@@ -28,6 +28,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import com.android.internal.util.AsyncChannel;
+import com.android.internal.util.ParcelableString;
 import com.android.internal.util.Protocol;
 
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import java.util.List;
 
 /**
  * Provides APIs for managing Wifi Passpoint credentials.
+ * @hide
  */
 public class WifiPasspointManager {
 
@@ -139,9 +141,38 @@ public class WifiPasspointManager {
          * The operation failed
          *
          * @param reason The reason for failure could be one of
-         *            {@link #REASON_WIFI_DISABLED}, {@link #REASON_ERROR} or {@link #REASON_BUSY}
+         *            {@link #WIFI_DISABLED}, {@link #ERROR} or {@link #BUSY}
          */
         public void onFailure(int reason);
+    }
+
+    /**
+     * Interface for callback invocation when doing OSU or user remediation
+     */
+    public interface OsuRemListener {
+        /** The operation succeeded */
+        public void onSuccess();
+
+        /**
+         * The operation failed
+         *
+         * @param reason The reason for failure could be one of
+         *            {@link #WIFI_DISABLED}, {@link #ERROR} or {@link #BUSY}
+         */
+        public void onFailure(int reason);
+
+        /**
+         * Browser launch is requried for user interaction. When this callback
+         * is called, app should launch browser / webview to the given URI.
+         *
+         * @param uri URI for browser launch
+         */
+        public void onBrowserLaunch(String uri);
+
+        /**
+         * When this is called, app should dismiss the previously lanched browser.
+         */
+        public void onBrowserDismiss();
     }
 
     /**
@@ -287,6 +318,31 @@ public class WifiPasspointManager {
                         }
                         break;
 
+                    case START_OSU_SUCCEEDED:
+                        listener = getListener(message.arg2, true);
+                        if (listener != null) {
+                            ((OsuRemListener) listener).onSuccess();
+                        }
+                        break;
+
+                    case START_OSU_FAILED:
+                        listener = getListener(message.arg2, true);
+                        if (listener != null) {
+                            ((OsuRemListener) listener).onFailure(message.arg1);
+                        }
+                        break;
+
+                    case START_OSU_BROWSER:
+                        listener = peekListener(message.arg2);
+                        if (listener != null) {
+                            ParcelableString str = (ParcelableString) message.obj;
+                            if (str == null || str.string == null)
+                                ((OsuRemListener) listener).onBrowserDismiss();
+                            else
+                                ((OsuRemListener) listener).onBrowserLaunch(str.string);
+                        }
+                        break;
+
                     default:
                         Log.d(TAG, "Ignored " + message);
                         break;
@@ -294,34 +350,6 @@ public class WifiPasspointManager {
             }
         }
 
-    }
-
-    public static class ParcelableString implements Parcelable {
-        public String string;
-
-        @Override
-        public int describeContents() {
-            return 0;
-        }
-
-        @Override
-        public void writeToParcel(Parcel out, int flags) {
-            out.writeString(string);
-        }
-
-        public static final Parcelable.Creator<ParcelableString> CREATOR =
-                new Parcelable.Creator<ParcelableString>() {
-                    @Override
-                    public ParcelableString createFromParcel(Parcel in) {
-                        ParcelableString ret = new ParcelableString();
-                        ret.string = in.readString();
-                        return ret;
-                    }
-                    @Override
-                    public ParcelableString[] newArray(int size) {
-                        return new ParcelableString[size];
-                    }
-        };
     }
 
     private static final int BASE = Protocol.BASE_WIFI_PASSPOINT_MANAGER;
@@ -388,6 +416,14 @@ public class WifiPasspointManager {
         }
     }
 
+    public int getPasspointState() {
+        try {
+            return mService.getPasspointState();
+        } catch (RemoteException e) {
+            return PASSPOINT_STATE_UNKNOWN;
+        }
+    }
+
     public void requestAnqpInfo(Channel c, List<ScanResult> requested, int mask,
             ActionListener listener) {
         Log.d(TAG, "requestAnqpInfo start");
@@ -412,6 +448,90 @@ public class WifiPasspointManager {
         for (ScanResult sr : list)
             c.mAsyncChannel.sendMessage(REQUEST_ANQP_INFO, mask, key, sr);
         Log.d(TAG, "requestAnqpInfo end");
+    }
+
+    public void requestOsuIcons(Channel c, List<WifiPasspointOsuProvider> requested,
+            int resolution, ActionListener listener) {
+    }
+
+    public List<WifiPasspointPolicy> requestCredentialMatch(List<ScanResult> requested) {
+        try {
+            return mService.requestCredentialMatch(requested);
+        } catch (RemoteException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get a list of saved Passpoint credentials. Only those credentials owned
+     * by the caller will be returned.
+     *
+     * @return The list of credentials
+     */
+    public List<WifiPasspointCredential> getCredentials() {
+        try {
+            return mService.getCredentials();
+        } catch (RemoteException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Add a new Passpoint credential.
+     *
+     * @param cred The credential to be added
+     * @return {@code true} if the operation succeeds, {@code false} otherwise
+     */
+    public boolean addCredential(WifiPasspointCredential cred) {
+        try {
+            return mService.addCredential(cred);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Update an existing Passpoint credential. Only system or the owner of this
+     * credential has the permission to do this.
+     *
+     * @param cred The credential to be updated
+     * @return {@code true} if the operation succeeds, {@code false} otherwise
+     */
+    public boolean updateCredential(WifiPasspointCredential cred) {
+        try {
+            return mService.updateCredential(cred);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Remove an existing Passpoint credential. Only system or the owner of this
+     * credential has the permission to do this.
+     *
+     * @param cred The credential to be removed
+     * @return {@code true} if the operation succeeds, {@code false} otherwise
+     */
+    public boolean removeCredential(WifiPasspointCredential cred) {
+        try {
+            return mService.removeCredential(cred);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
+    public void startOsu(Channel c, WifiPasspointOsuProvider osu, OsuRemListener listener) {
+        Log.d(TAG, "startOsu start");
+        checkChannel(c);
+        int key = c.putListener(listener);
+        c.mAsyncChannel.sendMessage(START_OSU, 0, key, osu);
+        Log.d(TAG, "startOsu end");
+    }
+
+    public void startRemediation(Channel c, OsuRemListener listener) {
+    }
+
+    public void connect(WifiPasspointPolicy policy) {
     }
 
     private static void checkChannel(Channel c) {
