@@ -669,8 +669,8 @@ public class WifiInjector {
             @NonNull ActiveModeManager.SoftApRole role,
             boolean verboseLoggingEnabled) {
         return new SoftApManager(mContext, mWifiHandlerThread.getLooper(),
-                mFrameworkFacade, mWifiNative, mCountryCode.getCountryCode(), listener, callback,
-                mWifiApConfigStore, config, mWifiMetrics, mWifiDiagnostics,
+                mFrameworkFacade, mWifiNative, mCoexManager, mCountryCode.getCountryCode(),
+                listener, callback, mWifiApConfigStore, config, mWifiMetrics, mWifiDiagnostics,
                 new SoftApNotifier(mContext, mFrameworkFacade),
                 mClock.getElapsedSinceBootMillis(), requestorWs, role, verboseLoggingEnabled);
     }
