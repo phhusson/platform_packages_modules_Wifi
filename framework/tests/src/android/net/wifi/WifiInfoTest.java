@@ -168,11 +168,11 @@ public class WifiInfoTest {
             assertNotEquals(info1, info2);
         }
 
-        info1.setTrusted(false);
+        info1.setTrusted(true);
         // Same behavior pre-S & post-S.
         assertNotEquals(info1, info2);
 
-        info2.setTrusted(false);
+        info2.setTrusted(true);
         if (SdkLevel.isAtLeastS()) {
             assertEquals(info1, info2);
         } else {
