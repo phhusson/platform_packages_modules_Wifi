@@ -207,11 +207,11 @@ public class WifiInfoTest {
             assertNotEquals(info1.hashCode(), info2.hashCode());
         }
 
-        info1.setTrusted(false);
+        info1.setTrusted(true);
         // Same behavior pre-S & post-S.
         assertNotEquals(info1.hashCode(), info2.hashCode());
 
-        info2.setTrusted(false);
+        info2.setTrusted(true);
         if (SdkLevel.isAtLeastS()) {
             assertEquals(info1.hashCode(), info2.hashCode());
         } else {
