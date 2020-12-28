@@ -367,6 +367,7 @@ package android.net.wifi {
     field @Deprecated public int creatorUid;
     field @Deprecated public boolean fromWifiNetworkSpecifier;
     field @Deprecated public boolean fromWifiNetworkSuggestion;
+    field @Deprecated public int lastConnectUid;
     field @Deprecated public String lastUpdateName;
     field @Deprecated public int lastUpdateUid;
     field @Deprecated public int macRandomizationSetting;
