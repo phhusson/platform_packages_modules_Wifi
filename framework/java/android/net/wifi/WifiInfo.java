@@ -42,7 +42,9 @@ import com.android.net.module.util.Inet4AddressUtils;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -57,6 +59,7 @@ import java.util.Objects;
  * {@link #getNetworkId()} will return {@code -1}.
  * {@link #getPasspointFqdn()} will return null.
  * {@link #getPasspointProviderFriendlyName()} will return null.
+ * {@link #getInformationElements()} will return null.
  */
 public class WifiInfo implements TransportInfo, Parcelable {
     private static final String TAG = "WifiInfo";
@@ -340,6 +343,12 @@ public class WifiInfo implements TransportInfo, Parcelable {
      */
     private String mPasspointUniqueId;
 
+    /**
+     * information elements found in the beacon of the connected bssid.
+     */
+    @Nullable
+    private List<ScanResult.InformationElement> mInformationElements;
+
     /** @hide */
     @UnsupportedAppUsage
     public WifiInfo() {
@@ -385,6 +394,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
         setProviderFriendlyName(null);
         setPasspointUniqueId(null);
         setSubscriptionId(SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+        setInformationElements(null);
         txBad = 0;
         txSuccess = 0;
         rxSuccess = 0;
@@ -447,6 +457,9 @@ public class WifiInfo implements TransportInfo, Parcelable {
             mMaxSupportedTxLinkSpeed = source.mMaxSupportedTxLinkSpeed;
             mMaxSupportedRxLinkSpeed = source.mMaxSupportedRxLinkSpeed;
             mPasspointUniqueId = source.mPasspointUniqueId;
+            if (source.mInformationElements != null) {
+                mInformationElements = new ArrayList<>(source.mInformationElements);
+            }
         }
     }
 
@@ -1147,6 +1160,9 @@ public class WifiInfo implements TransportInfo, Parcelable {
         dest.writeInt(mMaxSupportedRxLinkSpeed);
         dest.writeString(mParcelLocationSenstiveFields ? mPasspointUniqueId : null);
         dest.writeInt(mSubscriptionId);
+        if (SdkLevel.isAtLeastS()) {
+            dest.writeTypedList(mParcelLocationSenstiveFields ? mInformationElements : null);
+        }
     }
 
     /** Implement the Parcelable interface {@hide} */
@@ -1196,6 +1212,10 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 info.mMaxSupportedRxLinkSpeed = in.readInt();
                 info.mPasspointUniqueId = in.readString();
                 info.mSubscriptionId = in.readInt();
+                if (SdkLevel.isAtLeastS()) {
+                    info.mInformationElements = in.createTypedArrayList(
+                            ScanResult.InformationElement.CREATOR);
+                }
                 return info;
             }
 
@@ -1222,6 +1242,36 @@ public class WifiInfo implements TransportInfo, Parcelable {
      */
     public @Nullable String getPasspointUniqueId() {
         return mPasspointUniqueId;
+    }
+
+    /**
+     * Set the information elements found in the becaon of the connected bssid.
+     * @hide
+     */
+    public void setInformationElements(@Nullable List<ScanResult.InformationElement> infoElements) {
+        if (infoElements == null) {
+            mInformationElements = null;
+            return;
+        }
+        mInformationElements = new ArrayList<>(infoElements);
+    }
+
+    /**
+     * Get all information elements found in the beacon of the connected bssid.
+     * <p>
+     * The information elements will be {@code null} if there is no network currently connected or
+     * if the caller has insufficient permissions to access the info elements.
+     * </p>
+     *
+     * @return List of information elements {@link ScanResult.InformationElement} or null.
+     */
+    @Nullable
+    public List<ScanResult.InformationElement> getInformationElements() {
+        if (!SdkLevel.isAtLeastS()) {
+            throw new UnsupportedOperationException();
+        }
+        if (mInformationElements == null) return null;
+        return new ArrayList<>(mInformationElements);
     }
 
     @Override
@@ -1271,7 +1321,8 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 && Objects.equals(mWifiStandard, thatWifiInfo.mWifiStandard)
                 && Objects.equals(mMaxSupportedTxLinkSpeed, thatWifiInfo.mMaxSupportedTxLinkSpeed)
                 && Objects.equals(mMaxSupportedRxLinkSpeed, thatWifiInfo.mMaxSupportedRxLinkSpeed)
-                && Objects.equals(mPasspointUniqueId, thatWifiInfo.mPasspointUniqueId);
+                && Objects.equals(mPasspointUniqueId, thatWifiInfo.mPasspointUniqueId)
+                && Objects.equals(mInformationElements, thatWifiInfo.mInformationElements);
     }
 
     @Override
@@ -1313,7 +1364,8 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 mWifiStandard,
                 mMaxSupportedTxLinkSpeed,
                 mMaxSupportedRxLinkSpeed,
-                mPasspointUniqueId);
+                mPasspointUniqueId,
+                mInformationElements);
     }
 
     /**

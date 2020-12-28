@@ -51,11 +51,14 @@ package android.net.wifi {
     field @Deprecated public CharSequence venueName;
   }
 
-  public static class ScanResult.InformationElement {
+  public static class ScanResult.InformationElement implements android.os.Parcelable {
     ctor public ScanResult.InformationElement(@NonNull android.net.wifi.ScanResult.InformationElement);
+    method public int describeContents();
     method @NonNull public java.nio.ByteBuffer getBytes();
     method public int getId();
     method public int getIdExt();
+    method public void writeToParcel(android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.ScanResult.InformationElement> CREATOR;
   }
 
   public final class SoftApConfiguration implements android.os.Parcelable {
@@ -276,6 +279,7 @@ package android.net.wifi {
     method public static android.net.NetworkInfo.DetailedState getDetailedStateOf(android.net.wifi.SupplicantState);
     method public int getFrequency();
     method public boolean getHiddenSSID();
+    method @Nullable public java.util.List<android.net.wifi.ScanResult.InformationElement> getInformationElements();
     method @Deprecated public int getIpAddress();
     method public int getLinkSpeed();
     method public String getMacAddress();
