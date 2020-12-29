@@ -149,6 +149,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.IPowerManager;
 import android.os.IThermalService;
+import android.os.Parcel;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
@@ -2039,6 +2040,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
         return wifiInfo;
     }
 
+    private WifiInfo parcelingRoundTrip(WifiInfo wifiInfo) {
+        Parcel parcel = Parcel.obtain();
+        wifiInfo.writeToParcel(parcel, 0);
+        // Rewind the pointer to the head of the parcel.
+        parcel.setDataPosition(0);
+        return WifiInfo.CREATOR.createFromParcel(parcel);
+    }
+
     /**
      * Test that connected SSID and BSSID are not exposed to an app that does not have the
      * appropriate permissions.
@@ -2052,7 +2061,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 anyString(), nullable(String.class), anyInt(), nullable(String.class));
 
         mLooper.startAutoDispatch();
-        WifiInfo connectionInfo = mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID);
+        WifiInfo connectionInfo = parcelingRoundTrip(
+                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         assertEquals(WifiManager.UNKNOWN_SSID, connectionInfo.getSSID());
@@ -2075,7 +2085,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 anyString(), nullable(String.class), anyInt(), nullable(String.class));
 
         mLooper.startAutoDispatch();
-        WifiInfo connectionInfo = mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID);
+        WifiInfo connectionInfo = parcelingRoundTrip(
+                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         assertEquals(WifiManager.UNKNOWN_SSID, connectionInfo.getSSID());
@@ -2095,7 +2106,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mClientModeManager.syncRequestConnectionInfo()).thenReturn(wifiInfo);
 
         mLooper.startAutoDispatch();
-        WifiInfo connectionInfo = mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID);
+        WifiInfo connectionInfo = parcelingRoundTrip(
+                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         assertEquals(TEST_SSID_WITH_QUOTES, connectionInfo.getSSID());
@@ -2122,8 +2134,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(Arrays.asList(secondaryCmm));
 
         mLooper.startAutoDispatch();
-        WifiInfo connectionInfo =
-                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID);
+        WifiInfo connectionInfo = parcelingRoundTrip(
+                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         assertEquals(TEST_SSID_WITH_QUOTES, connectionInfo.getSSID());
@@ -2150,8 +2162,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(Arrays.asList(secondaryCmm));
 
         mLooper.startAutoDispatch();
-        WifiInfo connectionInfo =
-                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID);
+        WifiInfo connectionInfo = parcelingRoundTrip(
+                mWifiServiceImpl.getConnectionInfo(TEST_PACKAGE, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         assertEquals(TEST_SSID_WITH_QUOTES, connectionInfo.getSSID());
