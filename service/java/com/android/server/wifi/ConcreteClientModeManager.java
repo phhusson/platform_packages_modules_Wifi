@@ -424,7 +424,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
     }
 
     @Override
-    public ClientRole getRole() {
+    @Nullable public ClientRole getRole() {
         return mRole;
     }
 

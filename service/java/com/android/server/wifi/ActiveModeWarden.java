@@ -779,10 +779,11 @@ public class ActiveModeWarden {
     /** Get all client mode managers in the specified roles. */
     @NonNull
     public List<ConcreteClientModeManager> getClientModeManagersInRoles(ClientRole... roles) {
-        Set<ClientRole> rolesList = Set.of(roles);
+        Set<ClientRole> rolesSet = Set.of(roles);
         List<ConcreteClientModeManager> result = new ArrayList<>();
         for (ConcreteClientModeManager manager : mClientModeManagers) {
-            if (rolesList.contains(manager.getRole())) {
+            ClientRole role = manager.getRole();
+            if (role != null && rolesSet.contains(role)) {
                 result.add(manager);
             }
         }

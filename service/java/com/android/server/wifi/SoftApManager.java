@@ -267,7 +267,7 @@ public class SoftApManager implements ActiveModeManager {
     }
 
     @Override
-    public SoftApRole getRole() {
+    @Nullable public SoftApRole getRole() {
         return mRole;
     }
 
