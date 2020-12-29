@@ -28,6 +28,7 @@ import android.net.MacAddress;
 import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.PasspointTestUtils;
 import android.os.Parcel;
+import android.telephony.SubscriptionManager;
 
 import androidx.test.filters.SmallTest;
 
@@ -1520,5 +1521,18 @@ public class WifiNetworkSuggestionTest {
                 .setIsMetered(true)
                 .build();
         assertTrue(suggestion.isCarrierMerged());
+    }
+
+    /**
+     * Ensure {@link WifiNetworkSuggestion.Builder#setSubscriptionId(int)} throws an exception when
+     * Subscription ID is invalid.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetInvalidSubscriptionId() {
+        assumeTrue(SdkLevel.isAtLeastS());
+
+        WifiNetworkSuggestion suggestion = new WifiNetworkSuggestion.Builder()
+                .setSubscriptionId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                .build();
     }
 }
