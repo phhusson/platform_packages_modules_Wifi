@@ -3277,4 +3277,34 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         // Ensure we get the callback immediately.
         verify(primarCmmCallback).onChange(null, mClientModeManager);
     }
+
+    @Test
+    public void testGetCmmInRolesWithNullRoleInOneCmm() throws Exception {
+        enterClientModeActiveState();
+
+        // Ensure that we can create more client ifaces.
+        when(mWifiNative.isItPossibleToCreateStaIface(any())).thenReturn(true);
+        when(mResources.getBoolean(R.bool.config_wifiMultiStaLocalOnlyConcurrencyEnabled))
+                .thenReturn(true);
+
+        ConcreteClientModeManager additionalClientModeManager =
+                mock(ConcreteClientModeManager.class);
+        when(mWifiInjector.makeClientModeManager(
+                any(), any(), any(), anyBoolean())).thenReturn(additionalClientModeManager);
+
+        mActiveModeWarden.requestLocalOnlyClientModeManager(
+                mock(ActiveModeWarden.ExternalClientModeManagerRequestListener.class),
+                TEST_WORKSOURCE, TEST_SSID_2, TEST_BSSID_2);
+        mLooper.dispatchAll();
+
+        // No role set, should be ignored.
+        when(additionalClientModeManager.getRole()).thenReturn(null);
+        assertEquals(1, mActiveModeWarden.getClientModeManagersInRoles(
+                ROLE_CLIENT_PRIMARY, ROLE_CLIENT_LOCAL_ONLY).size());
+
+        // Role set, should be included.
+        when(additionalClientModeManager.getRole()).thenReturn(ROLE_CLIENT_LOCAL_ONLY);
+        assertEquals(2, mActiveModeWarden.getClientModeManagersInRoles(
+                ROLE_CLIENT_PRIMARY, ROLE_CLIENT_LOCAL_ONLY).size());
+    }
 }

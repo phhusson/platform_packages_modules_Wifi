@@ -17,6 +17,7 @@
 package com.android.server.wifi;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.os.WorkSource;
 
 import java.io.FileDescriptor;
@@ -138,7 +139,7 @@ public interface ActiveModeManager {
     /**
      * Method to get the role for a mode manager.
      */
-    Role getRole();
+    @Nullable Role getRole();
 
     /**
      * Method to get the iface name for the mode manager.

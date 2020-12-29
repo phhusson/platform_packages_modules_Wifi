@@ -16,6 +16,7 @@
 
 package com.android.server.wifi;
 
+import android.annotation.Nullable;
 import android.net.wifi.WifiManager;
 import android.os.WorkSource;
 
@@ -37,7 +38,7 @@ public class DefaultClientModeManager implements ClientModeManager, ClientModeDe
     }
 
     @Override
-    public ClientRole getRole() {
+    @Nullable public ClientRole getRole() {
         return null;
     }
 
