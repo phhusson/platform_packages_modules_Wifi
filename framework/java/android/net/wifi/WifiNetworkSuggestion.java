@@ -1420,4 +1420,16 @@ public final class WifiNetworkSuggestion implements Parcelable {
         }
         return wifiConfiguration.subscriptionId;
     }
+
+    /**
+     * @see Builder#setCarrierId(int)
+     * @hide
+     */
+    @SystemApi
+    public int getCarrierId() {
+        if (!SdkLevel.isAtLeastS()) {
+            throw new UnsupportedOperationException();
+        }
+        return wifiConfiguration.carrierId;
+    }
 }

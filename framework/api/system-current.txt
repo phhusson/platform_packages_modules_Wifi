@@ -674,6 +674,7 @@ package android.net.wifi {
   }
 
   public final class WifiNetworkSuggestion implements android.os.Parcelable {
+    method public int getCarrierId();
     method @NonNull public android.net.wifi.WifiConfiguration getWifiConfiguration();
     method public boolean isOemPaid();
     method public boolean isOemPrivate();
