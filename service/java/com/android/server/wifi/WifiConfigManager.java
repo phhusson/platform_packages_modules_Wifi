@@ -29,6 +29,7 @@ import android.net.MacAddress;
 import android.net.ProxyInfo;
 import android.net.StaticIpConfiguration;
 import android.net.wifi.ScanResult;
+import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiConfiguration.NetworkSelectionStatus;
 import android.net.wifi.WifiEnterpriseConfig;
@@ -1233,6 +1234,8 @@ public class WifiConfigManager {
                             existingInternalConfig, config, uid, packageName);
         }
 
+        WifiConfigurationUtil.addUpgradableSecurityTypeIfNecessary(newInternalConfig);
+
         // Only add networks with proxy settings if the user has permission to
         if (WifiConfigurationUtil.hasProxyChanged(existingInternalConfig, newInternalConfig)
                 && !canModifyProxySettings(uid, packageName)) {
@@ -1967,6 +1970,7 @@ public class WifiConfigManager {
         config.getNetworkSelectionStatus().setCandidate(null);
         config.getNetworkSelectionStatus().setCandidateScore(Integer.MIN_VALUE);
         config.getNetworkSelectionStatus().setSeenInLastQualifiedNetworkSelection(false);
+        config.getNetworkSelectionStatus().setCandidateSecurityParams(null);
         return true;
     }
 
@@ -1981,11 +1985,14 @@ public class WifiConfigManager {
      * @param networkId  network ID corresponding to the network.
      * @param scanResult Candidate ScanResult associated with this network.
      * @param score      Score assigned to the candidate.
+     * @param params     Security params for this candidate.
      * @return true if the network was found, false otherwise.
      */
-    public boolean setNetworkCandidateScanResult(int networkId, ScanResult scanResult, int score) {
+    public boolean setNetworkCandidateScanResult(int networkId, ScanResult scanResult, int score,
+            SecurityParams params) {
         if (mVerboseLoggingEnabled) {
-            Log.v(TAG, "Set network candidate scan result " + scanResult + " for " + networkId);
+            Log.v(TAG, "Set network candidate scan result " + scanResult + " for " + networkId
+                    + " with security params " + params);
         }
         WifiConfiguration config = getInternalConfiguredNetwork(networkId);
         if (config == null) {
@@ -1995,6 +2002,7 @@ public class WifiConfigManager {
         config.getNetworkSelectionStatus().setCandidate(scanResult);
         config.getNetworkSelectionStatus().setCandidateScore(score);
         config.getNetworkSelectionStatus().setSeenInLastQualifiedNetworkSelection(true);
+        config.getNetworkSelectionStatus().setCandidateSecurityParams(params);
         return true;
     }
 

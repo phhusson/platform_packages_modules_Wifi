@@ -239,17 +239,23 @@ public class WifiServiceImplTest extends WifiBaseTest {
     private static final String TEST_FRIENDLY_NAME = "testfriendlyname";
     private static final List<WifiConfiguration> TEST_WIFI_CONFIGURATION_LIST = Arrays.asList(
             WifiConfigurationTestUtil.generateWifiConfig(
-                    0, 1000000, "\"red\"", true, true, null, null),
+                    0, 1000000, "\"red\"", true, true, null, null,
+                    WifiConfigurationTestUtil.SECURITY_NONE),
             WifiConfigurationTestUtil.generateWifiConfig(
-                    1, 1000001, "\"green\"", true, false, "example.com", "Green"),
+                    1, 1000001, "\"green\"", true, false, "example.com", "Green",
+                    WifiConfigurationTestUtil.SECURITY_NONE),
             WifiConfigurationTestUtil.generateWifiConfig(
-                    2, 1200000, "\"blue\"", false, true, null, null),
+                    2, 1200000, "\"blue\"", false, true, null, null,
+                    WifiConfigurationTestUtil.SECURITY_NONE),
             WifiConfigurationTestUtil.generateWifiConfig(
-                    3, 1100000, "\"cyan\"", true, true, null, null),
+                    3, 1100000, "\"cyan\"", true, true, null, null,
+                    WifiConfigurationTestUtil.SECURITY_NONE),
             WifiConfigurationTestUtil.generateWifiConfig(
-                    4, 1100001, "\"yellow\"", true, true, "example.org", "Yellow"),
+                    4, 1100001, "\"yellow\"", true, true, "example.org", "Yellow",
+                    WifiConfigurationTestUtil.SECURITY_NONE),
             WifiConfigurationTestUtil.generateWifiConfig(
-                    5, 1100002, "\"magenta\"", false, false, null, null));
+                    5, 1100002, "\"magenta\"", false, false, null, null,
+                    WifiConfigurationTestUtil.SECURITY_NONE));
     private static final int TEST_AP_FREQUENCY = 2412;
     private static final int TEST_AP_BANDWIDTH = SoftApInfo.CHANNEL_WIDTH_20MHZ;
     private static final int NETWORK_CALLBACK_ID = 1100;

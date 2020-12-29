@@ -166,7 +166,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -453,6 +452,9 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock LinkProbeCallback mLinkProbeCallback;
     @Mock ClientModeImplMonitor mCmiMonitor;
     @Mock ClientModeManagerBroadcastQueue mBroadcastQueue;
+    @Mock WifiNetworkSelector mWifiNetworkSelector;
+    @Mock ActiveModeWarden mActiveModeWarden;
+    @Mock ClientModeManager mPrimaryClientModeManager;
 
     final ArgumentCaptor<WifiConfigManager.OnNetworkUpdateListener> mConfigUpdateListenerCaptor =
             ArgumentCaptor.forClass(WifiConfigManager.OnNetworkUpdateListener.class);
@@ -546,8 +548,19 @@ public class ClientModeImplTest extends WifiBaseTest {
         mWifiCarrierInfoManager = spy(tu);
         // static mocking
         mSession = ExtendedMockito.mockitoSession().strictness(Strictness.LENIENT)
+                .mockStatic(WifiInjector.class, withSettings().lenient())
                 .spyStatic(MacAddress.class)
                 .startMocking();
+        when(WifiInjector.getInstance()).thenReturn(mWifiInjector);
+
+        when(mWifiInjector.getActiveModeWarden()).thenReturn(mActiveModeWarden);
+        when(mActiveModeWarden.getPrimaryClientModeManager()).thenReturn(mPrimaryClientModeManager);
+        when(mPrimaryClientModeManager.getSupportedFeatures()).thenReturn(
+                WifiManager.WIFI_FEATURE_WPA3_SAE | WifiManager.WIFI_FEATURE_OWE);
+        when(mWifiInjector.getWifiGlobals()).thenReturn(mWifiGlobals);
+        when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(true);
+        when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
+
         initializeCmi();
 
         mOsuProvider = PasspointProvisioningTestUtil.generateOsuProvider(true);
@@ -633,7 +646,8 @@ public class ClientModeImplTest extends WifiBaseTest {
                 1, mBatteryStatsManager, mSupplicantStateTracker, mMboOceController,
                 mWifiCarrierInfoManager, mEapFailureNotifier, mSimRequiredNotifier,
                 mWifiScoreReport, mWifiP2pConnection, mWifiGlobals,
-                WIFI_IFACE_NAME, mClientModeManager, mCmiMonitor, mBroadcastQueue, false);
+                WIFI_IFACE_NAME, mClientModeManager, mCmiMonitor, mBroadcastQueue,
+                mWifiNetworkSelector, false);
 
         mWifiCoreThread = getCmiHandlerThread(mCmi);
 
@@ -4496,242 +4510,6 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         verify(mWifiConnectivityManager, never())
                 .forceConnectivityScan(ClientModeImpl.WIFI_WORK_SOURCE);
-    }
-
-    /**
-     * Verifies that the logic does not modify PSK key management when WPA3 auto upgrade feature is
-     * disabled.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testNoWpa3UpgradeWhenOverlaysAreOff() throws Exception {
-        initializeAndAddNetworkAndVerifySuccess();
-
-        WifiConfiguration config = mock(WifiConfiguration.class);
-        config.SSID = sSSID;
-        BitSet allowedKeyManagement = mock(BitSet.class);
-        config.allowedKeyManagement = allowedKeyManagement;
-        when(config.allowedKeyManagement.get(eq(WifiConfiguration.KeyMgmt.WPA_PSK))).thenReturn(
-                true);
-        when(config.getNetworkSelectionStatus())
-                .thenReturn(new WifiConfiguration.NetworkSelectionStatus());
-        when(mWifiConfigManager.getConfiguredNetworkWithoutMasking(0)).thenReturn(config);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeEnabled, false);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled, false);
-
-        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
-        mLooper.dispatchAll();
-
-        verify(config, never()).setSecurityParams(eq(WifiConfiguration.SECURITY_TYPE_SAE));
-    }
-
-    /**
-     * Verifies that the logic always enables SAE key management when WPA3 auto upgrade offload
-     * feature is enabled.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testWpa3UpgradeOffload() throws Exception {
-        initializeAndAddNetworkAndVerifySuccess();
-
-        WifiConfiguration config = new WifiConfiguration();
-        config.SSID = sSSID;
-        config.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
-        when(mWifiConfigManager.getConfiguredNetworkWithoutMasking(0)).thenReturn(config);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeEnabled, true);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled, true);
-
-        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
-        mLooper.dispatchAll();
-
-        assertTrue(config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE));
-    }
-
-    /**
-     * Verifies that the logic does not enable SAE key management when WPA3 auto upgrade feature is
-     * enabled but no SAE candidate is available.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testNoWpa3UpgradeWithPskCandidate() throws Exception {
-        initializeAndAddNetworkAndVerifySuccess();
-
-        WifiConfiguration config = mock(WifiConfiguration.class);
-        config.SSID = sSSID;
-        BitSet allowedKeyManagement = mock(BitSet.class);
-        config.allowedKeyManagement = allowedKeyManagement;
-        when(config.allowedKeyManagement.get(eq(WifiConfiguration.KeyMgmt.WPA_PSK)))
-                .thenReturn(true);
-        WifiConfiguration.NetworkSelectionStatus networkSelectionStatus =
-                mock(WifiConfiguration.NetworkSelectionStatus.class);
-        when(config.getNetworkSelectionStatus()).thenReturn(networkSelectionStatus);
-        when(mWifiConfigManager.getConfiguredNetworkWithoutMasking(0)).thenReturn(config);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeEnabled, true);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled, false);
-
-        String ssid = "WPA2-Network";
-        String caps = "[WPA2-FT/PSK+PSK][ESS][WPS]";
-        ScanResult scanResult = new ScanResult(WifiSsid.createFromAsciiEncoded(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
-        scanResult.informationElements = new ScanResult.InformationElement[]{
-                createIE(ScanResult.InformationElement.EID_SSID,
-                        ssid.getBytes(StandardCharsets.UTF_8))
-        };
-        when(networkSelectionStatus.getCandidate()).thenReturn(scanResult);
-
-        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
-        mLooper.dispatchAll();
-
-        verify(config, never()).setSecurityParams(eq(WifiConfiguration.SECURITY_TYPE_SAE));
-    }
-
-    /**
-     * Verifies that the logic enables SAE key management when WPA3 auto upgrade feature is
-     * enabled and an SAE candidate is available.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testWpa3UpgradeWithSaeCandidate() throws Exception {
-        initializeAndAddNetworkAndVerifySuccess();
-
-        WifiConfiguration config = spy(new WifiConfiguration());
-        config.SSID = sSSID;
-        config.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
-        WifiConfiguration.NetworkSelectionStatus networkSelectionStatus =
-                mock(WifiConfiguration.NetworkSelectionStatus.class);
-        when(config.getNetworkSelectionStatus()).thenReturn(networkSelectionStatus);
-        when(mWifiConfigManager.getConfiguredNetworkWithoutMasking(anyInt())).thenReturn(config);
-        when(mWifiConfigManager.getScanDetailCacheForNetwork(anyInt())).thenReturn(null);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeEnabled, true);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled, false);
-
-        final String ssid = "WPA3-Network";
-        String caps = "[WPA2-FT/SAE+SAE][ESS][WPS]";
-        ScanResult scanResult = new ScanResult(WifiSsid.createFromAsciiEncoded(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
-        scanResult.informationElements = new ScanResult.InformationElement[]{
-                createIE(ScanResult.InformationElement.EID_SSID,
-                        ssid.getBytes(StandardCharsets.UTF_8))
-        };
-        when(networkSelectionStatus.getCandidate()).thenReturn(scanResult);
-
-        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
-        mLooper.dispatchAll();
-
-        assertTrue(config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE));
-    }
-
-    /**
-     * Verifies that the logic does not enable SAE key management when WPA3 auto upgrade feature is
-     * enabled and an SAE candidate is available, while another WPA2 AP is in range.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testWpa3UpgradeWithSaeCandidateAndPskApInRange() throws Exception {
-        initializeAndAddNetworkAndVerifySuccess();
-
-        WifiConfiguration config = spy(new WifiConfiguration());
-        config.SSID = sSSID;
-        config.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
-        WifiConfiguration.NetworkSelectionStatus networkSelectionStatus =
-                mock(WifiConfiguration.NetworkSelectionStatus.class);
-        when(config.getNetworkSelectionStatus()).thenReturn(networkSelectionStatus);
-        when(mWifiConfigManager.getConfiguredNetworkWithoutMasking(anyInt())).thenReturn(config);
-        when(mWifiConfigManager.getScanDetailCacheForNetwork(anyInt())).thenReturn(null);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeEnabled, true);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled, false);
-
-        final String saeBssid = "ab:cd:01:ef:45:89";
-        final String pskBssid = "ab:cd:01:ef:45:9a";
-
-        final String ssidSae = "Mixed-Network";
-        config.SSID = ScanResultUtil.createQuotedSSID(ssidSae);
-        config.networkId = 1;
-
-        String capsSae = "[WPA2-FT/SAE+SAE][ESS][WPS]";
-        ScanResult scanResultSae = new ScanResult(WifiSsid.createFromAsciiEncoded(ssidSae), ssidSae,
-                saeBssid, 1245, 0, capsSae, -78, 2412, 1025, 22, 33, 20, 0,
-                0, true);
-        ScanResult.InformationElement ieSae = createIE(ScanResult.InformationElement.EID_SSID,
-                ssidSae.getBytes(StandardCharsets.UTF_8));
-        scanResultSae.informationElements = new ScanResult.InformationElement[]{ieSae};
-        when(networkSelectionStatus.getCandidate()).thenReturn(scanResultSae);
-        ScanResult.InformationElement[] ieArr = new ScanResult.InformationElement[1];
-        ieArr[0] = ieSae;
-
-        final String ssidPsk = "Mixed-Network";
-        String capsPsk = "[WPA2-FT/PSK+PSK][ESS][WPS]";
-        ScanResult scanResultPsk = new ScanResult(WifiSsid.createFromAsciiEncoded(ssidPsk), ssidPsk,
-                pskBssid, 1245, 0, capsPsk, -48, 2462, 1025, 22, 33, 20, 0,
-                0, true);
-        ScanResult.InformationElement iePsk = createIE(ScanResult.InformationElement.EID_SSID,
-                ssidPsk.getBytes(StandardCharsets.UTF_8));
-        scanResultPsk.informationElements = new ScanResult.InformationElement[]{iePsk};
-        ScanResult.InformationElement[] ieArrPsk = new ScanResult.InformationElement[1];
-        ieArrPsk[0] = iePsk;
-        List<ScanResult> scanResults = new ArrayList<>();
-        scanResults.add(scanResultPsk);
-        scanResults.add(scanResultSae);
-
-        when(mScanRequestProxy.getScanResults()).thenReturn(scanResults);
-
-        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
-        mLooper.dispatchAll();
-
-        assertFalse(config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE));
-    }
-
-    /**
-     * Verifies that the logic enables SAE key management when WPA3 auto upgrade feature is
-     * enabled and no candidate is available (i.e. user selected a WPA2 saved network and the
-     * network is actually WPA3.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testWpa3UpgradeWithNoCandidate() throws Exception {
-        initializeAndAddNetworkAndVerifySuccess();
-
-        WifiConfiguration config = spy(new WifiConfiguration());
-        config.SSID = sSSID;
-        config.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
-        WifiConfiguration.NetworkSelectionStatus networkSelectionStatus =
-                mock(WifiConfiguration.NetworkSelectionStatus.class);
-        when(config.getNetworkSelectionStatus()).thenReturn(networkSelectionStatus);
-        when(mWifiConfigManager.getConfiguredNetworkWithoutMasking(anyInt())).thenReturn(config);
-
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeEnabled, true);
-        mResources.setBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled, false);
-
-        final String saeBssid = "ab:cd:01:ef:45:89";
-        final String ssidSae = "WPA3-Network";
-        config.SSID = ScanResultUtil.createQuotedSSID(ssidSae);
-        config.networkId = 1;
-
-        String capsSae = "[WPA2-FT/SAE+SAE][ESS][WPS]";
-        ScanResult scanResultSae = new ScanResult(WifiSsid.createFromAsciiEncoded(ssidSae), ssidSae,
-                saeBssid, 1245, 0, capsSae, -78, 2412, 1025, 22, 33, 20, 0,
-                0, true);
-        ScanResult.InformationElement ieSae = createIE(ScanResult.InformationElement.EID_SSID,
-                ssidSae.getBytes(StandardCharsets.UTF_8));
-        scanResultSae.informationElements = new ScanResult.InformationElement[]{ieSae};
-        when(networkSelectionStatus.getCandidate()).thenReturn(null);
-        List<ScanResult> scanResults = new ArrayList<>();
-        scanResults.add(scanResultSae);
-
-        when(mScanRequestProxy.getScanResults()).thenReturn(scanResults);
-
-        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
-        mLooper.dispatchAll();
-
-        assertTrue(config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE));
     }
 
     private static ScanResult.InformationElement createIE(int id, byte[] bytes) {

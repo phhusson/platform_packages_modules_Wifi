@@ -798,6 +798,16 @@ public class WifiConfiguration implements Parcelable {
     }
 
     /**
+     * Get the default params which is the same as the legacy fields.
+     *
+     * @return the default security params.
+     * @hide
+     */
+    public @NonNull SecurityParams getDefaultSecurityParams() {
+        return new SecurityParams(mSecurityParamsList.get(0));
+    }
+
+    /**
      * Enable the support of Fast Initial Link Set-up (FILS).
      *
      * FILS can be applied to all security types.
@@ -1988,6 +1998,11 @@ public class WifiConfiguration implements Parcelable {
         private int mCandidateScore;
 
         /**
+         * Used to cache the select security params from the candidate.
+         */
+        private SecurityParams mCandidateSecurityParams;
+
+        /**
          * Indicate whether this network is visible in latest Qualified Network Selection. This
          * means there is scan result found related to this Configuration and meet the minimum
          * requirement. The saved network need not join latest Qualified Network Selection. For
@@ -2066,6 +2081,24 @@ public class WifiConfiguration implements Parcelable {
          */
         public int getCandidateScore() {
             return mCandidateScore;
+        }
+
+        /**
+         * set the security type of the temporary candidate of current network selection procedure
+         * @param params value to set to mCandidateSecurityParams
+         * @hide
+         */
+        public void setCandidateSecurityParams(SecurityParams params) {
+            mCandidateSecurityParams = params;
+        }
+
+        /**
+         * get the security type of the temporary candidate of current network selection procedure
+         * @return return the security params
+         * @hide
+         */
+        public SecurityParams getCandidateSecurityParams() {
+            return mCandidateSecurityParams;
         }
 
         /**
@@ -2405,6 +2438,7 @@ public class WifiConfiguration implements Parcelable {
             setSeenInLastQualifiedNetworkSelection(source.getSeenInLastQualifiedNetworkSelection());
             setCandidate(source.getCandidate());
             setCandidateScore(source.getCandidateScore());
+            setCandidateSecurityParams(source.getCandidateSecurityParams());
             setConnectChoice(source.getConnectChoice());
             setConnectChoiceRssi(source.getConnectChoiceRssi());
             setHasEverConnected(source.hasEverConnected());

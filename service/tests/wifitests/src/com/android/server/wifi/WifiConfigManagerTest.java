@@ -29,6 +29,7 @@ import android.content.pm.PackageManager;
 import android.net.IpConfiguration;
 import android.net.MacAddress;
 import android.net.wifi.ScanResult;
+import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiConfiguration.NetworkSelectionStatus;
 import android.net.wifi.WifiEnterpriseConfig;
@@ -152,6 +153,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
     @Mock private PerNetwork mPerNetwork;
     @Mock private WifiMetrics mWifiMetrics;
     @Mock private WifiConfigManager.OnNetworkUpdateListener mListener;
+    @Mock private ActiveModeWarden mActiveModeWarden;
+    @Mock private ClientModeManager mPrimaryClientModeManager;
+    @Mock private WifiGlobals mWifiGlobals;
     private LruConnectionTracker mLruConnectionTracker;
 
     private MockResources mResources;
@@ -264,9 +268,18 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         mWifiConfigManager.addOnNetworkUpdateListener(mWcmListener);
         // static mocking
         mSession = ExtendedMockito.mockitoSession()
+                .mockStatic(WifiInjector.class, withSettings().lenient())
                 .mockStatic(WifiConfigStore.class, withSettings().lenient())
                 .strictness(Strictness.LENIENT)
                 .startMocking();
+        when(WifiInjector.getInstance()).thenReturn(mWifiInjector);
+        when(mWifiInjector.getActiveModeWarden()).thenReturn(mActiveModeWarden);
+        when(mWifiInjector.getWifiGlobals()).thenReturn(mWifiGlobals);
+        when(mActiveModeWarden.getPrimaryClientModeManager()).thenReturn(mPrimaryClientModeManager);
+        when(mPrimaryClientModeManager.getSupportedFeatures()).thenReturn(
+                WifiManager.WIFI_FEATURE_WPA3_SAE | WifiManager.WIFI_FEATURE_OWE);
+        when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(true);
+        when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
         when(WifiConfigStore.createUserFiles(anyInt(), anyBoolean())).thenReturn(mock(List.class));
         when(mTelephonyManager.createForSubscriptionId(anyInt())).thenReturn(mDataTelephonyManager);
     }
@@ -3773,7 +3786,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
 
     private void verifySetUserConnectChoice(int preferredNetId, int notPreferredNetId) {
         assertTrue(mWifiConfigManager.setNetworkCandidateScanResult(
-                notPreferredNetId, mock(ScanResult.class), 54));
+                notPreferredNetId, mock(ScanResult.class), 54, mock(SecurityParams.class)));
         assertTrue(mWifiConfigManager.updateNetworkAfterConnect(preferredNetId, true, TEST_RSSI));
         WifiConfiguration preferred = mWifiConfigManager.getConfiguredNetwork(preferredNetId);
         assertNull(preferred.getNetworkSelectionStatus().getConnectChoice());
@@ -4022,7 +4035,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         // Now set scan results of network2 to set the corresponding
         // {@link NetworkSelectionStatus#mSeenInLastQualifiedNetworkSelection} field.
         assertTrue(mWifiConfigManager.setNetworkCandidateScanResult(network2.networkId,
-                createScanDetailForNetwork(network2).getScanResult(), 54));
+                createScanDetailForNetwork(network2).getScanResult(), 54,
+                SecurityParams.createSecurityParamsBySecurityType(
+                        WifiConfiguration.SECURITY_TYPE_PSK)));
 
         // Retrieve the hidden network list & verify the order of the networks returned.
         List<WifiScanner.ScanSettings.HiddenNetwork> hiddenNetworks =
@@ -5773,7 +5788,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         verifyUpdateNetworkAfterConnectHasEverConnectedTrue(network2.networkId);
         // Set network4 {@link NetworkSelectionStatus#mSeenInLastQualifiedNetworkSelection} to true.
         assertTrue(mWifiConfigManager.setNetworkCandidateScanResult(network4.networkId,
-                createScanDetailForNetwork(network4).getScanResult(), 54));
+                createScanDetailForNetwork(network4).getScanResult(), 54,
+                SecurityParams.createSecurityParamsBySecurityType(
+                        WifiConfiguration.SECURITY_TYPE_OPEN)));
         List<WifiConfiguration> networkList = mWifiConfigManager.getConfiguredNetworks();
         // Expected order should be based on connection order and last qualified selection.
         Collections.sort(networkList, mWifiConfigManager.getScanListComparator());

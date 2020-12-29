@@ -23,8 +23,10 @@ import static com.android.server.wifi.util.NativeUtil.addEnclosingQuotes;
 import android.net.IpConfiguration;
 import android.net.MacAddress;
 import android.net.StaticIpConfiguration;
+import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
+import android.net.wifi.WifiManager;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiScanner;
 import android.os.PatternMatcher;
@@ -862,6 +864,80 @@ public class WifiConfigurationUtil {
         return pnoNetwork;
     }
 
+    private static void addOpenUpgradableSecurityTypeIfNecessary(WifiConfiguration config) {
+        if (!config.isSecurityType(WifiConfiguration.SECURITY_TYPE_OPEN)) return;
+        if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE)) return;
+
+        Log.d(TAG, "Add upgradable OWE configuration.");
+        SecurityParams oweParams = SecurityParams.createSecurityParamsBySecurityType(
+                WifiConfiguration.SECURITY_TYPE_OWE);
+        oweParams.setIsAddedByAutoUpgrade(true);
+        config.addSecurityParams(oweParams);
+    }
+
+    private static void addPskUpgradableSecurityTypeIfNecessary(WifiConfiguration config) {
+        if (!config.isSecurityType(WifiConfiguration.SECURITY_TYPE_PSK)) return;
+        if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) return;
+
+        Log.d(TAG, "Add upgradable SAE configuration.");
+        SecurityParams saeParams = SecurityParams.createSecurityParamsBySecurityType(
+                WifiConfiguration.SECURITY_TYPE_SAE);
+        saeParams.setIsAddedByAutoUpgrade(true);
+        config.addSecurityParams(saeParams);
+    }
+
+    /**
+     * Add upgradable securit type to the given wifi configuration.
+     *
+     * @param config the wifi configuration to be checked.
+     */
+    public static void addUpgradableSecurityTypeIfNecessary(WifiConfiguration config) {
+        addOpenUpgradableSecurityTypeIfNecessary(config);
+        addPskUpgradableSecurityTypeIfNecessary(config);
+    }
+
+    /**
+     * For a upgradable type which is added by the auto-upgrade mechenism, it is only
+     * matched when corresponding auto-upgrade features are enabled.
+     */
+    private static boolean shouldOmitAutoUpgradeParams(SecurityParams params) {
+        if (!params.isAddedByAutoUpgrade()) return false;
+
+        WifiGlobals wifiGlobals = WifiInjector.getInstance().getWifiGlobals();
+
+        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
+            return !wifiGlobals.isWpa3SaeUpgradeEnabled();
+        }
+        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE)) {
+            return !wifiGlobals.isOweUpgradeEnabled();
+        }
+        return false;
+    }
+
+    private static boolean isSecurityParamsSupported(SecurityParams params) {
+        final long wifiFeatures = WifiInjector.getInstance()
+                .getActiveModeWarden().getPrimaryClientModeManager()
+                .getSupportedFeatures();
+        switch (params.getSecurityType()) {
+            case WifiConfiguration.SECURITY_TYPE_SAE:
+                return 0 != (wifiFeatures & WifiManager.WIFI_FEATURE_WPA3_SAE);
+            case WifiConfiguration.SECURITY_TYPE_OWE:
+                return 0 != (wifiFeatures & WifiManager.WIFI_FEATURE_OWE);
+        }
+        return true;
+    }
+
+    /**
+     * Check the security params is valid or not.
+     * @param params the requesting security params.
+     * @return true if it's valid; otherwise false.
+     */
+    public static boolean isSecurityParamsValid(SecurityParams params) {
+        if (!params.isEnabled()) return false;
+        if (!isSecurityParamsSupported(params)) return false;
+        if (shouldOmitAutoUpgradeParams(params)) return false;
+        return true;
+    }
 
     /**
      * General WifiConfiguration list sorting algorithm:
