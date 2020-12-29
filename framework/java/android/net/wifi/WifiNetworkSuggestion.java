@@ -453,23 +453,33 @@ public final class WifiNetworkSuggestion implements Parcelable {
         }
 
         /**
-         * Set the subscription ID of the SIM card for which this suggestion is targeted.
-         * The suggestion will only apply to that SIM card.
+         * Configure the suggestion to only be used with the SIM identified by the subscription
+         * ID specified in this method. The suggested network will only be used by that SIM and
+         * no other SIM - even from the same carrier.
          * <p>
-         * The subscription ID must belong to a carrier ID which meets either of the following
-         * conditions:
-         * <li>The carrier ID specified by the cross carrier provider, or</li>
-         * <li>The carrier ID which is used to validate the suggesting carrier-privileged app, see
-         * {@link TelephonyManager#hasCarrierPrivileges()}</li>
+         * The caller is restricted to be either of:
+         * <li>A carrier provisioning app (which holds the
+         * {@code android.Manifest.permission#NETWORK_CARRIER_PROVISIONING} permission).
+         * <li>A carrier-privileged app - which is restricted to only specify a subscription ID
+         * which belong to the same carrier which signed the app, see
+         * {@link TelephonyManager#hasCarrierPrivileges()}.
+         * <p>
+         * Specifying a subscription ID which doesn't match these restriction will cause the
+         * suggestion to be rejected with the error code
+         * {@link WifiManager#STATUS_NETWORK_SUGGESTIONS_ERROR_ADD_NOT_ALLOWED}.
          *
-         * @param subId subscription ID see {@link SubscriptionInfo#getSubscriptionId()}
+         * @param subscriptionId subscription ID see {@link SubscriptionInfo#getSubscriptionId()}
          * @return Instance of {@link Builder} to enable chaining of the builder method.
+         * @throws IllegalArgumentException if subscriptionId equals to {@link SubscriptionManager#INVALID_SUBSCRIPTION_ID}
          */
-        public @NonNull Builder setSubscriptionId(int subId) {
+        public @NonNull Builder setSubscriptionId(int subscriptionId) {
             if (!SdkLevel.isAtLeastS()) {
                 throw new UnsupportedOperationException();
             }
-            mSubscriptionId = subId;
+            if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                throw new IllegalArgumentException();
+            }
+            mSubscriptionId = subscriptionId;
             return this;
         }
 
