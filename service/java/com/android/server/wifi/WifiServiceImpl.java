@@ -2931,11 +2931,11 @@ public class WifiServiceImpl extends BaseWifiService {
 
     /**
      * Provides backward compatibility for apps using
-     * {@link WifiManager#getConnectionInfo()} when a secondary STA is created as a result of
-     * a request from their app (peer to peer WifiNetworkSpecifier request or oem paid/private
-     * suggestion).
+     * {@link WifiManager#getConnectionInfo()}, {@link WifiManager#getDhcpInfo()} when a
+     * secondary STA is created as a result of a request from their app (peer to peer
+     * WifiNetworkSpecifier request or oem paid/private suggestion).
      */
-    private ClientModeManager getClientModeManagerForConnectionInfo(
+    private ClientModeManager getClientModeManagerIfSecondaryCmmRequestedByCallerPresent(
             int callingUid, @NonNull String callingPackageName) {
         List<ConcreteClientModeManager> secondaryCmms =
                 mActiveModeWarden.getClientModeManagersInRoles(
@@ -2967,7 +2967,8 @@ public class WifiServiceImpl extends BaseWifiService {
         long ident = Binder.clearCallingIdentity();
         try {
             WifiInfo result = mWifiThreadRunner.call(
-                    () -> getClientModeManagerForConnectionInfo(uid, callingPackage)
+                    () -> getClientModeManagerIfSecondaryCmmRequestedByCallerPresent(
+                            uid, callingPackage)
                             .syncRequestConnectionInfo(), new WifiInfo());
             boolean hideDefaultMacAddress = true;
             boolean hideBssidSsidNetworkIdAndFqdn = true;
@@ -3268,14 +3269,16 @@ public class WifiServiceImpl extends BaseWifiService {
      * @deprecated
      */
     @Override
-    @Deprecated
-    public DhcpInfo getDhcpInfo() {
+    public DhcpInfo getDhcpInfo(@NonNull String packageName) {
         enforceAccessPermission();
+        int callingUid = Binder.getCallingUid();
         if (mVerboseLoggingEnabled) {
-            mLog.info("getDhcpInfo uid=%").c(Binder.getCallingUid()).flush();
+            mLog.info("getDhcpInfo uid=%").c(callingUid).flush();
         }
-        DhcpResultsParcelable dhcpResults =
-                mActiveModeWarden.getPrimaryClientModeManager().syncGetDhcpResultsParcelable();
+        DhcpResultsParcelable dhcpResults = mWifiThreadRunner.call(
+                () -> getClientModeManagerIfSecondaryCmmRequestedByCallerPresent(
+                        callingUid, packageName)
+                        .syncGetDhcpResultsParcelable(), new DhcpResultsParcelable());
 
         DhcpInfo info = new DhcpInfo();
 
