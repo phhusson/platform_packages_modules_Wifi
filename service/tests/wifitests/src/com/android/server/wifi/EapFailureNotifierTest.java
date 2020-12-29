@@ -143,7 +143,8 @@ public class EapFailureNotifierTest extends WifiBaseTest {
         verify(mNotificationManager).notify(eq(EapFailureNotifier.NOTIFICATION_ID), any());
         ArgumentCaptor<Intent> intent = ArgumentCaptor.forClass(Intent.class);
         verify(mFrameworkFacade).getActivity(
-                eq(mContext), eq(0), intent.capture(), eq(PendingIntent.FLAG_UPDATE_CURRENT));
+                eq(mContext), eq(0), intent.capture(),
+                eq(PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         assertEquals(TEST_SETTINGS_PACKAGE, intent.getValue().getPackage());
         assertEquals(Settings.ACTION_WIFI_SETTINGS, intent.getValue().getAction());
     }
@@ -170,7 +171,8 @@ public class EapFailureNotifierTest extends WifiBaseTest {
         verify(mNotificationManager).notify(eq(EapFailureNotifier.NOTIFICATION_ID), any());
         ArgumentCaptor<Intent> intent = ArgumentCaptor.forClass(Intent.class);
         verify(mFrameworkFacade).getActivity(
-                eq(mContext), eq(0), intent.capture(), eq(PendingIntent.FLAG_UPDATE_CURRENT));
+                eq(mContext), eq(0), intent.capture(),
+                eq(PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         assertEquals(TEST_SETTINGS_PACKAGE, intent.getValue().getPackage());
         assertEquals(Settings.ACTION_WIFI_SETTINGS, intent.getValue().getAction());
     }
