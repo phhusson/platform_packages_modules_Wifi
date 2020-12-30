@@ -1412,6 +1412,10 @@ public class WifiServiceImpl extends BaseWifiService {
                 Map<String, List<WifiClient>> clients, boolean isBridged) {
             synchronized (mLock) {
                 mIsBridgedMode = isBridged;
+                if (infos.size() == 0 && isBridged) {
+                    Log.d(TAG, "ShutDown bridged mode, clear isBridged cache in Service");
+                    mIsBridgedMode = false;
+                }
                 mTetheredSoftApConnectedClientsMap = clients;
                 mTetheredSoftApInfoMap = infos;
             }
@@ -1421,7 +1425,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 ISoftApCallback callback = iterator.next();
                 try {
                     callback.onConnectedClientsOrInfoChanged(mTetheredSoftApInfoMap,
-                            mTetheredSoftApConnectedClientsMap, mIsBridgedMode, false);
+                            mTetheredSoftApConnectedClientsMap, isBridged, false);
                 } catch (RemoteException e) {
                     Log.e(TAG, "onConnectedClientsOrInfoChanged: remote exception -- " + e);
                 }
