@@ -4893,7 +4893,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         verify(mWifiConfigManager).resetSimNetworks();
         verify(mWifiConfigManager).stopTemporarilyDisablingAllNonCarrierMergedWifi();
-        verify(mSimRequiredNotifier, never()).dismissSimRequiredNotification();
+        verify(mSimRequiredNotifier).dismissSimRequiredNotification();
         verify(mWifiNetworkSuggestionsManager).resetCarrierPrivilegedApps();
         verify(mWifiConfigManager).removeEphemeralCarrierNetworks();
         verify(mWifiNetworkSuggestionsManager).resetSimNetworkSuggestions();
