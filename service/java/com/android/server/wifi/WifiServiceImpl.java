@@ -1396,8 +1396,6 @@ public class WifiServiceImpl extends BaseWifiService {
                     callback.onStateChanged(state, failureReason);
                 } catch (RemoteException e) {
                     Log.e(TAG, "onStateChanged: remote exception -- " + e);
-                    // TODO(b/138863863) remove does nothing, getCallbacks() returns a copy
-                    iterator.remove();
                 }
             }
         }
