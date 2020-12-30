@@ -16,14 +16,6 @@
     {
       // Install com.google.android.wifi.apex and run FrameworksWifiTests.
       "name": "FrameworksWifiTests[com.google.android.wifi.apex]"
-    },
-    {
-      "name": "CtsWifiTestCases[com.google.android.wifi.apex]",
-      "options": [
-        {
-          "exclude-annotation": "android.net.wifi.cts.VirtualDeviceNotSupported"
-        }
-      ]
     }
   ]
 }
