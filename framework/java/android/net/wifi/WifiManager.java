@@ -2893,10 +2893,18 @@ public class WifiManager {
      * connectivityManager.registerNetworkCallback(request, networkCallback); // For listen
      * }</pre>
      * <p>
-     * <b>Compatibility Note:</b>
+     * <b>Compatibility Notes:</b>
      * <li>Apps can continue using this API, however newer features
      * such as ability to mask out location sensitive data in WifiInfo will not be supported
      * via this API. </li>
+     * <li>On devices supporting concurrent connections (indicated via
+     * {@link #isMultiStaConcurrencySupported()}), this API will return the details
+     * of the internet providing connection (if any) to all apps, except for the apps that triggered
+     * the creation of the concurrent connection. For such apps, this API will return the details of
+     * the connection they created. e.g. apps using {@link WifiNetworkSpecifier} will
+     * trigger a concurrent connection on supported devices and hence this API will provide
+     * details of their peer to peer connection (not the internet providing connection). This
+     * is to maintain backwards compatibility with behavior on single STA devices.</li>
      * </p>
      */
     @Deprecated
@@ -3031,11 +3039,23 @@ public class WifiManager {
     /**
      * Return the DHCP-assigned addresses from the last successful DHCP request,
      * if any.
+     *
+     * <p>
+     * <li>On devices supporting concurrent connections (indicated via
+     * {@link #isMultiStaConcurrencySupported()}), this API will return the details
+     * of the internet providing connection (if any) to all apps, except for the apps that triggered
+     * the creation of the concurrent connection. For such apps, this API will return the details of
+     * the connection they created. e.g. apps using {@link WifiNetworkSpecifier} will
+     * trigger a concurrent connection on supported devices and hence this API will provide
+     * details of their peer to peer connection (not the internet providing connection). This
+     * is to maintain backwards compatibility with behavior on single STA devices.</li>
+     * </p>
+     *
      * @return the DHCP information
      */
     public DhcpInfo getDhcpInfo() {
         try {
-            return mService.getDhcpInfo();
+            return mService.getDhcpInfo(mContext.getOpPackageName());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -3572,7 +3592,7 @@ public class WifiManager {
      * unexpectedly, but they will receive a notification if they have properly registered.
      * <p>
      * Applications should also be aware that this network will be shared with other applications.
-     * Applications are responsible for protecting their data on this network (e.g., TLS).
+     * Applications are responsible for protecting their data on this network (e.g. TLS).
      * <p>
      * Applications need to have the following permissions to start LocalOnlyHotspot: {@link
      * android.Manifest.permission#CHANGE_WIFI_STATE} and {@link
