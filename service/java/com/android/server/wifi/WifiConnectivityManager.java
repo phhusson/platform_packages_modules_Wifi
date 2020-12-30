@@ -676,7 +676,7 @@ public class WifiConnectivityManager {
             boolean isFullBandScanResults = false;
             if (results != null && results.length > 0) {
                 isFullBandScanResults =
-                        WifiScanner.isFullBandScan(results[0].getBandScanned(), true);
+                        WifiScanner.isFullBandScan(results[0].getBandsScannedInternal(), true);
             }
             // Full band scan results only.
             if (mWaitForFullBandScanResults) {
