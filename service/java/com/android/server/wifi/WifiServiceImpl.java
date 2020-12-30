@@ -436,10 +436,13 @@ public class WifiServiceImpl extends BaseWifiService {
     private void resetCarrierNetworks(@ClientModeImpl.ResetSimReason int resetReason) {
         mWifiThreadRunner.post(() -> {
             Log.d(TAG, "resetting carrier networks since SIM was changed");
-            if (resetReason == RESET_SIM_REASON_SIM_INSERTED) {
-                // whenever a SIM is inserted clear all SIM related notifications
+            if (resetReason == RESET_SIM_REASON_SIM_INSERTED
+                    || resetReason == RESET_SIM_REASON_DEFAULT_DATA_SIM_CHANGED) {
+                // clear all SIM related notifications since some action was taken to address
+                // "missing" SIM issue
                 mSimRequiredNotifier.dismissSimRequiredNotification();
-            } else {
+            }
+            if (resetReason != RESET_SIM_REASON_SIM_INSERTED) {
                 mWifiConfigManager.resetSimNetworks();
                 mWifiNetworkSuggestionsManager.resetSimNetworkSuggestions();
                 mPasspointManager.resetSimPasspointNetwork();
