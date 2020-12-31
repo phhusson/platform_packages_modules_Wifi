@@ -16,11 +16,11 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="wifi_eap_error_message_code_32760" msgid="2026634652595949365">"<xliff:g id="SSID">%1$s</xliff:g> : Ne možete da se povežete na Verizon WiFi Access van oblasti koju Verizon pokriva."</string>
-    <string name="wifi_eap_error_message_code_32761" msgid="360877194229909012">"<xliff:g id="SSID">%1$s</xliff:g> : Niste pretplaćeni na Verizon WiFi Access. Pozovite nas na 800 922 0204."</string>
-    <string name="wifi_eap_error_message_code_32762" msgid="7728639390217187188">"<xliff:g id="SSID">%1$s</xliff:g> : Došlo je do problema u vezi sa Verizon WiFi Access nalogom. Pozovite nas na 800 922 0204."</string>
-    <string name="wifi_eap_error_message_code_32763" msgid="4245525855163845749">"<xliff:g id="SSID">%1$s</xliff:g> : Već ste povezani na Verizon WiFi Access."</string>
-    <string name="wifi_eap_error_message_code_32764" msgid="7837099889588693332">"<xliff:g id="SSID">%1$s</xliff:g> : Postoji problem pri povezivanju na Verizon WiFi Access. Pozovite nas na 800 922 0204."</string>
-    <string name="wifi_eap_error_message_code_32765" msgid="1430902733213412544">"<xliff:g id="SSID">%1$s</xliff:g> : Došlo je do problema u vezi sa Verizon WiFi Access nalogom. Pozovite nas na 800 922 0204."</string>
-    <string name="wifi_eap_error_message_code_32766" msgid="3201380662092880364">"<xliff:g id="SSID">%1$s</xliff:g> : Verizon WiFi Access nije dostupan sa vaše lokacije. Probajte ponovo kasnije ili probajte sa neke druge lokacije."</string>
+    <string name="wifi_eap_error_message_code_32760" msgid="5711364720754353427">"<xliff:g id="SSID">%1$s</xliff:g> : Ne možete da se povežete na Verizon WiFi Access van oblasti koju Verizon pokriva."</string>
+    <string name="wifi_eap_error_message_code_32761" msgid="7871615432524623339">"<xliff:g id="SSID">%1$s</xliff:g> : Niste pretplaćeni na Verizon WiFi Access. Pozovite nas na 800 922 0204."</string>
+    <string name="wifi_eap_error_message_code_32762" msgid="2994908156286205343">"<xliff:g id="SSID">%1$s</xliff:g> : Došlo je do problema u vezi sa Verizon WiFi Access nalogom. Pozovite nas na 800 922 0204."</string>
+    <string name="wifi_eap_error_message_code_32763" msgid="8051026304965697200">"<xliff:g id="SSID">%1$s</xliff:g> : Već ste povezani na Verizon WiFi Access."</string>
+    <string name="wifi_eap_error_message_code_32764" msgid="7311904315070770780">"<xliff:g id="SSID">%1$s</xliff:g> : Postoji problem pri povezivanju na Verizon WiFi Access. Pozovite nas na 800 922 0204."</string>
+    <string name="wifi_eap_error_message_code_32765" msgid="576968115890091383">"<xliff:g id="SSID">%1$s</xliff:g> : Došlo je do problema u vezi sa Verizon WiFi Access nalogom. Pozovite nas na 800 922 0204."</string>
+    <string name="wifi_eap_error_message_code_32766" msgid="895346637290649533">"<xliff:g id="SSID">%1$s</xliff:g> : Verizon WiFi Access nije dostupan sa vaše lokacije. Probajte ponovo kasnije ili probajte sa neke druge lokacije."</string>
 </resources>
