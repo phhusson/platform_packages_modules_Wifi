@@ -37,6 +37,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
 import android.net.DhcpInfo;
+import android.net.LinkProperties;
 import android.net.MacAddress;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -3040,7 +3041,14 @@ public class WifiManager {
      * Return the DHCP-assigned addresses from the last successful DHCP request,
      * if any.
      *
+     * @return the DHCP information
+     *
+     * @deprecated Use the methods on {@link android.net.LinkProperties} which can be obtained
+     * either via {@link NetworkCallback#onLinkPropertiesChanged(Network, LinkProperties)} or
+     * {@link ConnectivityManager#getLinkProperties(Network)}.
+     *
      * <p>
+     * <b>Compatibility Notes:</b>
      * <li>On devices supporting concurrent connections (indicated via
      * {@link #isMultiStaConcurrencySupported()}), this API will return the details
      * of the internet providing connection (if any) to all apps, except for the apps that triggered
@@ -3050,9 +3058,8 @@ public class WifiManager {
      * details of their peer to peer connection (not the internet providing connection). This
      * is to maintain backwards compatibility with behavior on single STA devices.</li>
      * </p>
-     *
-     * @return the DHCP information
      */
+    @Deprecated
     public DhcpInfo getDhcpInfo() {
         try {
             return mService.getDhcpInfo(mContext.getOpPackageName());
