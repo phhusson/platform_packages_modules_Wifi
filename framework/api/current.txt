@@ -46,9 +46,9 @@ package android.net.wifi {
     field public int channelWidth;
     field public int frequency;
     field public int level;
-    field public CharSequence operatorFriendlyName;
+    field @Deprecated public CharSequence operatorFriendlyName;
     field public long timestamp;
-    field public CharSequence venueName;
+    field @Deprecated public CharSequence venueName;
   }
 
   public static class ScanResult.InformationElement {
