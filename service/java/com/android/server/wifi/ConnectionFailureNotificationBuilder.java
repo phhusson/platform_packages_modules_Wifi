@@ -76,7 +76,8 @@ public class ConnectionFailureNotificationBuilder {
         showDetailIntent.putExtra(RANDOMIZATION_SETTINGS_NETWORK_ID, config.networkId);
         showDetailIntent.putExtra(RANDOMIZATION_SETTINGS_NETWORK_SSID, ssidAndSecurityType);
         PendingIntent pendingShowDetailIntent = mFrameworkFacade.getBroadcast(
-                mContext, 0, showDetailIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                mContext, 0, showDetailIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         return mFrameworkFacade.makeNotificationBuilder(
                 mContext, WifiService.NOTIFICATION_NETWORK_ALERTS)

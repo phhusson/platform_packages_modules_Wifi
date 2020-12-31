@@ -85,7 +85,7 @@ public class WakeupNotificationFactory {
     private PendingIntent getPrivateBroadcast(String action) {
         Intent intent = new Intent(action)
                 .setPackage(mWifiInjector.getWifiStackPackageName());
-        return mFrameworkFacade.getBroadcast(
-                mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return mFrameworkFacade.getBroadcast(mContext, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

@@ -112,7 +112,8 @@ public class SimRequiredNotifier {
                 .setSmallIcon(Icon.createWithResource(mContext.getWifiOverlayApkPkgName(),
                         R.drawable.stat_notify_wifi_in_range))
                 .setContentIntent(mFrameworkFacade.getActivity(
-                        mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT));
+                        mContext, 0, intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         mNotificationManager.notify(SystemMessage.NOTE_ID_WIFI_SIM_REQUIRED,
                 builder.build());
     }
