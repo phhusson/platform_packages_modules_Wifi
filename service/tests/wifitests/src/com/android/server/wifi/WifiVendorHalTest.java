@@ -2673,6 +2673,17 @@ public class WifiVendorHalTest extends WifiBaseTest {
     }
 
     /**
+     * Test removeIfaceInstanceFromBridgedApIface
+     */
+    @Test
+    public void testRemoveIfaceInstanceFromBridgedApIface() throws RemoteException {
+        mWifiVendorHal = new WifiVendorHalSpyV1_5(mContext, mHalDeviceManager, mHandler);
+        when(mIWifiChipV15.removeIfaceInstanceFromBridgedApIface(any(), any()))
+                .thenReturn(mWifiStatusSuccess);
+        assertTrue(mWifiVendorHal.removeIfaceInstanceFromBridgedApIface(any(), any()));
+    }
+
+    /**
      * Test the callback handling for the 1.2 HAL.
      */
     @Test

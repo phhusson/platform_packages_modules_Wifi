@@ -136,6 +136,12 @@
          are no connected devices. -->
     <integer translatable="false" name="config_wifiFrameworkSoftApShutDownTimeoutMilliseconds">600000</integer>
 
+    <!-- Integer delay in milliseconds before shutting down idle soft AP instance.
+         This timer is the inactivity timer for transitioning a Dual AP to Single AP mode
+         by shutting down one of the APs that has been inactive/unused.
+         If both APs in Dual AP mode are idle, it shuts down the AP in higher band. -->
+    <integer translatable="false" name="config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond">300000</integer>
+
     <!-- Integer indicating maximum hardware supported client number of soft ap -->
     <integer translatable="false" name="config_wifiHardwareSoftapMaxClientCount">16</integer>
 
