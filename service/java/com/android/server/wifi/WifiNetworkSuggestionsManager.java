@@ -1456,7 +1456,7 @@ public class WifiNetworkSuggestionsManager {
                 .putExtra(extra1.first, extra1.second)
                 .putExtra(extra2.first, extra2.second);
         return mFrameworkFacade.getBroadcast(mContext, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private @NonNull CharSequence getAppName(@NonNull String packageName, int uid) {
