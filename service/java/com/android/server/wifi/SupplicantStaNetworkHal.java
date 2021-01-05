@@ -1369,6 +1369,14 @@ public class SupplicantStaNetworkHal {
         }
     }
 
+    /** get current network id */
+    public int getNetworkId() {
+        if (!getId()) {
+            return -1;
+        }
+        return mNetworkId;
+    }
+
     /** See ISupplicantStaNetwork.hal for documentation */
     private boolean registerCallback(ISupplicantStaNetworkCallback callback) {
         synchronized (mLock) {
@@ -3080,7 +3088,7 @@ public class SupplicantStaNetworkHal {
     }
 
     /** See ISupplicantStaNetwork.hal for documentation */
-    private boolean enable(boolean noConnect) {
+    public boolean enable(boolean noConnect) {
         synchronized (mLock) {
             final String methodStr = "enable";
             if (!checkISupplicantStaNetworkAndLogFailure(methodStr)) return false;
