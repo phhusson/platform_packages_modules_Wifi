@@ -186,7 +186,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
         mResources = new MockResources();
         mResources.setBoolean(
-                R.bool.config_wifi_only_link_same_credential_configurations, true);
+                R.bool.config_wifi_only_link_same_credential_configurations, false);
+        mResources.setBoolean(
+                R.bool.config_wifiAllowLinkingUnknownDefaultGatewayConfigurations, true);
         mResources.setInteger(
                 R.integer.config_wifi_framework_associated_partial_scan_max_num_active_channels,
                 TEST_MAX_NUM_ACTIVE_CHANNELS_FOR_PARTIAL_SCAN);
@@ -2635,6 +2637,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         WifiConfiguration network1 = WifiConfigurationTestUtil.createPskNetwork();
         WifiConfiguration network2 = WifiConfigurationTestUtil.createPskNetwork();
         WifiConfiguration network3 = WifiConfigurationTestUtil.createPskNetwork();
+        network1.preSharedKey = "\"preSharedKey1\"";
+        network2.preSharedKey = "\"preSharedKey2\"";
+        network3.preSharedKey = "\"preSharedKey3\"";
         verifyAddNetworkToWifiConfigManager(network1);
         verifyAddNetworkToWifiConfigManager(network2);
         verifyAddNetworkToWifiConfigManager(network3);
@@ -2660,6 +2665,17 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 networkScanDetail2));
         assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
                 networkScanDetail3));
+
+        // Now update the linked networks for all of the networks
+        mWifiConfigManager.updateNetworkSelectionStatus(network1.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network2.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network3.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateLinkedNetworks(network1.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network2.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network3.networkId);
 
         List<WifiConfiguration> retrievedNetworks =
                 mWifiConfigManager.getConfiguredNetworks();
@@ -2727,6 +2743,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         WifiConfiguration network1 = WifiConfigurationTestUtil.createPskNetwork();
         WifiConfiguration network2 = WifiConfigurationTestUtil.createPskNetwork();
         WifiConfiguration network3 = WifiConfigurationTestUtil.createPskNetwork();
+        network1.preSharedKey = "\"preSharedKey1\"";
+        network2.preSharedKey = "\"preSharedKey2\"";
+        network3.preSharedKey = "\"preSharedKey3\"";
         verifyAddNetworkToWifiConfigManager(network1);
         verifyAddNetworkToWifiConfigManager(network2);
         verifyAddNetworkToWifiConfigManager(network3);
@@ -2744,6 +2763,17 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 networkScanDetail2));
         assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
                 networkScanDetail3));
+
+        // Now update the linked networks for all of the networks
+        mWifiConfigManager.updateNetworkSelectionStatus(network1.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network2.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network3.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateLinkedNetworks(network1.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network2.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network3.networkId);
 
         List<WifiConfiguration> retrievedNetworks =
                 mWifiConfigManager.getConfiguredNetworks();
@@ -2780,6 +2810,14 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
                 networkScanDetail2));
 
+        // Now update the linked networks for all of the networks
+        mWifiConfigManager.updateNetworkSelectionStatus(network1.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network2.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateLinkedNetworks(network1.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network2.networkId);
+
         List<WifiConfiguration> retrievedNetworks =
                 mWifiConfigManager.getConfiguredNetworks();
         for (WifiConfiguration network : retrievedNetworks) {
@@ -2797,6 +2835,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
     public void testNoNetworkLinkUsingBSSIDMatchForNetworksWithHighScanDetailCacheSize() {
         WifiConfiguration network1 = WifiConfigurationTestUtil.createPskNetwork();
         WifiConfiguration network2 = WifiConfigurationTestUtil.createPskNetwork();
+        network1.preSharedKey = "\"preSharedKey1\"";
+        network2.preSharedKey = "\"preSharedKey2\"";
         verifyAddNetworkToWifiConfigManager(network1);
         verifyAddNetworkToWifiConfigManager(network2);
 
@@ -2821,6 +2861,14 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
                 networkScanDetail2));
 
+        // Now update the linked networks for all of the networks
+        mWifiConfigManager.updateNetworkSelectionStatus(network1.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network2.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateLinkedNetworks(network1.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network2.networkId);
+
         List<WifiConfiguration> retrievedNetworks =
                 mWifiConfigManager.getConfiguredNetworks();
         for (WifiConfiguration network : retrievedNetworks) {
@@ -2837,6 +2885,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
     public void testNetworkLinkUsingBSSIDMatchAndThenUnlinkDueToGwMacAddress() {
         WifiConfiguration network1 = WifiConfigurationTestUtil.createPskNetwork();
         WifiConfiguration network2 = WifiConfigurationTestUtil.createPskNetwork();
+        network1.preSharedKey = "\"preSharedKey1\"";
+        network2.preSharedKey = "\"preSharedKey2\"";
         verifyAddNetworkToWifiConfigManager(network1);
         verifyAddNetworkToWifiConfigManager(network2);
 
@@ -2850,6 +2900,14 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 networkScanDetail1));
         assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
                 networkScanDetail2));
+
+        // Now update the linked networks for all of the networks
+        mWifiConfigManager.updateNetworkSelectionStatus(network1.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateNetworkSelectionStatus(network2.networkId,
+                TEST_NETWORK_SELECTION_ENABLE_REASON);
+        mWifiConfigManager.updateLinkedNetworks(network1.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network2.networkId);
 
         List<WifiConfiguration> retrievedNetworks =
                 mWifiConfigManager.getConfiguredNetworks();
@@ -2869,12 +2927,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 network1.networkId, "de:ad:fe:45:23:34"));
         assertTrue(mWifiConfigManager.setNetworkDefaultGwMacAddress(
                 network2.networkId, "ad:de:fe:45:23:34"));
-
-        // Add some fake scan results again to re-evaluate the linking of networks.
-        assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
-                createScanDetailForNetwork(network1, "af:89:56:34:45:67")));
-        assertNotNull(mWifiConfigManager.getSavedNetworkForScanDetailAndCache(
-                createScanDetailForNetwork(network1, "af:89:56:34:45:68")));
+        mWifiConfigManager.updateLinkedNetworks(network1.networkId);
+        mWifiConfigManager.updateLinkedNetworks(network2.networkId);
 
         retrievedNetworks = mWifiConfigManager.getConfiguredNetworks();
         for (WifiConfiguration network : retrievedNetworks) {
