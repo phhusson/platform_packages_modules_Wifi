@@ -120,6 +120,7 @@ import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiUsabilityStatsListener;
 import android.net.wifi.IScanResultsCallback;
 import android.net.wifi.ISoftApCallback;
+import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
@@ -338,6 +339,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Mock ISuggestionConnectionStatusListener mSuggestionConnectionStatusListener;
     @Mock ISuggestionUserApprovalStatusListener mSuggestionUserApprovalStatusListener;
     @Mock IOnWifiActivityEnergyInfoListener mOnWifiActivityEnergyInfoListener;
+    @Mock ISubsystemRestartCallback mSubsystemRestartCallback;
     @Mock IWifiConnectedNetworkScorer mWifiConnectedNetworkScorer;
     @Mock WifiSettingsConfigStore mWifiSettingsConfigStore;
     @Mock WifiScanAlwaysAvailableSettingsCompatibility mScanAlwaysAvailableSettingsCompatibility;
@@ -1083,6 +1085,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      * Verify that the restartWifiSubsystem fails w/o the NETWORK_AIRPLANE_MODE permission.
      */
     @Test public void testRestartWifiSubsystemWithoutPermission() {
+        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext).enforceCallingOrSelfPermission(
                 eq(android.Manifest.permission.NETWORK_AIRPLANE_MODE), eq("WifiService"));
 
@@ -1095,9 +1098,55 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
+     * Verify that a call to registerSubsystemRestartCallback throws a SecurityException if the
+     * caller does not have the ACCESS_WIFI_STATE permission.
+     */
+    @Test
+    public void testRegisterSubsystemRestartThrowsSecurityExceptionOnMissingPermissions() {
+        doThrow(new SecurityException()).when(mContext)
+                .enforceCallingOrSelfPermission(eq(ACCESS_WIFI_STATE),
+                        eq("WifiService"));
+        try {
+            mWifiServiceImpl.registerSubsystemRestartCallback(mSubsystemRestartCallback);
+            fail("expected SecurityException");
+        } catch (SecurityException expected) { }
+    }
+
+    /**
+     * Verify that a call to unregisterSubsystemRestartCallback throws a SecurityException if the
+     * caller does not have the ACCESS_WIFI_STATE permission.
+     */
+    @Test
+    public void testUnregisterSubsystemRestartThrowsSecurityExceptionOnMissingPermissions() {
+        doThrow(new SecurityException()).when(mContext)
+                .enforceCallingOrSelfPermission(eq(ACCESS_WIFI_STATE),
+                        eq("WifiService"));
+        try {
+            mWifiServiceImpl.unregisterSubsystemRestartCallback(mSubsystemRestartCallback);
+            fail("expected SecurityException");
+        } catch (SecurityException expected) { }
+    }
+
+
+    /**
+     * Test register and unregister subsystem restart callback will go to ActiveModeManager;
+     */
+    @Test
+    public void testRegisterUnregisterSubsystemRestartCallback() throws Exception {
+        when(mCoexCallback.asBinder()).thenReturn(mAppBinder);
+        mWifiServiceImpl.registerSubsystemRestartCallback(mSubsystemRestartCallback);
+        mLooper.dispatchAll();
+        verify(mActiveModeWarden).registerSubsystemRestartCallback(mSubsystemRestartCallback);
+        mWifiServiceImpl.unregisterSubsystemRestartCallback(mSubsystemRestartCallback);
+        mLooper.dispatchAll();
+        verify(mActiveModeWarden).unregisterSubsystemRestartCallback(mSubsystemRestartCallback);
+    }
+
+    /**
      * Verify that the restartWifiSubsystem succeeds and passes correct parameters.
      */
     @Test public void testRestartWifiSubsystemWithReason() {
+        assumeTrue(SdkLevel.isAtLeastS());
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_AIRPLANE_MODE),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
 
