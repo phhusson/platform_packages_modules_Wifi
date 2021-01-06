@@ -432,6 +432,15 @@ public class SupplicantStaNetworkHal {
                 Log.e(TAG, "failed to set update identifier");
                 return false;
             }
+            /** SAE configuration */
+            if (securityParams.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
+                /** Hash-to-Element preference */
+                if (getV1_4StaNetwork() != null
+                        && !setSaeH2eOnlyMode(securityParams.isSaeH2eOnlyMode())) {
+                    Log.e(TAG, "failed to set H2E preference.");
+                    return false;
+                }
+            }
             // Finish here if no EAP config to set
             if (config.enterpriseConfig != null
                     && config.enterpriseConfig.getEapMethod() != WifiEnterpriseConfig.Eap.NONE) {
@@ -3520,6 +3529,30 @@ public class SupplicantStaNetworkHal {
                     return checkStatusAndLogFailure(status, methodStr);
                 } else {
                     Log.e(TAG, "Cannot get ISupplicantStaNetwork V1.3");
+                    return false;
+                }
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+                return false;
+            }
+        }
+    }
+
+    /** See ISupplicantStaNetwork.hal for documentation */
+    private boolean setSaeH2eOnlyMode(boolean enable) {
+        synchronized (mLock) {
+            final String methodStr = "setSaeH2eOnlyMode";
+            if (!checkISupplicantStaNetworkAndLogFailure(methodStr)) return false;
+
+            try {
+                android.hardware.wifi.supplicant.V1_4.ISupplicantStaNetwork
+                        iSupplicantStaNetworkV14 = getV1_4StaNetwork();
+                if (iSupplicantStaNetworkV14 != null) {
+                    android.hardware.wifi.supplicant.V1_4.SupplicantStatus status =
+                            iSupplicantStaNetworkV14.enableSaeH2eOnlyMode(enable);
+                    return checkStatusAndLogFailure(status, methodStr);
+                } else {
+                    Log.e(TAG, "Cannot get ISupplicantStaNetwork V1.4");
                     return false;
                 }
             } catch (RemoteException e) {
