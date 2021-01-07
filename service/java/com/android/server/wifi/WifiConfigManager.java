@@ -801,6 +801,30 @@ public class WifiConfigManager {
         return mConfiguredNetworks.valuesForCurrentUser();
     }
 
+    private WifiConfiguration getInternalConfiguredNetworkByUpgradableType(
+            WifiConfiguration config) {
+        WifiConfiguration internalConfig = null;
+        int securityType = config.getDefaultSecurityParams().getSecurityType();
+        internalConfig = mConfiguredNetworks.getBySsidSecurityTypeForCurrentUser(
+                config.SSID, securityType, config.shared);
+        if (internalConfig != null) {
+            return internalConfig;
+        }
+        switch (securityType) {
+            case WifiConfiguration.SECURITY_TYPE_PSK:
+                return mConfiguredNetworks.getBySsidSecurityTypeForCurrentUser(
+                        config.SSID, WifiConfiguration.SECURITY_TYPE_SAE, config.shared);
+            case WifiConfiguration.SECURITY_TYPE_EAP:
+                return mConfiguredNetworks.getBySsidSecurityTypeForCurrentUser(
+                        config.SSID, WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE,
+                        config.shared);
+            case WifiConfiguration.SECURITY_TYPE_OPEN:
+                return mConfiguredNetworks.getBySsidSecurityTypeForCurrentUser(
+                        config.SSID, WifiConfiguration.SECURITY_TYPE_OWE, config.shared);
+        }
+        return null;
+    }
+
     /**
      * Helper method to retrieve the internal WifiConfiguration object corresponding to the
      * provided configuration in our database.
@@ -813,9 +837,14 @@ public class WifiConfigManager {
             return internalConfig;
         }
         internalConfig = mConfiguredNetworks.getByConfigKeyForCurrentUser(config.getProfileKey());
+        if (internalConfig != null) {
+            return internalConfig;
+        }
+        internalConfig = getInternalConfiguredNetworkByUpgradableType(config);
         if (internalConfig == null) {
             Log.e(TAG, "Cannot find network with networkId " + config.networkId
-                    + " or configKey " + config.getProfileKey());
+                    + " or configKey " + config.getProfileKey()
+                    + " or upgradable security type check");
         }
         return internalConfig;
     }
@@ -930,6 +959,36 @@ public class WifiConfigManager {
 
     }
 
+    private void mergeSecurityParamsListWithInternalWifiConfiguration(
+            WifiConfiguration internalConfig, WifiConfiguration externalConfig) {
+        // If not set, just copy over all list.
+        if (internalConfig.getSecurityParamsList().isEmpty()) {
+            internalConfig.setSecurityParams(externalConfig.getSecurityParamsList());
+            return;
+        }
+
+        // An external caller is only allowed to set one type manually.
+        // As a result, only default type matters.
+        // There might be 2 cases:
+        // 1. Existing config with new upgradable type config,
+        //    ex. PSK/SAE config with SAE config.
+        // 2. Existing configuration with downgradable type config,
+        //    ex. SAE config with PSK config.
+        // As security params list is not empty, new config won't be an
+        // non-upgradable or non-downgradable type, or it cannot match
+        // any existing configs.
+        int oldType = internalConfig.getDefaultSecurityParams().getSecurityType();
+        int newType = externalConfig.getDefaultSecurityParams().getSecurityType();
+        if (oldType != newType) {
+            if (internalConfig.isSecurityType(newType)) {
+                internalConfig.setSecurityParamsIsAddedByAutoUpgrade(newType, false);
+            } else {
+                internalConfig.setSecurityParams(newType);
+                internalConfig.addSecurityParams(oldType);
+            }
+        }
+    }
+
     /**
      * Copy over public elements from an external WifiConfiguration object to the internal
      * configuration object if element has been set in the provided external WifiConfiguration.
@@ -987,11 +1046,7 @@ public class WifiConfigManager {
             internalConfig.roamingConsortiumIds = externalConfig.roamingConsortiumIds.clone();
         }
 
-        // Copy over all the security params if set.
-        if (externalConfig.getSecurityParamsList() != null
-                && !externalConfig.getSecurityParamsList().isEmpty()) {
-            internalConfig.setSecurityParams(externalConfig.getSecurityParamsList());
-        }
+        mergeSecurityParamsListWithInternalWifiConfiguration(internalConfig, externalConfig);
 
         // Copy over all the auth/protocol/key mgmt parameters if set.
         if (externalConfig.allowedAuthAlgorithms != null
@@ -1285,6 +1340,9 @@ public class WifiConfigManager {
         // Add it to our internal map. This will replace any existing network configuration for
         // updates.
         try {
+            if (null != existingInternalConfig) {
+                mConfiguredNetworks.remove(existingInternalConfig.networkId);
+            }
             mConfiguredNetworks.put(newInternalConfig);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Failed to add network to config map", e);
@@ -1339,6 +1397,7 @@ public class WifiConfigManager {
             Log.e(TAG, "Cannot add/update network before store is read!");
             return new NetworkUpdateResult(WifiConfiguration.INVALID_NETWORK_ID);
         }
+        config.convertLegacyFieldsToSecurityParamsIfNeeded();
         WifiConfiguration existingConfig = getInternalConfiguredNetwork(config);
         if (!config.isEphemeral()) {
             // Removes the existing ephemeral network if it exists to add this configuration.
@@ -2897,7 +2956,16 @@ public class WifiConfigManager {
                 Log.e(TAG, "Skipping malformed network from shared store: " + configuration);
                 continue;
             }
+
+            WifiConfiguration existingConfiguration = getInternalConfiguredNetwork(configuration);
+            if (null != existingConfiguration) {
+                Log.d(TAG, "Merging network from shared store " + configuration.getProfileKey());
+                mergeWithInternalWifiConfiguration(existingConfiguration, configuration);
+                continue;
+            }
+
             configuration.networkId = mNextNetworkId++;
+            WifiConfigurationUtil.addUpgradableSecurityTypeIfNecessary(configuration);
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "Adding network from shared store " + configuration.getProfileKey());
             }
@@ -2923,7 +2991,16 @@ public class WifiConfigManager {
                 Log.e(TAG, "Skipping malformed network from user store: " + configuration);
                 continue;
             }
+
+            WifiConfiguration existingConfiguration = getInternalConfiguredNetwork(configuration);
+            if (null != existingConfiguration) {
+                Log.d(TAG, "Merging network from user store " + configuration.getProfileKey());
+                mergeWithInternalWifiConfiguration(existingConfiguration, configuration);
+                continue;
+            }
+
             configuration.networkId = mNextNetworkId++;
+            WifiConfigurationUtil.addUpgradableSecurityTypeIfNecessary(configuration);
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "Adding network from user store " + configuration.getProfileKey());
             }

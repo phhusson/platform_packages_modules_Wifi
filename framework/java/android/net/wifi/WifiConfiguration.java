@@ -737,6 +737,31 @@ public class WifiConfiguration implements Parcelable {
     }
 
     /**
+     * Set whether a type is added by auto-upgrade.
+     *
+     * @param securityType One of the following security types:
+     * {@link #SECURITY_TYPE_OPEN},
+     * {@link #SECURITY_TYPE_WEP},
+     * {@link #SECURITY_TYPE_PSK},
+     * {@link #SECURITY_TYPE_EAP},
+     * {@link #SECURITY_TYPE_SAE},
+     * {@link #SECURITY_TYPE_OWE},
+     * {@link #SECURITY_TYPE_WAPI_PSK},
+     * {@link #SECURITY_TYPE_WAPI_CERT},
+     * {@link #SECURITY_TYPE_EAP_WPA3_ENTERPRISE},
+     * {@link #SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT},
+     *
+     * @hide
+     */
+    public void setSecurityParamsIsAddedByAutoUpgrade(
+            @SecurityType int securityType, boolean isAddedByAutoUpgrade) {
+        mSecurityParamsList.stream()
+                .filter(params -> params.isSecurityType(securityType))
+                .findAny()
+                .ifPresent(params -> params.setIsAddedByAutoUpgrade(isAddedByAutoUpgrade));
+    }
+
+    /**
      * Get the specific security param.
      *
      * @param securityType One of the following security types:

@@ -6095,4 +6095,281 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         mWifiConfigManager.getPersistentMacAddress(network);
         verify(mMacAddressUtil).calculatePersistentMac(eq(network.getNetworkKey()), any());
     }
+
+    private void verifyAddUpgradableNetwork(
+            WifiConfiguration baseConfig,
+            WifiConfiguration upgradableConfig) {
+        int baseSecurityType = baseConfig.getDefaultSecurityParams().getSecurityType();
+        int upgradableSecurityType = upgradableConfig.getDefaultSecurityParams().getSecurityType();
+
+        NetworkUpdateResult result = addNetworkToWifiConfigManager(baseConfig);
+        assertTrue(result.getNetworkId() != WifiConfiguration.INVALID_NETWORK_ID);
+        List<WifiConfiguration> retrievedNetworks =
+                mWifiConfigManager.getConfiguredNetworksWithPasswords();
+        assertEquals(1, retrievedNetworks.size());
+        WifiConfiguration unmergedNetwork = retrievedNetworks.get(0);
+        assertTrue(unmergedNetwork.isSecurityType(baseSecurityType));
+        assertTrue(unmergedNetwork.isSecurityType(upgradableSecurityType));
+        assertTrue(unmergedNetwork.getSecurityParams(upgradableSecurityType)
+                .isAddedByAutoUpgrade());
+
+        result = addNetworkToWifiConfigManager(upgradableConfig);
+        assertTrue(result.getNetworkId() != WifiConfiguration.INVALID_NETWORK_ID);
+
+        retrievedNetworks =
+                mWifiConfigManager.getConfiguredNetworksWithPasswords();
+        // Two networks should be merged into one.
+        assertEquals(1, retrievedNetworks.size());
+        WifiConfiguration mergedNetwork = retrievedNetworks.get(0);
+        assertTrue(mergedNetwork.isSecurityType(baseSecurityType));
+        assertTrue(mergedNetwork.isSecurityType(upgradableSecurityType));
+        assertFalse(mergedNetwork.getSecurityParams(upgradableSecurityType)
+                .isAddedByAutoUpgrade());
+    }
+
+    /**
+     * Verifies the addition of an upgradable network using
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddUpgradableNetworkForPskSae() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        WifiConfiguration upgradableConfig = new WifiConfiguration();
+        upgradableConfig.SSID = "\"upgradableNetwork\"";
+        upgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        upgradableConfig.preSharedKey = "\"Passw0rd\"";
+
+        verifyAddUpgradableNetwork(baseConfig, upgradableConfig);
+    }
+
+    /**
+     * Verifies the addition of an upgradable network using
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddUpgradableNetworkForWpa2Wpa3Enterprise() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_EAP);
+        baseConfig.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
+        WifiConfiguration upgradableConfig = new WifiConfiguration();
+        upgradableConfig.SSID = "\"upgradableNetwork\"";
+        upgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE);
+        upgradableConfig.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
+
+        verifyAddUpgradableNetwork(baseConfig, upgradableConfig);
+    }
+
+    /**
+     * Verifies the addition of an upgradable network using
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddUpgradableNetworkForOpenOwe() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_OPEN);
+        WifiConfiguration upgradableConfig = new WifiConfiguration();
+        upgradableConfig.SSID = "\"upgradableNetwork\"";
+        upgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_OWE);
+
+        verifyAddUpgradableNetwork(baseConfig, upgradableConfig);
+    }
+
+    private void verifyAddDowngradableNetwork(
+            WifiConfiguration baseConfig,
+            WifiConfiguration downgradableConfig) {
+        int baseSecurityType = baseConfig.getDefaultSecurityParams().getSecurityType();
+        int downgradableSecurityType = downgradableConfig.getDefaultSecurityParams()
+                .getSecurityType();
+
+        NetworkUpdateResult result = addNetworkToWifiConfigManager(baseConfig);
+        assertTrue(result.getNetworkId() != WifiConfiguration.INVALID_NETWORK_ID);
+        List<WifiConfiguration> retrievedNetworks =
+                mWifiConfigManager.getConfiguredNetworksWithPasswords();
+        assertEquals(1, retrievedNetworks.size());
+        WifiConfiguration unmergedNetwork = retrievedNetworks.get(0);
+        assertEquals(baseSecurityType,
+                unmergedNetwork.getDefaultSecurityParams().getSecurityType());
+        assertTrue(unmergedNetwork.isSecurityType(baseSecurityType));
+        assertFalse(unmergedNetwork.isSecurityType(downgradableSecurityType));
+        assertFalse(unmergedNetwork.getSecurityParams(baseSecurityType)
+                .isAddedByAutoUpgrade());
+
+        result = addNetworkToWifiConfigManager(downgradableConfig);
+        assertTrue(result.getNetworkId() != WifiConfiguration.INVALID_NETWORK_ID);
+
+        retrievedNetworks =
+                mWifiConfigManager.getConfiguredNetworksWithPasswords();
+        // Two networks should be merged into one.
+        assertEquals(1, retrievedNetworks.size());
+        WifiConfiguration mergedNetwork = retrievedNetworks.get(0);
+        // default type is changed to downgrading one.
+        assertEquals(downgradableSecurityType,
+                mergedNetwork.getDefaultSecurityParams().getSecurityType());
+        assertTrue(mergedNetwork.isSecurityType(baseSecurityType));
+        assertTrue(mergedNetwork.isSecurityType(downgradableSecurityType));
+        assertFalse(mergedNetwork.getSecurityParams(baseSecurityType)
+                .isAddedByAutoUpgrade());
+    }
+    /**
+     * Verifies the addition of a downgradable network using
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddDowngradableNetworkSaePsk() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"downgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        WifiConfiguration downgradableConfig = new WifiConfiguration();
+        downgradableConfig.SSID = "\"downgradableNetwork\"";
+        downgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        downgradableConfig.preSharedKey = "\"Passw0rd\"";
+
+        verifyAddDowngradableNetwork(
+                baseConfig,
+                downgradableConfig);
+    }
+
+    /**
+     * Verifies the addition of a downgradable network using
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddDowngradableNetworkWpa2Wpa3Enterprise() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"downgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE);
+        baseConfig.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
+        WifiConfiguration downgradableConfig = new WifiConfiguration();
+        downgradableConfig.SSID = "\"downgradableNetwork\"";
+        downgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_EAP);
+        downgradableConfig.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
+
+        verifyAddDowngradableNetwork(
+                baseConfig,
+                downgradableConfig);
+    }
+
+    /**
+     * Verifies the addition of a downgradable network using
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddDowngradableNetworkOweOpen() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"downgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_OWE);
+        WifiConfiguration downgradableConfig = new WifiConfiguration();
+        downgradableConfig.SSID = "\"downgradableNetwork\"";
+        downgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_OPEN);
+
+        verifyAddDowngradableNetwork(
+                baseConfig,
+                downgradableConfig);
+    }
+
+    private void verifyLoadFromStoreMergeUpgradableConfigurations(
+            WifiConfiguration baseConfig,
+            WifiConfiguration upgradableConfig) {
+        int baseSecurityType = baseConfig.getDefaultSecurityParams().getSecurityType();
+        int upgradableSecurityType = upgradableConfig.getDefaultSecurityParams().getSecurityType();
+
+        // Set up the store data.
+        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
+            {
+                add(baseConfig);
+                add(upgradableConfig);
+            }
+        };
+        setupStoreDataForRead(sharedNetworks, new ArrayList<>());
+
+        // read from store now
+        assertTrue(mWifiConfigManager.loadFromStore());
+
+        // assert that the expected identities are reset
+        List<WifiConfiguration> retrievedNetworks =
+                mWifiConfigManager.getConfiguredNetworksWithPasswords();
+        assertEquals(1, retrievedNetworks.size());
+
+        WifiConfiguration mergedNetwork = retrievedNetworks.get(0);
+        assertTrue(mergedNetwork.isSecurityType(baseSecurityType));
+        assertTrue(mergedNetwork.isSecurityType(upgradableSecurityType));
+        assertFalse(mergedNetwork.getSecurityParams(upgradableSecurityType)
+                .isAddedByAutoUpgrade());
+    }
+
+    /**
+     * Verifies that upgradable configuration are merged on
+     * {@link WifiConfigManager#loadFromStore()}.
+     */
+    @Test
+    public void testLoadFromStoreMergeUpgradableConfigurationsPskSae() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        WifiConfiguration upgradableConfig = new WifiConfiguration();
+        upgradableConfig.SSID = "\"upgradableNetwork\"";
+        upgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        upgradableConfig.preSharedKey = "\"Passw0rd\"";
+
+        verifyLoadFromStoreMergeUpgradableConfigurations(
+                baseConfig,
+                upgradableConfig);
+        // reverse ordered networks should still be merged.
+        verifyLoadFromStoreMergeUpgradableConfigurations(
+                upgradableConfig,
+                baseConfig);
+    }
+
+    /**
+     * Verifies that upgradable configuration are merged on
+     * {@link WifiConfigManager#loadFromStore()}.
+     */
+    @Test
+    public void testLoadFromStoreMergeUpgradableConfigurationsOpenOwe() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_OPEN);
+        WifiConfiguration upgradableConfig = new WifiConfiguration();
+        upgradableConfig.SSID = "\"upgradableNetwork\"";
+        upgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_OWE);
+
+        verifyLoadFromStoreMergeUpgradableConfigurations(
+                baseConfig,
+                upgradableConfig);
+        // reverse ordered networks should still be merged.
+        verifyLoadFromStoreMergeUpgradableConfigurations(
+                upgradableConfig,
+                baseConfig);
+    }
+
+    /**
+     * Verifies that upgradable configuration are merged on
+     * {@link WifiConfigManager#loadFromStore()}.
+     */
+    @Test
+    public void testLoadFromStoreMergeUpgradableConfigurationsWpa2Wpa3Enterprise() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_EAP);
+        baseConfig.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
+        WifiConfiguration upgradableConfig = new WifiConfiguration();
+        upgradableConfig.SSID = "\"upgradableNetwork\"";
+        upgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE);
+        upgradableConfig.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
+
+        verifyLoadFromStoreMergeUpgradableConfigurations(
+                baseConfig,
+                upgradableConfig);
+        // reverse ordered networks should still be merged.
+        verifyLoadFromStoreMergeUpgradableConfigurations(
+                upgradableConfig,
+                baseConfig);
+    }
 }
