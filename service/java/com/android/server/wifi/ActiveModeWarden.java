@@ -1484,6 +1484,25 @@ public class ActiveModeWarden {
             return mSettingsStore.isWifiToggleEnabled() || checkScanOnlyModeAvailable();
         }
 
+        private void handleStaToggleChangeInDisabledState(WorkSource requestorWs) {
+            if (shouldEnableSta()) {
+                startPrimaryOrScanOnlyClientModeManager(requestorWs);
+                transitionTo(mEnabledState);
+            }
+        }
+
+        private void handleStaToggleChangeInEnabledState(WorkSource requestorWs) {
+            if (shouldEnableSta()) {
+                if (hasAnyClientModeManager()) {
+                    switchAllPrimaryOrScanOnlyClientModeManagers(requestorWs);
+                } else {
+                    startPrimaryOrScanOnlyClientModeManager(requestorWs);
+                }
+            } else {
+                stopAllClientModeManagers();
+            }
+        }
+
         class DisabledState extends BaseState {
             @Override
             public void enter() {
@@ -1505,10 +1524,7 @@ public class ActiveModeWarden {
                 switch (msg.what) {
                     case CMD_WIFI_TOGGLED:
                     case CMD_SCAN_ALWAYS_MODE_CHANGED:
-                        if (shouldEnableSta()) {
-                            startPrimaryOrScanOnlyClientModeManager((WorkSource) msg.obj);
-                            transitionTo(mEnabledState);
-                        }
+                        handleStaToggleChangeInDisabledState((WorkSource) msg.obj);
                         break;
                     case CMD_SET_AP:
                         // note: CMD_SET_AP is handled/dropped in ECM mode - will not start here
@@ -1669,16 +1685,7 @@ public class ActiveModeWarden {
                 switch (msg.what) {
                     case CMD_WIFI_TOGGLED:
                     case CMD_SCAN_ALWAYS_MODE_CHANGED:
-                        WorkSource requestorWs = (WorkSource) msg.obj;
-                        if (shouldEnableSta()) {
-                            if (hasAnyClientModeManager()) {
-                                switchAllPrimaryOrScanOnlyClientModeManagers(requestorWs);
-                            } else {
-                                startPrimaryOrScanOnlyClientModeManager(requestorWs);
-                            }
-                        } else {
-                            stopAllClientModeManagers();
-                        }
+                        handleStaToggleChangeInEnabledState((WorkSource) msg.obj);
                         break;
                     case CMD_REQUEST_ADDITIONAL_CLIENT_MODE_MANAGER:
                         handleAdditionalClientModeManagerRequest(
