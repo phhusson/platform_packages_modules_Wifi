@@ -5511,4 +5511,25 @@ public class ClientModeImplTest extends WifiBaseTest {
                 any(WifiConfiguration.class));
         verify(mWifiNative).disconnect(eq(WIFI_IFACE_NAME));
     }
+
+    /**
+     * Verify that the Transition Disable event is routed correctly.
+     */
+    @Test
+    public void testTransitionDisableEvent() throws Exception {
+        final int networkId = FRAMEWORK_NETWORK_ID;
+        final int indication = WifiMonitor.TDI_USE_WPA3_PERSONAL
+                | WifiMonitor.TDI_USE_WPA3_ENTERPRISE;
+
+        initializeAndAddNetworkAndVerifySuccess();
+
+        startConnectSuccess();
+
+        mCmi.sendMessage(WifiMonitor.TRANSITION_DISABLE_INDICATION,
+                networkId, indication);
+        mLooper.dispatchAll();
+
+        verify(mWifiConfigManager).updateNetworkTransitionDisable(
+                eq(networkId), eq(indication));
+    }
 }

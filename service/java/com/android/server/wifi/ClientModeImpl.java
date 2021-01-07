@@ -777,6 +777,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             WifiMonitor.SUP_REQUEST_IDENTITY,
             WifiMonitor.SUP_REQUEST_SIM_AUTH,
             WifiMonitor.MBO_OCE_BSS_TM_HANDLING_DONE,
+            WifiMonitor.TRANSITION_DISABLE_INDICATION,
     };
 
     private void registerForWifiMonitorEvents()  {
@@ -1981,6 +1982,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 return "GAS_QUERY_START_EVENT";
             case WifiMonitor.MBO_OCE_BSS_TM_HANDLING_DONE:
                 return "MBO_OCE_BSS_TM_HANDLING_DONE";
+            case WifiMonitor.TRANSITION_DISABLE_INDICATION:
+                return "TRANSITION_DISABLE_INDICATION";
             case WifiP2pServiceImpl.GROUP_CREATING_TIMED_OUT:
                 return "GROUP_CREATING_TIMED_OUT";
             case WifiP2pServiceImpl.P2P_CONNECTION_CHANGED:
@@ -3630,6 +3633,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 case WifiMonitor.SUP_REQUEST_SIM_AUTH:
                 case WifiMonitor.TARGET_BSSID_EVENT:
                 case WifiMonitor.ASSOCIATED_BSSID_EVENT:
+                case WifiMonitor.TRANSITION_DISABLE_INDICATION:
                 case CMD_UNWANTED_NETWORK:
                 case CMD_CONNECTING_WATCHDOG_TIMER:
                 case CMD_ROAM_WATCHDOG_TIMER: {
@@ -4502,6 +4506,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                                 WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__CONNECTING_WATCHDOG_TIMER);
                         transitionTo(mDisconnectedState);
                     }
+                    break;
+                }
+                case WifiMonitor.TRANSITION_DISABLE_INDICATION: {
+                    log("Received TRANSITION_DISABLE_INDICATION: networkId=" + message.arg1
+                            + ", indication=" + message.arg2);
+                    mWifiConfigManager.updateNetworkTransitionDisable(message.arg1, message.arg2);
                     break;
                 }
                 default: {

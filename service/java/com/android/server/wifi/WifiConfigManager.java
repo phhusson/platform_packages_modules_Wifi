@@ -3475,4 +3475,39 @@ public class WifiConfigManager {
         }
         return result;
     }
+
+    /**
+     * Update the configuration according to transition disable indications.
+     *
+     * @param networkId network ID corresponding to the network.
+     * @param indicationBit transition disable indication bits.
+     * @return true if the network was found, false otherwise.
+     */
+    public boolean updateNetworkTransitionDisable(
+            int networkId,
+            @WifiMonitor.TransitionDisableIndication int indicationBit) {
+        localLog("updateNetworkTransitionDisable: network ID=" + networkId
+                + " indication: " + indicationBit);
+        WifiConfiguration config = getInternalConfiguredNetwork(networkId);
+        if (config == null) {
+            Log.e(TAG, "Cannot find network for " + networkId);
+            return false;
+        }
+        if (0 != (indicationBit & WifiMonitor.TDI_USE_WPA3_PERSONAL)
+                && config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
+            config.setSecurityParamsEnabled(WifiConfiguration.SECURITY_TYPE_PSK, false);
+        }
+        if (0 != (indicationBit & WifiMonitor.TDI_USE_SAE_PK)) {
+            config.enableSaePkOnlyMode(true);
+        }
+        if (0 != (indicationBit & WifiMonitor.TDI_USE_WPA3_ENTERPRISE)
+                && config.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE)) {
+            config.setSecurityParamsEnabled(WifiConfiguration.SECURITY_TYPE_EAP, false);
+        }
+        if (0 != (indicationBit & WifiMonitor.TDI_USE_ENHANCED_OPEN)
+                && config.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE)) {
+            config.setSecurityParamsEnabled(WifiConfiguration.SECURITY_TYPE_OPEN, false);
+        }
+        return true;
+    }
 }

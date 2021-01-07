@@ -6372,4 +6372,150 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 upgradableConfig,
                 baseConfig);
     }
+
+    private void verifyTransitionDisableIndicationForSecurityType(
+            WifiConfiguration testNetwork, int indication) {
+
+        int disabledType = testNetwork.getDefaultSecurityParams().getSecurityType();
+        NetworkUpdateResult result = verifyAddNetworkToWifiConfigManager(testNetwork);
+        int networkId = result.getNetworkId();
+
+        WifiConfiguration configBefore = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertTrue(configBefore.getSecurityParams(disabledType).isEnabled());
+
+        mWifiConfigManager.updateNetworkTransitionDisable(result.getNetworkId(), indication);
+
+        WifiConfiguration configAfter = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertFalse(configBefore.getSecurityParams(disabledType).isEnabled());
+    }
+
+    /**
+     * Verify Transition Disable Indication for the PSK/SAE configuration.
+     */
+    @Test
+    public void testSaeTransitionDisableIndication() {
+        verifyTransitionDisableIndicationForSecurityType(
+                WifiConfigurationTestUtil.createPskNetwork(),
+                WifiMonitor.TDI_USE_WPA3_PERSONAL);
+    }
+
+    /**
+     * Verify Transition Disable Indication for WPA2/WPA3 Enterprise configuration.
+     */
+    @Test
+    public void testWpa2Wpa3EnterpriseValidationTransitionDisableIndication() {
+        verifyTransitionDisableIndicationForSecurityType(
+                WifiConfigurationTestUtil.createEapNetwork(),
+                WifiMonitor.TDI_USE_WPA3_ENTERPRISE);
+    }
+
+    /**
+     * Verify Transition Disable Indication for Open/OWE configuration.
+     */
+    @Test
+    public void testOpenOweEnterpriseValidationTransitionDisableIndication() {
+        verifyTransitionDisableIndicationForSecurityType(
+                WifiConfigurationTestUtil.createOpenNetwork(),
+                WifiMonitor.TDI_USE_ENHANCED_OPEN);
+    }
+
+    /**
+     * Verify Transition Disable Indication for the AP validation enforcement.
+     */
+    @Test
+    public void testSaeApValidationTransitionDisableIndication() {
+        WifiConfiguration testNetwork = WifiConfigurationTestUtil.createPskNetwork();
+        NetworkUpdateResult result = verifyAddNetworkToWifiConfigManager(testNetwork);
+        int networkId = result.getNetworkId();
+
+        WifiConfiguration configBefore = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertFalse(configBefore.getSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE)
+                .isSaePkOnlyMode());
+
+        int indication = WifiMonitor.TDI_USE_SAE_PK;
+        mWifiConfigManager.updateNetworkTransitionDisable(result.getNetworkId(), indication);
+
+        WifiConfiguration configAfter = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertTrue(configAfter.getSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE)
+                .isSaePkOnlyMode());
+    }
+
+    private void verifyNonApplicableTransitionDisableIndicationForSecurityType(
+            WifiConfiguration testNetwork, int indication) {
+
+        int disabledType = testNetwork.getDefaultSecurityParams().getSecurityType();
+        NetworkUpdateResult result = verifyAddNetworkToWifiConfigManager(testNetwork);
+        int networkId = result.getNetworkId();
+
+        WifiConfiguration configBefore = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertTrue(configBefore.getSecurityParams(disabledType).isEnabled());
+
+        mWifiConfigManager.updateNetworkTransitionDisable(result.getNetworkId(), indication);
+
+        WifiConfiguration configAfter = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertTrue(configBefore.getSecurityParams(disabledType).isEnabled());
+    }
+
+    /**
+     * Verify Transition Disable Indication does not change anything if
+     * the type is not applicable.
+     */
+    @Test
+    public void testOpenTransitionDisableIndicationNotAffectPskSaeType() {
+        verifyNonApplicableTransitionDisableIndicationForSecurityType(
+                WifiConfigurationTestUtil.createPskNetwork(),
+                WifiMonitor.TDI_USE_SAE_PK
+                        | WifiMonitor.TDI_USE_ENHANCED_OPEN
+                        | WifiMonitor.TDI_USE_WPA3_ENTERPRISE);
+    }
+
+    /**
+     * Verify Transition Disable Indication does not change anything if
+     * the type is not applicable.
+     */
+    @Test
+    public void testNonApplicableTransitionDisableIndicationNotAffectWpa2Wpa3EnterpriseType() {
+        verifyNonApplicableTransitionDisableIndicationForSecurityType(
+                WifiConfigurationTestUtil.createEapNetwork(),
+                WifiMonitor.TDI_USE_SAE_PK
+                        | WifiMonitor.TDI_USE_ENHANCED_OPEN
+                        | WifiMonitor.TDI_USE_WPA3_PERSONAL);
+    }
+
+    /**
+     * Verify Transition Disable Indication does not change anything if
+     * the type is not applicable.
+     */
+    @Test
+    public void testNonApplicableTransitionDisableIndicationNotAffectOpenOweType() {
+        verifyNonApplicableTransitionDisableIndicationForSecurityType(
+                WifiConfigurationTestUtil.createOpenNetwork(),
+                WifiMonitor.TDI_USE_SAE_PK
+                        | WifiMonitor.TDI_USE_WPA3_PERSONAL
+                        | WifiMonitor.TDI_USE_WPA3_ENTERPRISE);
+    }
+
+    /**
+     * Verify Transition Disable Indication does not change anything if
+     * the type is not applicable.
+     */
+    @Test
+    public void testNonApplicableTransitionDisableIndicationNotAffectApValidation() {
+        WifiConfiguration testNetwork = WifiConfigurationTestUtil.createPskNetwork();
+        NetworkUpdateResult result = verifyAddNetworkToWifiConfigManager(testNetwork);
+        int networkId = result.getNetworkId();
+
+        WifiConfiguration configBefore = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertFalse(configBefore.getSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE)
+                .isSaePkOnlyMode());
+
+        int indication = WifiMonitor.TDI_USE_ENHANCED_OPEN
+                | WifiMonitor.TDI_USE_WPA3_PERSONAL
+                | WifiMonitor.TDI_USE_WPA3_ENTERPRISE;
+        mWifiConfigManager.updateNetworkTransitionDisable(result.getNetworkId(), indication);
+
+        WifiConfiguration configAfter = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertFalse(configAfter.getSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE)
+                .isSaePkOnlyMode());
+    }
 }
