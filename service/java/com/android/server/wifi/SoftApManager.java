@@ -442,7 +442,7 @@ public class SoftApManager implements ActiveModeManager {
             return SUCCESS;
         }
 
-        if (!mWifiNative.setCountryCodeHal(
+        if (!mWifiNative.setApCountryCode(
                 mApInterfaceName, mCountryCode.toUpperCase(Locale.ROOT))) {
             if (band == SoftApConfiguration.BAND_5GHZ) {
                 // Return an error if failed to set country code when AP is configured for

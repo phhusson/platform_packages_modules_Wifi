@@ -5986,7 +5986,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
     @Override
     public boolean setCountryCode(String countryCode) {
-        return mWifiNative.setCountryCode(mInterfaceName, countryCode);
+        return mWifiNative.setStaCountryCode(mInterfaceName, countryCode);
     }
 
     @Override

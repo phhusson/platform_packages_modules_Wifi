@@ -230,7 +230,7 @@ public class SoftApManagerTest extends WifiBaseTest {
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond))
                 .thenReturn(
                 (int) TEST_DEFAULT_SHUTDOWN_IDLE_INSTANCE_IN_BRIDGED_MODE_TIMEOUT_MILLS);
-        when(mWifiNative.setCountryCodeHal(
+        when(mWifiNative.setApCountryCode(
                 TEST_INTERFACE_NAME, TEST_COUNTRY_CODE.toUpperCase(Locale.ROOT)))
                 .thenReturn(true);
         when(mWifiNative.getApFactoryMacAddress(any())).thenReturn(TEST_INTERFACE_MAC_ADDRESS);
@@ -440,7 +440,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         mSoftApManager = createSoftApManager(softApConfig, null, ROLE_SOFTAP_TETHERED);
 
-        verify(mWifiNative, never()).setCountryCodeHal(eq(TEST_INTERFACE_NAME), any());
+        verify(mWifiNative, never()).setApCountryCode(eq(TEST_INTERFACE_NAME), any());
 
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         verify(mContext, times(2)).sendStickyBroadcastAsUser(intentCaptor.capture(),
@@ -468,14 +468,14 @@ public class SoftApManagerTest extends WifiBaseTest {
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
                 mTestSoftApCapability);
 
-        when(mWifiNative.setCountryCodeHal(
+        when(mWifiNative.setApCountryCode(
                 TEST_INTERFACE_NAME, TEST_COUNTRY_CODE.toUpperCase(Locale.ROOT)))
                 .thenReturn(false);
 
 
         mSoftApManager = createSoftApManager(softApConfig, TEST_COUNTRY_CODE, ROLE_SOFTAP_TETHERED);
 
-        verify(mWifiNative).setCountryCodeHal(
+        verify(mWifiNative).setApCountryCode(
                 TEST_INTERFACE_NAME, TEST_COUNTRY_CODE.toUpperCase(Locale.ROOT));
 
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
@@ -505,7 +505,7 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability);
 
         startSoftApAndVerifyEnabled(softApConfig, null);
-        verify(mWifiNative, never()).setCountryCodeHal(eq(TEST_INTERFACE_NAME), any());
+        verify(mWifiNative, never()).setApCountryCode(eq(TEST_INTERFACE_NAME), any());
     }
 
     /**
@@ -522,7 +522,7 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability);
 
         startSoftApAndVerifyEnabled(softApConfig, null);
-        verify(mWifiNative, never()).setCountryCodeHal(eq(TEST_INTERFACE_NAME), any());
+        verify(mWifiNative, never()).setApCountryCode(eq(TEST_INTERFACE_NAME), any());
     }
 
     /**
@@ -538,10 +538,10 @@ public class SoftApManagerTest extends WifiBaseTest {
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
                 mTestSoftApCapability);
 
-        when(mWifiNative.setCountryCodeHal(eq(TEST_INTERFACE_NAME), any())).thenReturn(false);
+        when(mWifiNative.setApCountryCode(eq(TEST_INTERFACE_NAME), any())).thenReturn(false);
 
         startSoftApAndVerifyEnabled(softApConfig, TEST_COUNTRY_CODE);
-        verify(mWifiNative).setCountryCodeHal(
+        verify(mWifiNative).setApCountryCode(
                 TEST_INTERFACE_NAME, TEST_COUNTRY_CODE.toUpperCase(Locale.ROOT));
     }
 
@@ -558,10 +558,10 @@ public class SoftApManagerTest extends WifiBaseTest {
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
                 mTestSoftApCapability);
 
-        when(mWifiNative.setCountryCodeHal(eq(TEST_INTERFACE_NAME), any())).thenReturn(false);
+        when(mWifiNative.setApCountryCode(eq(TEST_INTERFACE_NAME), any())).thenReturn(false);
 
         startSoftApAndVerifyEnabled(softApConfig, TEST_COUNTRY_CODE);
-        verify(mWifiNative).setCountryCodeHal(
+        verify(mWifiNative).setApCountryCode(
                 TEST_INTERFACE_NAME, TEST_COUNTRY_CODE.toUpperCase(Locale.ROOT));
     }
 

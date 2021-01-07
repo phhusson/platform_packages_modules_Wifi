@@ -1198,7 +1198,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private final class CountryCodeListenerProxy implements WifiCountryCode.ChangeListener {
         @Override
         public void onDriverCountryCodeChanged(String countryCode) {
-            Log.i(TAG, "onDriverCountryCodeChanged" + countryCode);
+            Log.i(TAG, "onDriverCountryCodeChanged " + countryCode);
             mTetheredSoftApTracker.updateAvailChannelListInSoftApCapability();
             mActiveModeWarden.updateSoftApCapability(
                     mTetheredSoftApTracker.getSoftApCapability());
