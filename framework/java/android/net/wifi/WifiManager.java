@@ -873,6 +873,20 @@ public class WifiManager {
             "android.net.wifi.action.NETWORK_SETTINGS_RESET";
 
     /**
+     * Broadcast intent action indicating that the wifi network profiles provisioned
+     * may need refresh.
+     *
+     * Note: This intent is sent as a directed broadcast to each manifest registered receiver;
+     * And restricted to those apps which have the NETWORK_CARRIER_PROVISIONING permission.
+     * Intent will not be received by dynamically registered receivers.
+     * @hide
+     */
+    @SystemApi
+    @RequiresPermission(android.Manifest.permission.NETWORK_CARRIER_PROVISIONING)
+    public static final String ACTION_REFRESH_USER_PROVISIONING =
+            "android.net.wifi.action.REFRESH_USER_PROVISIONING";
+
+    /**
      * Broadcast intent action indicating that a connection to the supplicant has
      * been established (and it is now possible
      * to perform Wi-Fi operations) or the connection to the supplicant has been
