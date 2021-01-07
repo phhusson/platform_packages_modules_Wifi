@@ -72,7 +72,6 @@ public class SoftApStoreDataTest extends WifiBaseTest {
             | SoftApConfiguration.BAND_5GHZ;
     private static final int TEST_BAND_2G = SoftApConfiguration.BAND_2GHZ;
     private static final int TEST_BAND_5G = SoftApConfiguration.BAND_5GHZ;
-
     private static final int TEST_OLD_BAND = WifiConfiguration.AP_BAND_ANY;
     private static final int TEST_SECURITY = SoftApConfiguration.SECURITY_TYPE_WPA2_PSK;
     private static final boolean TEST_CLIENT_CONTROL_BY_USER = false;
@@ -93,6 +92,8 @@ public class SoftApStoreDataTest extends WifiBaseTest {
     private static final SparseIntArray TEST_CHANNELS_IN_R_CONFIG = new SparseIntArray() {{
             put(TEST_BAND, TEST_CHANNEL);
             }};
+
+    private static final boolean TEST_80211AX_ENABLED = false;
 
     private static final String TEST_CONFIG_STRING_FROM_WIFICONFIGURATION =
             "<string name=\"SSID\">" + TEST_SSID + "</string>\n"
@@ -143,7 +144,9 @@ public class SoftApStoreDataTest extends WifiBaseTest {
                     + "<int name=\"Band\" value=\"" + TEST_BAND_5G + "\" />\n"
                     + "<int name=\"Channel\" value=\"" + TEST_CHANNEL_5G + "\" />\n"
                     + "</BandChannel>\n"
-                    + "</BandChannelMap>\n";
+                    + "</BandChannelMap>\n"
+                    + "<boolean name=\"80211axEnabled\" value=\""
+                    + TEST_80211AX_ENABLED + "\" />\n";
 
     private static final String TEST_CONFIG_STRING_WITH_ALL_CONFIG_IN_R =
             "<string name=\"SSID\">" + TEST_SSID + "</string>\n"
@@ -335,6 +338,7 @@ public class SoftApStoreDataTest extends WifiBaseTest {
         softApConfigBuilder.setMacRandomizationSetting(TEST_MAC_RANDOMIZATIONSETTING);
         softApConfigBuilder.setBridgedModeOpportunisticShutdownEnabled(
                 TEST_BRIDGED_OPPORTUNISTIC_SHUTDOWN_ENABLED);
+        softApConfigBuilder.setIeee80211axEnabled(TEST_80211AX_ENABLED);
 
         when(mDataSource.toSerialize()).thenReturn(softApConfigBuilder.build());
         byte[] actualData = serializeData();
@@ -372,6 +376,7 @@ public class SoftApStoreDataTest extends WifiBaseTest {
         assertEquals(softApConfig.getMacRandomizationSetting(), TEST_MAC_RANDOMIZATIONSETTING);
         assertEquals(softApConfig.isBridgedModeOpportunisticShutdownEnabled(),
                 TEST_BRIDGED_OPPORTUNISTIC_SHUTDOWN_ENABLED);
+        assertEquals(softApConfig.isIeee80211axEnabled(), TEST_80211AX_ENABLED);
     }
 
     /**

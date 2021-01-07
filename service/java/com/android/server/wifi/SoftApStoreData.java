@@ -64,6 +64,7 @@ public class SoftApStoreData implements WifiConfigStore.StoreData {
             "BridgedModeOpportunisticShutdownEnabled";
     private static final String XML_TAG_MAC_RAMDOMIZATION_SETTING = "MacRandomizationSetting";
     private static final String XML_TAG_BAND_CHANNEL_MAP = "BandChannelMap";
+    private static final String XML_TAG_80211_AX_ENABLED = "80211axEnabled";
 
 
     private final Context mContext;
@@ -160,6 +161,8 @@ public class SoftApStoreData implements WifiConfigStore.StoreData {
                 XmlUtil.SoftApConfigurationXmlUtil.writeChannelsToXml(out,
                         softApConfig.getChannels());
                 XmlUtil.writeNextSectionEnd(out, XML_TAG_BAND_CHANNEL_MAP);
+                XmlUtil.writeNextValue(out, XML_TAG_80211_AX_ENABLED,
+                        softApConfig.isIeee80211axEnabled());
             }
         }
     }
@@ -251,6 +254,11 @@ public class SoftApStoreData implements WifiConfigStore.StoreData {
                         case XML_TAG_MAC_RAMDOMIZATION_SETTING:
                             if (SdkLevel.isAtLeastS()) {
                                 softApConfigBuilder.setMacRandomizationSetting((int) value);
+                            }
+                            break;
+                        case XML_TAG_80211_AX_ENABLED:
+                            if (SdkLevel.isAtLeastS()) {
+                                softApConfigBuilder.setIeee80211axEnabled((boolean) value);
                             }
                             break;
                         default:

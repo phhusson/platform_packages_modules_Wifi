@@ -82,6 +82,7 @@ public class SoftApBackupRestoreTest extends WifiBaseTest {
             put(TEST_BAND_2G, TEST_CHANNEL_2G);
             put(TEST_BAND_5G, TEST_CHANNEL_5G);
             }};
+    private static final boolean TEST_80211AX_ENABLED = false;
 
     /**
      * Asserts that the WifiConfigurations equal to SoftApConfiguration.
@@ -287,6 +288,7 @@ public class SoftApBackupRestoreTest extends WifiBaseTest {
         configBuilder.setMacRandomizationSetting(TEST_MAC_RANDOMIZATIONSETTING);
         configBuilder.setBridgedModeOpportunisticShutdownEnabled(
                 TEST_BRIDGED_OPPORTUNISTIC_SHUTDOWN_ENABLED);
+        configBuilder.setIeee80211axEnabled(TEST_80211AX_ENABLED);
         SoftApConfiguration config = configBuilder.build();
 
         byte[] data = mSoftApBackupRestore.retrieveBackupDataFromSoftApConfiguration(config);

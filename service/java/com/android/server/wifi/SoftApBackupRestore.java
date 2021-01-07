@@ -108,6 +108,7 @@ public class SoftApBackupRestore {
                     out.writeInt(channels.keyAt(i));
                     out.writeInt(channels.valueAt(i));
                 }
+                out.writeBoolean(config.isIeee80211axEnabled());
             }
 
         } catch (IOException io) {
@@ -201,6 +202,7 @@ public class SoftApBackupRestore {
                     channels.put(in.readInt(), in.readInt());
                 }
                 configBuilder.setChannels(channels);
+                configBuilder.setIeee80211axEnabled(in.readBoolean());
             }
         } catch (IOException io) {
             Log.e(TAG, "Invalid backup data received, IOException: " + io);
