@@ -1370,15 +1370,22 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
     }
 
     @Test
-    public void propagateVerboseLoggingFlagToClientModeImpl() throws Exception {
+    public void propagateSettingsToClientModeImpl() throws Exception {
         startClientInConnectModeAndVerifyEnabled();
         verify(mWifiInjector).makeClientModeImpl(any(), any(), eq(false));
+        verify(mClientModeImpl).setShouldReduceNetworkScore(false);
 
         mClientModeManager.enableVerboseLogging(true);
         verify(mClientModeImpl).enableVerboseLogging(true);
 
         mClientModeManager.enableVerboseLogging(false);
         verify(mClientModeImpl).enableVerboseLogging(false);
+
+        mClientModeManager.setShouldReduceNetworkScore(true);
+        verify(mClientModeImpl).setShouldReduceNetworkScore(true);
+
+        mClientModeManager.setShouldReduceNetworkScore(false);
+        verify(mClientModeImpl, times(2)).setShouldReduceNetworkScore(false);
     }
 
     @Test
@@ -1411,5 +1418,31 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
                 any());
         // but wifi state was updated (should be updated no matter the role)
         assertEquals(WifiManager.WIFI_STATE_DISABLING, mClientModeManager.syncGetWifiState());
+    }
+
+    @Test
+    public void changeRoleResetsSettings() throws Exception {
+        startClientInConnectModeAndVerifyEnabled();
+
+        verify(mClientModeImpl).setShouldReduceNetworkScore(false);
+
+        mClientModeManager.setRole(ROLE_CLIENT_SECONDARY_TRANSIENT, TEST_WORKSOURCE);
+        mLooper.dispatchAll();
+
+        // reset upon role change
+        verify(mClientModeImpl, times(2)).setShouldReduceNetworkScore(false);
+    }
+
+    @Test
+    public void sameRoleDoesntResetsSettings() throws Exception {
+        startClientInConnectModeAndVerifyEnabled();
+
+        verify(mClientModeImpl).setShouldReduceNetworkScore(false);
+
+        mClientModeManager.setRole(ROLE_CLIENT_PRIMARY, TEST_WORKSOURCE);
+        mLooper.dispatchAll();
+
+        // no role change, no reset
+        verify(mClientModeImpl).setShouldReduceNetworkScore(false);
     }
 }

@@ -43,22 +43,22 @@ public class MakeBeforeBreakManager {
 
     private static class MakeBeforeBreakInfo {
         @NonNull
-        final ConcreteClientModeManager mOldPrimary;
+        public final ConcreteClientModeManager oldPrimary;
         @NonNull
-        final ConcreteClientModeManager mNewPrimary;
+        public final ConcreteClientModeManager newPrimary;
 
         MakeBeforeBreakInfo(
                 @NonNull ConcreteClientModeManager oldPrimary,
                 @NonNull ConcreteClientModeManager newPrimary) {
-            this.mOldPrimary = oldPrimary;
-            this.mNewPrimary = newPrimary;
+            this.oldPrimary = oldPrimary;
+            this.newPrimary = newPrimary;
         }
 
         @Override
         public String toString() {
             return "MakeBeforeBreakInfo{"
-                    + "oldPrimary=" + mOldPrimary
-                    + ", newPrimary=" + mNewPrimary
+                    + "oldPrimary=" + oldPrimary
+                    + ", newPrimary=" + newPrimary
                     + '}';
         }
     }
@@ -113,10 +113,17 @@ public class MakeBeforeBreakManager {
             // if either the old or new primary stopped during MBB, abort the MBB attempt
             ConcreteClientModeManager clientModeManager =
                     (ConcreteClientModeManager) activeModeManager;
-            if (mMakeBeforeBreakInfo != null
-                    && (clientModeManager == mMakeBeforeBreakInfo.mOldPrimary
-                    || clientModeManager == mMakeBeforeBreakInfo.mNewPrimary)) {
-                mMakeBeforeBreakInfo = null;
+            if (mMakeBeforeBreakInfo != null) {
+                boolean oldPrimaryStopped = clientModeManager == mMakeBeforeBreakInfo.oldPrimary;
+                boolean newPrimaryStopped = clientModeManager == mMakeBeforeBreakInfo.newPrimary;
+                if (oldPrimaryStopped || newPrimaryStopped) {
+                    Log.i(TAG, "MBB CMM stopped, aborting:"
+                            + " oldPrimary=" + mMakeBeforeBreakInfo.oldPrimary
+                            + " stopped=" + oldPrimaryStopped
+                            + " newPrimary=" + mMakeBeforeBreakInfo.newPrimary
+                            + " stopped=" + newPrimaryStopped);
+                    mMakeBeforeBreakInfo = null;
+                }
             }
             recoverPrimary();
         }
@@ -153,6 +160,8 @@ public class MakeBeforeBreakManager {
                 || (mMakeBeforeBreakInfo == null && secondaryTransientCmms.size() > 1)) {
             ConcreteClientModeManager manager = secondaryTransientCmms.get(0);
             manager.setRole(ROLE_CLIENT_PRIMARY, mFrameworkFacade.getSettingsWorkSource(mContext));
+            Log.i(TAG, "recoveryPrimary kicking in, making " + manager + " primary and stopping"
+                    + " all other SECONDARY_TRANSIENT ClientModeManagers");
             // tear down the extra secondary transient CMMs (if they exist)
             for (int i = 1; i < secondaryTransientCmms.size(); i++) {
                 secondaryTransientCmms.get(i).stop();
@@ -189,10 +198,8 @@ public class MakeBeforeBreakManager {
             return;
         }
 
-        if (mVerboseLoggingEnabled) {
-            Log.d(TAG, "Starting MBB switch primary from " + currentPrimary + " to " + newPrimary
-                    + " by setting current primary's role to ROLE_CLIENT_SECONDARY_TRANSIENT");
-        }
+        Log.i(TAG, "Starting MBB switch primary from " + currentPrimary + " to " + newPrimary
+                + " by setting current primary's role to ROLE_CLIENT_SECONDARY_TRANSIENT");
 
         currentPrimary.setRole(
                 ROLE_CLIENT_SECONDARY_TRANSIENT, ActiveModeWarden.INTERNAL_REQUESTOR_WS);
@@ -206,33 +213,37 @@ public class MakeBeforeBreakManager {
             return;
         }
         // not the CMM we're looking for, keep monitoring
-        if (roleChangedClientModeManager != mMakeBeforeBreakInfo.mOldPrimary) {
+        if (roleChangedClientModeManager != mMakeBeforeBreakInfo.oldPrimary) {
             return;
         }
         try {
             // if old primary didn't transition to secondary transient, abort the MBB attempt
-            if (mMakeBeforeBreakInfo.mOldPrimary.getRole() != ROLE_CLIENT_SECONDARY_TRANSIENT) {
+            if (mMakeBeforeBreakInfo.oldPrimary.getRole() != ROLE_CLIENT_SECONDARY_TRANSIENT) {
                 Log.i(TAG, "old primary is no longer secondary transient, aborting MBB: "
-                        + mMakeBeforeBreakInfo.mOldPrimary);
+                        + mMakeBeforeBreakInfo.oldPrimary);
                 return;
             }
 
             // if somehow the next primary is no longer secondary transient, abort the MBB attempt
-            if (mMakeBeforeBreakInfo.mNewPrimary.getRole() != ROLE_CLIENT_SECONDARY_TRANSIENT) {
+            if (mMakeBeforeBreakInfo.newPrimary.getRole() != ROLE_CLIENT_SECONDARY_TRANSIENT) {
                 Log.i(TAG, "new primary is no longer secondary transient, abort MBB: "
-                        + mMakeBeforeBreakInfo.mNewPrimary);
+                        + mMakeBeforeBreakInfo.newPrimary);
                 return;
             }
 
-            if (mVerboseLoggingEnabled) {
-                Log.d(TAG, "Continue MBB switch primary from " + mMakeBeforeBreakInfo.mOldPrimary
-                        + " to " + mMakeBeforeBreakInfo.mNewPrimary
-                        + " by setting new Primary's role to ROLE_CLIENT_PRIMARY");
-            }
+            Log.i(TAG, "Continue MBB switch primary from " + mMakeBeforeBreakInfo.oldPrimary
+                    + " to " + mMakeBeforeBreakInfo.newPrimary
+                    + " by setting new Primary's role to ROLE_CLIENT_PRIMARY and reducing network"
+                    + " score");
 
             // otherwise, actually set the new primary's role to primary.
-            mMakeBeforeBreakInfo.mNewPrimary.setRole(
+            mMakeBeforeBreakInfo.newPrimary.setRole(
                     ROLE_CLIENT_PRIMARY, mFrameworkFacade.getSettingsWorkSource(mContext));
+
+            // linger old primary
+            // TODO(b/160346062): maybe do this after the new primary was fully transitioned to
+            //  ROLE_CLIENT_PRIMARY (since setRole() is asynchronous)
+            mMakeBeforeBreakInfo.oldPrimary.setShouldReduceNetworkScore(true);
         } finally {
             // end the MBB attempt
             mMakeBeforeBreakInfo = null;

@@ -123,6 +123,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
 
     private String mClientInterfaceName;
     private boolean mIfaceIsUp = false;
+    private boolean mShouldReduceNetworkScore = false;
     private final DeferStopHandler mDeferStopHandler;
     @Nullable
     private ClientRole mRole = null;
@@ -677,6 +678,17 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
         }
 
+        /**
+         * Reset this ConcreteClientModeManager when its role changes, so that it can be reused for
+         * another purpose.
+         */
+        private void reset() {
+            // Therefore, the caller must ensure that the role change has been completed and these
+            // settings have already reset before setting them, otherwise the new setting would be
+            // lost.
+            setShouldReduceNetworkScore(false);
+        }
+
         private void setRoleInternalAndInvokeCallback(ClientRole newRole) {
             if (newRole == mRole) return;
             if (mRole == null) {
@@ -686,6 +698,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             } else {
                 Log.v(getTag(), "ClientModeManager role changed: " + newRole);
                 mRole = newRole;
+                reset();
                 mModeListener.onRoleChanged(ConcreteClientModeManager.this);
             }
         }
@@ -875,6 +888,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
                     mClientModeImpl = mWifiInjector.makeClientModeImpl(
                             mClientInterfaceName, ConcreteClientModeManager.this,
                             mVerboseLoggingEnabled);
+                    mClientModeImpl.setShouldReduceNetworkScore(mShouldReduceNetworkScore);
                 }
                 if (!(mConnectRoleToSetOnTransition instanceof ClientConnectivityRole)) {
                     Log.wtf(TAG, "Unexpected mConnectRoleToSetOnTransition: "
@@ -1229,6 +1243,12 @@ public class ConcreteClientModeManager implements ClientModeManager {
     @Override
     public boolean requestIcon(String bssid, String fileName) {
         return getClientMode().requestIcon(bssid, fileName);
+    }
+
+    @Override
+    public void setShouldReduceNetworkScore(boolean shouldReduceNetworkScore) {
+        mShouldReduceNetworkScore = shouldReduceNetworkScore;
+        getClientMode().setShouldReduceNetworkScore(shouldReduceNetworkScore);
     }
 
     @Override

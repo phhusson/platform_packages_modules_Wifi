@@ -22,6 +22,8 @@ import static android.net.wifi.WifiConfiguration.NetworkSelectionStatus.DISABLED
 import static android.net.wifi.WifiManager.WIFI_FEATURE_FILS_SHA256;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_FILS_SHA384;
 
+import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED;
+import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_TRANSIENT;
 import static com.android.server.wifi.WifiDataStall.INVALID_THROUGHPUT;
 
 import android.annotation.IntDef;
@@ -102,6 +104,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.Inet4AddressUtils;
 import com.android.net.module.util.MacAddressUtils;
 import com.android.net.module.util.NetUtils;
+import com.android.server.wifi.ActiveModeManager.ClientRole;
 import com.android.server.wifi.MboOceController.BtmFrameData;
 import com.android.server.wifi.WifiCarrierInfoManager.SimAuthRequestData;
 import com.android.server.wifi.WifiCarrierInfoManager.SimAuthResponseData;
@@ -579,6 +582,13 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
     @Nullable
     private StateMachineObituary mObituary = null;
+
+    /**
+     * Whether this ClientModeImpl is in lingering mode. When in lingering mode, the ClientModeImpl
+     * will automatically stop its owner {@link ClientModeManager} upon disconnecting from its
+     * current Wifi network (i.e. exiting {@link L2ConnectedState}.
+     */
+    private boolean mLingering = false;
 
     /** Note that this constructor will also start() the StateMachine. */
     public ClientModeImpl(
@@ -3337,6 +3347,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     int uid = message.arg2;
                     String bssid = (String) message.obj;
                     mSentHLPs = false;
+                    // Stop lingering (if it was lingering before) if we start a new connection.
+                    // This means that the ClientModeManager was reused for another purpose, so it
+                    // should no longer be in lingering mode.
+                    mClientModeManager.setShouldReduceNetworkScore(false);
 
                     if (!hasConnectionRequests()) {
                         if (mNetworkAgent == null) {
@@ -3958,6 +3972,26 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             mWifiInfo.reset();
             mWifiInfo.setSupplicantState(SupplicantState.DISCONNECTED);
             mWifiScoreCard.noteSupplicantStateChanged(mWifiInfo);
+
+            // For secondary client roles, they should stop themselves upon disconnection.
+            // - Primary role shouldn't because it is persistent, and should try connecting to other
+            //   networks upon disconnection.
+            // - ROLE_CLIENT_LOCAL_ONLY shouldn't because it has auto-retry logic if the connection
+            //   fails. WifiNetworkFactory will explicitly remove the CMM when the request is
+            //   complete.
+            // TODO(b/160346062): Maybe clean this up by having ClientModeManager register a
+            //  onExitConnectingOrConnectedState() callback with ClientModeImpl and implementing
+            //  this logic in ClientModeManager. ClientModeImpl should be role-agnostic.
+            ClientRole role = mClientModeManager.getRole();
+            if (role == ROLE_CLIENT_SECONDARY_LONG_LIVED
+                    || role == ROLE_CLIENT_SECONDARY_TRANSIENT) {
+                if (mVerboseLoggingEnabled) {
+                    Log.d(TAG, "Disconnected in ROLE_CLIENT_SECONDARY_*, stop ClientModeManager="
+                            + mClientModeManager);
+                }
+                // stop owner ClientModeManager, which will in turn stop this ClientModeImpl
+                mClientModeManager.stop();
+            }
         }
 
         @Override
@@ -6000,6 +6034,11 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     @Override
     public List<RxFateReport> getRxPktFates() {
         return mWifiNative.getRxPktFates(mInterfaceName);
+    }
+
+    @Override
+    public void setShouldReduceNetworkScore(boolean shouldReduceNetworkScore) {
+        mWifiScoreReport.setShouldReduceNetworkScore(shouldReduceNetworkScore);
     }
 
     private void addPasspointUrlsToLinkProperties(LinkProperties linkProperties) {
