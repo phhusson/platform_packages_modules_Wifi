@@ -2987,4 +2987,13 @@ public class WifiManagerTest {
         verify(mExecutor).execute(any(Runnable.class));
     }
 
+    @Test
+    public void testSetEmergencyScanRequestInProgress() throws Exception {
+        mWifiManager.setEmergencyScanRequestInProgress(true);
+        verify(mWifiService).setEmergencyScanRequestInProgress(true);
+
+        mWifiManager.setEmergencyScanRequestInProgress(false);
+        verify(mWifiService).setEmergencyScanRequestInProgress(false);
+    }
+
 }

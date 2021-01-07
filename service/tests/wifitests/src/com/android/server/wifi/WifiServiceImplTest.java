@@ -7045,4 +7045,25 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         assertEquals(dhcpResultsParcelable.leaseDuration, dhcpInfo.leaseDuration);
     }
+
+    @Test
+    public void testSetEmergencyScanRequestInProgress() throws Exception {
+        mWifiServiceImpl.setEmergencyScanRequestInProgress(true);
+        verify(mActiveModeWarden).setEmergencyScanRequestInProgress(true);
+
+        mWifiServiceImpl.setEmergencyScanRequestInProgress(false);
+        verify(mActiveModeWarden).setEmergencyScanRequestInProgress(false);
+    }
+
+    @Test
+    public void testSetEmergencyScanRequestWithoutPermissionThrowsException() throws Exception {
+        when(mContext.checkCallingOrSelfPermission(android.Manifest.permission.NETWORK_STACK))
+                .thenReturn(PackageManager.PERMISSION_DENIED);
+        doThrow(new SecurityException()).when(mContext).enforceCallingOrSelfPermission(
+                eq(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK), any());
+        try {
+            mWifiServiceImpl.setEmergencyScanRequestInProgress(true);
+            fail();
+        } catch (SecurityException e) { }
+    }
 }

@@ -1088,7 +1088,7 @@ public class WifiManager {
      * A batch of access point scans has been completed and the results areavailable.
      * Call {@link #getBatchedScanResults()} to obtain the results.
      * @deprecated This API is nolonger supported.
-     * Use {@link android.net.wifi.WifiScanner} API
+     * Use {@link WifiScanner} API
      * @hide
      */
     @Deprecated
@@ -7154,6 +7154,29 @@ public class WifiManager {
         try {
             mService.removeSuggestionUserApprovalStatusListener(listener.hashCode(),
                     mContext.getOpPackageName());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Indicates the start/end of an emergency scan request being processed by {@link WifiScanner}.
+     * The wifi stack should ensure that the wifi chip remains on for the duration of the scan.
+     * WifiScanner detects emergency scan requests via
+     * {@link WifiScanner.ScanSettings#ignoreLocationSettings} flag.
+     *
+     * If the wifi stack is off (because location & wifi toggles are off) when this indication is
+     * received, the wifi stack will temporarily move to a scan only mode. Since location toggle
+     * is off, only scan with
+     * {@link WifiScanner.ScanSettings#ignoreLocationSettings} flag set will be
+     * allowed to be processed for this duration.
+     *
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.NETWORK_STACK)
+    public void setEmergencyScanRequestInProgress(boolean inProgress) {
+        try {
+            mService.setEmergencyScanRequestInProgress(inProgress);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
