@@ -1078,4 +1078,50 @@ public class WifiScoreReportTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mNetworkAgent).sendNetworkScore(51);
     }
+
+    /**
+     * Verify BSSID is added onto blocklist when the score value of -2 is sent from external Wi-Fi
+     * scorer.
+     */
+    @Test
+    public void verifyBssidBlocklistWithScoreValueOfMinus2() throws Exception {
+        WifiConnectedNetworkScorerImpl scorerImpl = new WifiConnectedNetworkScorerImpl();
+        // Register Client for verification.
+        mWifiScoreReport.setWifiConnectedNetworkScorer(mAppBinder, scorerImpl);
+        when(mNetwork.getNetId()).thenReturn(TEST_NETWORK_ID);
+        mWifiScoreReport.startConnectedNetworkScorer(TEST_NETWORK_ID);
+        mClock.mStepMillis = 0;
+        mClock.mWallClockMillis = 10;
+        mWifiInfo.setRssi(-65);
+
+        scorerImpl.mScoreUpdateObserver.notifyScoreUpdate(scorerImpl.mSessionId, -2);
+        mLooper.dispatchAll();
+        verify(mBssidBlocklistMonitor).handleBssidConnectionFailure(any(), any(), anyInt(),
+                anyInt());
+    }
+
+    /**
+     * Verify BSSID is not added onto blocklist when positive score values are sent from external
+     * Wi-Fi scorer.
+     */
+    @Test
+    public void verifyNoBssidBlocklistWithPositiveScoreValues() throws Exception {
+        WifiConnectedNetworkScorerImpl scorerImpl = new WifiConnectedNetworkScorerImpl();
+        // Register Client for verification.
+        mWifiScoreReport.setWifiConnectedNetworkScorer(mAppBinder, scorerImpl);
+        when(mNetwork.getNetId()).thenReturn(TEST_NETWORK_ID);
+        mWifiScoreReport.startConnectedNetworkScorer(TEST_NETWORK_ID);
+        mClock.mStepMillis = 0;
+        mClock.mWallClockMillis = 10;
+        mWifiInfo.setRssi(-65);
+
+        scorerImpl.mScoreUpdateObserver.notifyScoreUpdate(scorerImpl.mSessionId, 49);
+        mLooper.dispatchAll();
+        verify(mBssidBlocklistMonitor, never()).handleBssidConnectionFailure(any(), any(), anyInt(),
+                anyInt());
+        scorerImpl.mScoreUpdateObserver.notifyScoreUpdate(scorerImpl.mSessionId, 51);
+        mLooper.dispatchAll();
+        verify(mBssidBlocklistMonitor, never()).handleBssidConnectionFailure(any(), any(), anyInt(),
+                anyInt());
+    }
 }

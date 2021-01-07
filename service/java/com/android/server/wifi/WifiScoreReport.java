@@ -61,6 +61,7 @@ public class WifiScoreReport {
     private static final int INVALID_SESSION_ID = -1;
     private static final long MIN_TIME_TO_WAIT_BEFORE_BLOCKLIST_BSSID_MILLIS = 29000;
     private static final long INVALID_WALL_CLOCK_MILLIS = -1;
+    private static final int WIFI_SCORE_TO_TERMINATE_CONNECTION_BLOCKLIST_BSSID = -2;
 
     /**
      * Copy of the settings string. Can't directly use the constant because it is @hide.
@@ -109,6 +110,21 @@ public class WifiScoreReport {
                              + " sessionId=" + sessionId
                              + " currentSessionId=" + getCurrentSessionId()
                              + " score=" + score);
+                    return;
+                }
+                // Disconnect WiFi and blocklist current BSSID. This is an intermediate solution
+                // and will be removed when the extension API is extended to include more inputs
+                // tracked by b/171571687.
+                if (score == WIFI_SCORE_TO_TERMINATE_CONNECTION_BLOCKLIST_BSSID) {
+                    mBssidBlocklistMonitor.handleBssidConnectionFailure(mWifiInfo.getBSSID(),
+                            mWifiInfo.getSSID(),
+                            BssidBlocklistMonitor.REASON_FRAMEWORK_DISCONNECT_CONNECTED_SCORE,
+                            mWifiInfo.getRssi());
+                    return;
+                }
+                if (score > ConnectedScore.WIFI_MAX_SCORE
+                        || score < ConnectedScore.WIFI_MIN_SCORE) {
+                    Log.e(TAG, "Invalid score value from external scorer: " + score);
                     return;
                 }
                 long millis = mClock.getWallClockMillis();
