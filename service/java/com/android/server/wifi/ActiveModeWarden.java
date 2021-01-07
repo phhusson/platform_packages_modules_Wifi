@@ -1363,6 +1363,44 @@ public class ActiveModeWarden {
                 wifiToggled(mFacade.getSettingsWorkSource(mContext));
             }
 
+            private boolean processMessageInEmergencyMode(Message msg) {
+                // In emergency mode: Some messages need special handling in this mode,
+                // all others are dropped.
+                switch (msg.what) {
+                    case CMD_STA_STOPPED:
+                    case CMD_AP_STOPPED:
+                        log("Processing message in Emergency Callback Mode: " + msg);
+                        if (!hasAnyModeManager()) {
+                            log("No active mode managers, return to DisabledState.");
+                            transitionTo(mDisabledState);
+                        }
+                        break;
+                    case CMD_SET_AP:
+                        // arg1 == 1 => enable AP
+                        if (msg.arg1 == 1) {
+                            log("AP cannot be started in Emergency Callback Mode: " + msg);
+                            // SoftAP was disabled upon entering emergency mode. It also cannot
+                            // be re-enabled during emergency mode. Drop the message and invoke
+                            // the failure callback.
+                            Pair<SoftApModeConfiguration, WorkSource> softApConfigAndWs =
+                                    (Pair<SoftApModeConfiguration, WorkSource>) msg.obj;
+                            SoftApModeConfiguration softApConfig = softApConfigAndWs.first;
+                            WifiServiceImpl.SoftApCallbackInternal callback =
+                                    softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
+                                            ? mLohsCallback : mSoftApCallback;
+                            // need to notify SoftApCallback that start/stop AP failed
+                            callback.onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
+                                    WifiManager.SAP_START_FAILURE_GENERAL);
+                        }
+                        break;
+                    default:
+                        log("Dropping message in emergency callback mode: " + msg);
+                        break;
+
+                }
+                return HANDLED;
+            }
+
             @Override
             public final boolean processMessage(Message msg) {
                 // potentially enter emergency mode
@@ -1378,36 +1416,11 @@ public class ActiveModeWarden {
                     }
                     return HANDLED;
                 } else if (isInEmergencyMode()) {
-                    // already in emergency mode, drop all messages other than mode stop messages
-                    // triggered by emergency mode start.
-                    if (msg.what == CMD_STA_STOPPED || msg.what == CMD_AP_STOPPED) {
-                        log("Processing message in Emergency Callback Mode: " + msg);
-                        if (!hasAnyModeManager()) {
-                            log("No active mode managers, return to DisabledState.");
-                            transitionTo(mDisabledState);
-                        }
-                    } else if (msg.what == CMD_SET_AP
-                                && msg.arg1 == 1) { // arg1 == 1 => enable AP
-                        log("AP cannot be started in Emergency Callback Mode: " + msg);
-                        // SoftAP was disabled upon entering emergency mode. It also cannot be
-                        // re-enabled during emergency mode. Drop the message and invoke the failure
-                        // callback.
-                        Pair<SoftApModeConfiguration, WorkSource> softApConfigAndWs =
-                                (Pair<SoftApModeConfiguration, WorkSource>) msg.obj;
-                        SoftApModeConfiguration softApConfig = softApConfigAndWs.first;
-                        WifiServiceImpl.SoftApCallbackInternal callback =
-                                softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
-                                        ? mLohsCallback : mSoftApCallback;
-                        // need to notify SoftApCallback that start/stop AP failed
-                        callback.onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                                WifiManager.SAP_START_FAILURE_GENERAL);
-                    } else {
-                        log("Dropping message in emergency callback mode: " + msg);
-                    }
-                    return HANDLED;
+                    return processMessageInEmergencyMode(msg);
+                } else {
+                    // not in emergency mode, process messages normally
+                    return processMessageFiltered(msg);
                 }
-                // not in emergency mode, process messages normally
-                return processMessageFiltered(msg);
             }
 
             protected abstract boolean processMessageFiltered(Message msg);
