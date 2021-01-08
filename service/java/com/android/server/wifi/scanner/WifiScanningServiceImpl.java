@@ -187,8 +187,15 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
         if (msg.what != WifiScanner.CMD_START_SINGLE_SCAN) return false;
         if (!(msg.obj instanceof Bundle)) return false;
         Bundle bundle = (Bundle) msg.obj;
-        ScanSettings scanSettings = bundle.getParcelable(WifiScanner.SCAN_PARAMS_SCAN_SETTINGS_KEY);
-        return scanSettings.ignoreLocationSettings;
+        try {
+            ScanSettings scanSettings =
+                    bundle.getParcelable(WifiScanner.SCAN_PARAMS_SCAN_SETTINGS_KEY);
+            if (scanSettings == null) return false;
+            return scanSettings.ignoreLocationSettings;
+        } catch (BadParcelableException e) {
+            Log.wtf(TAG, "Failed to get parcelable params", e);
+            return false;
+        }
     }
 
     // Check if we should hide this request from app-ops if this is a single scan request.
@@ -817,6 +824,66 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             }
         }
 
+        /**
+         * Helper method to handle the scan start message.
+         */
+        private void handleScanStartMessage(ClientInfo ci, Message msg) {
+            int handler = msg.arg2;
+            Bundle scanParams = (Bundle) msg.obj;
+            if (scanParams == null) {
+                logCallback("singleScanInvalidRequest",  ci, handler, "null params");
+                replyFailed(msg, WifiScanner.REASON_INVALID_REQUEST, "params null");
+                return;
+            }
+            ScanSettings scanSettings = null;
+            WorkSource workSource = null;
+            try {
+                scanSettings =
+                        scanParams.getParcelable(
+                                WifiScanner.SCAN_PARAMS_SCAN_SETTINGS_KEY);
+                workSource =
+                        scanParams.getParcelable(
+                                WifiScanner.SCAN_PARAMS_WORK_SOURCE_KEY);
+            } catch (BadParcelableException e) {
+                Log.wtf(TAG, "Failed to get parcelable params", e);
+                logCallback("singleScanInvalidRequest",  ci, handler,
+                        "bad parcel params");
+                replyFailed(msg, WifiScanner.REASON_INVALID_REQUEST,
+                        "bad parcel params");
+                return;
+            }
+            if (validateScanRequest(ci, handler, scanSettings)) {
+                mWifiMetrics.incrementOneshotScanCount();
+                if ((scanSettings.band & WifiScanner.WIFI_BAND_5_GHZ_DFS_ONLY) != 0) {
+                    mWifiMetrics.incrementOneshotScanWithDfsCount();
+                }
+                logScanRequest("addSingleScanRequest", ci, handler, workSource,
+                        scanSettings, null);
+                replySucceeded(msg);
+
+                if (getCurrentState() == mScanningState) {
+                    // If there is an active scan that will fulfill the scan request then
+                    // mark this request as an active scan, otherwise mark it pending.
+                    if (activeScanSatisfies(scanSettings)) {
+                        mActiveScans.addRequest(ci, handler, workSource, scanSettings);
+                    } else {
+                        mPendingScans.addRequest(ci, handler, workSource, scanSettings);
+                    }
+                } else if (getCurrentState() == mIdleState) {
+                    // If were not currently scanning then try to start a scan. Otherwise
+                    // this scan will be scheduled when transitioning back to IdleState
+                    // after finishing the current scan.
+                    mPendingScans.addRequest(ci, handler, workSource, scanSettings);
+                    tryToStartNewScan();
+                }
+            } else {
+                logCallback("singleScanInvalidRequest",  ci, handler, "bad request");
+                replyFailed(msg, WifiScanner.REASON_INVALID_REQUEST, "bad request");
+                mWifiMetrics.incrementScanReturnEntry(
+                        WifiMetricsProto.WifiLog.SCAN_FAILURE_INVALID_CONFIGURATION, 1);
+            }
+        }
+
         class DefaultState extends State {
             @Override
             public void enter() {
@@ -902,60 +969,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         // Ignore if we're already in driver loaded state.
                         return HANDLED;
                     case WifiScanner.CMD_START_SINGLE_SCAN:
-                        int handler = msg.arg2;
-                        Bundle scanParams = (Bundle) msg.obj;
-                        if (scanParams == null) {
-                            logCallback("singleScanInvalidRequest",  ci, handler, "null params");
-                            replyFailed(msg, WifiScanner.REASON_INVALID_REQUEST, "params null");
-                            return HANDLED;
-                        }
-                        ScanSettings scanSettings = null;
-                        WorkSource workSource = null;
-                        try {
-                            scanSettings =
-                                    scanParams.getParcelable(
-                                            WifiScanner.SCAN_PARAMS_SCAN_SETTINGS_KEY);
-                            workSource =
-                                    scanParams.getParcelable(
-                                            WifiScanner.SCAN_PARAMS_WORK_SOURCE_KEY);
-                        } catch (BadParcelableException e) {
-                            Log.e(TAG, "Failed to get parcelable params", e);
-                            logCallback("singleScanInvalidRequest",  ci, handler,
-                                    "bad parcel params");
-                            replyFailed(msg, WifiScanner.REASON_INVALID_REQUEST,
-                                    "bad parcel params");
-                            return HANDLED;
-                        }
-                        if (validateScanRequest(ci, handler, scanSettings)) {
-                            mWifiMetrics.incrementOneshotScanCount();
-                            if ((scanSettings.band & WifiScanner.WIFI_BAND_5_GHZ_DFS_ONLY) != 0) {
-                                mWifiMetrics.incrementOneshotScanWithDfsCount();
-                            }
-                            logScanRequest("addSingleScanRequest", ci, handler, workSource,
-                                    scanSettings, null);
-                            replySucceeded(msg);
-
-                            // If there is an active scan that will fulfill the scan request then
-                            // mark this request as an active scan, otherwise mark it pending.
-                            // If were not currently scanning then try to start a scan. Otherwise
-                            // this scan will be scheduled when transitioning back to IdleState
-                            // after finishing the current scan.
-                            if (getCurrentState() == mScanningState) {
-                                if (activeScanSatisfies(scanSettings)) {
-                                    mActiveScans.addRequest(ci, handler, workSource, scanSettings);
-                                } else {
-                                    mPendingScans.addRequest(ci, handler, workSource, scanSettings);
-                                }
-                            } else {
-                                mPendingScans.addRequest(ci, handler, workSource, scanSettings);
-                                tryToStartNewScan();
-                            }
-                        } else {
-                            logCallback("singleScanInvalidRequest",  ci, handler, "bad request");
-                            replyFailed(msg, WifiScanner.REASON_INVALID_REQUEST, "bad request");
-                            mWifiMetrics.incrementScanReturnEntry(
-                                    WifiMetricsProto.WifiLog.SCAN_FAILURE_INVALID_CONFIGURATION, 1);
-                        }
+                        handleScanStartMessage(ci, msg);
                         return HANDLED;
                     case WifiScanner.CMD_STOP_SINGLE_SCAN:
                         removeSingleScanRequest(ci, msg.arg2);
@@ -1017,14 +1031,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         ScanData latestScanResults =
                                 mScannerImplsTracker.getLatestSingleScanResults();
                         if (latestScanResults != null) {
-                            mWifiMetrics.getScanMetrics().logScanSucceeded(
-                                    WifiMetrics.ScanMetrics.SCAN_TYPE_SINGLE,
-                                    latestScanResults.getResults().length);
-                            mWifiMetrics.incrementScanReturnEntry(
-                                    WifiMetricsProto.WifiLog.SCAN_SUCCESS,
-                                    mActiveScans.size());
-                            reportScanResults(latestScanResults);
-                            mActiveScans.clear();
+                            handleScanResults(latestScanResults);
                         } else {
                             Log.e(TAG, "latest scan results null unexpectedly");
                         }
@@ -1305,12 +1312,20 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         describeForLog(allResults));
                 entry.reportEvent(WifiScanner.CMD_SCAN_RESULT, 0, parcelableAllResults);
             }
+        }
 
+        void handleScanResults(@NonNull ScanData results) {
+            mWifiMetrics.getScanMetrics().logScanSucceeded(
+                    WifiMetrics.ScanMetrics.SCAN_TYPE_SINGLE, results.getResults().length);
+            mWifiMetrics.incrementScanReturnEntry(
+                    WifiMetricsProto.WifiLog.SCAN_SUCCESS, mActiveScans.size());
+            reportScanResults(results);
             // Cache full band (with DFS or not) scan results.
             if (WifiScanner.isFullBandScan(results.getBandsScannedInternal(), true)) {
                 mCachedScanResults.clear();
                 mCachedScanResults.addAll(Arrays.asList(results.getResults()));
             }
+            mActiveScans.clear();
         }
 
         List<ScanResult> getCachedScanResultsAsList() {
