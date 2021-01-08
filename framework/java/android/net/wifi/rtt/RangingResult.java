@@ -237,13 +237,13 @@ public final class RangingResult implements Parcelable {
     /**
      * @return The number of attempted measurements used in the RTT exchange resulting in this set
      * of results. The number of successful measurements is returned by
-     * {@link #getNumSuccessfulMeasurements()} which at most, if there are no errors, will be 1 less
-     * that the number of attempted measurements.
+     * {@link #getNumSuccessfulMeasurements()} which at most, if there are no errors, will be 1
+     * less than the number of attempted measurements.
      * <p>
-     * Only valid if {@link #getStatus()} returns {@link #STATUS_SUCCESS}, and if the method
-     * {@link #is80211mcMeasurement()} returns true, otherwise will throw an exception. If the value
-     * is 0, it should be interpreted as no information available, which may occur for one-sided RTT
-     * measurements. Instead {@link RangingRequest#getRttBurstSize()} should be used instead.
+     * Only valid if {@link #getStatus()} returns {@link #STATUS_SUCCESS}, otherwise will throw an
+     * exception. If the value is 0, it should be interpreted as no information available, which may
+     * occur for one-sided RTT measurements. Instead {@link RangingRequest#getRttBurstSize()}
+     * should be used instead.
      */
     public int getNumAttemptedMeasurements() {
         if (mStatus != STATUS_SUCCESS) {
