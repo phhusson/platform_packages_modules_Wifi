@@ -314,4 +314,6 @@ interface IWifiManager
     boolean addSuggestionUserApprovalStatusListener(in IBinder binder, in ISuggestionUserApprovalStatusListener listener, int listenerIdentifier, String packageName, String featureId);
 
     void removeSuggestionUserApprovalStatusListener(int listenerIdentifier, String packageName);
+
+    void setEmergencyScanRequestInProgress(boolean inProgress);
 }

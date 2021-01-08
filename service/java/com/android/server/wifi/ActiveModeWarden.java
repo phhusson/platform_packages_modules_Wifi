@@ -564,6 +564,15 @@ public class ActiveModeWarden {
                 INTERNAL_REQUESTOR_WS);
     }
 
+    /** emergency scan progress indication. */
+    public void setEmergencyScanRequestInProgress(boolean inProgress) {
+        mWifiController.sendMessage(
+                WifiController.CMD_EMERGENCY_SCAN_STATE_CHANGED,
+                inProgress ? 1 : 0, 0,
+                // Emergency scans should have the highest priority, so use settings worksource.
+                mFacade.getSettingsWorkSource(mContext));
+    }
+
     /**
      * Listener to request a ModeManager instance for a particular operation.
      */
@@ -884,6 +893,17 @@ public class ActiveModeWarden {
     }
 
     /**
+     * Method to enable a new primary client mode manager in scan only mode.
+     */
+    private boolean startScanOnlyClientModeManager(WorkSource requestorWs) {
+        Log.d(TAG, "Starting primary ClientModeManager in scan only mode");
+        ConcreteClientModeManager manager = mWifiInjector.makeClientModeManager(
+                new ClientListener(), requestorWs, ROLE_CLIENT_SCAN_ONLY, mVerboseLoggingEnabled);
+        mClientModeManagers.add(manager);
+        return true;
+    }
+
+    /**
      * Method to enable a new primary client mode manager.
      */
     private boolean startPrimaryOrScanOnlyClientModeManager(WorkSource requestorWs) {
@@ -908,6 +928,19 @@ public class ActiveModeWarden {
     }
 
     /**
+     * Method to switch all primary client mode manager mode of operation to ScanOnly mode.
+     */
+    private void switchAllPrimaryClientModeManagersToScanOnlyMode(@NonNull WorkSource requestorWs) {
+        Log.d(TAG, "Switching all primary client mode managers to scan only mode");
+        for (ConcreteClientModeManager clientModeManager : mClientModeManagers) {
+            if (clientModeManager.getRole() != ROLE_CLIENT_PRIMARY) {
+                continue;
+            }
+            clientModeManager.setRole(ROLE_CLIENT_SCAN_ONLY, requestorWs);
+        }
+    }
+
+    /**
      * Method to switch all client mode manager mode of operation (from ScanOnly To Connect &
      * vice-versa) based on the toggle state.
      */
@@ -928,7 +961,7 @@ public class ActiveModeWarden {
     private ActiveModeManager.ClientRole getRoleForPrimaryOrScanOnlyClientModeManager() {
         if (mSettingsStore.isWifiToggleEnabled()) {
             return ROLE_CLIENT_PRIMARY;
-        } else if (checkScanOnlyModeAvailable()) {
+        } else if (mWifiController.shouldEnableScanOnlyMode()) {
             return ROLE_CLIENT_SCAN_ONLY;
         } else {
             Log.e(TAG, "Something is wrong, no client mode toggles enabled");
@@ -944,7 +977,10 @@ public class ActiveModeWarden {
             @NonNull ConcreteClientModeManager modeManager, @NonNull WorkSource requestorWs) {
         ActiveModeManager.ClientRole role = getRoleForPrimaryOrScanOnlyClientModeManager();
         if (role == null) return false;
-        modeManager.setRole(role, requestorWs);
+        // change role if needed.
+        if (modeManager.getRole() != role) {
+            modeManager.setRole(role, requestorWs);
+        }
         return true;
     }
 
@@ -1205,11 +1241,6 @@ public class ActiveModeWarden {
         mBatteryStatsManager.reportWifiState(BatteryStatsManager.WIFI_STATE_OFF_SCANNING, null);
     }
 
-    private boolean checkScanOnlyModeAvailable() {
-        return mWifiPermissionsUtil.isLocationModeEnabled()
-                && mSettingsStore.isScanAlwaysAvailable();
-    }
-
     public boolean isMakeBeforeBreakEnabled() {
         return mContext.getResources().getBoolean(
                 R.bool.config_wifiMultiStaNetworkSwitchingMakeBeforeBreakEnabled);
@@ -1228,6 +1259,7 @@ public class ActiveModeWarden {
         private static final int BASE = Protocol.BASE_WIFI_CONTROLLER;
 
         static final int CMD_EMERGENCY_MODE_CHANGED                 = BASE + 1;
+        static final int CMD_EMERGENCY_SCAN_STATE_CHANGED           = BASE + 2;
         static final int CMD_SCAN_ALWAYS_MODE_CHANGED               = BASE + 7;
         static final int CMD_WIFI_TOGGLED                           = BASE + 8;
         static final int CMD_AIRPLANE_TOGGLED                       = BASE + 9;
@@ -1255,6 +1287,7 @@ public class ActiveModeWarden {
 
         private boolean mIsInEmergencyCall = false;
         private boolean mIsInEmergencyCallbackMode = false;
+        private boolean mIsEmergencyScanInProgress = false;
 
         WifiController() {
             super(TAG, mLooper);
@@ -1295,6 +1328,8 @@ public class ActiveModeWarden {
                     return "CMD_REMOVE_ADDITIONAL_CLIENT_MODE_MANAGER";
                 case CMD_REQUEST_ADDITIONAL_CLIENT_MODE_MANAGER:
                     return "CMD_REQUEST_ADDITIONAL_CLIENT_MODE_MANAGER";
+                case CMD_EMERGENCY_SCAN_STATE_CHANGED:
+                    return "CMD_EMERGENCY_SCAN_STATE_CHANGED";
                 case CMD_SCAN_ALWAYS_MODE_CHANGED:
                     return "CMD_SCAN_ALWAYS_MODE_CHANGED";
                 case CMD_SET_AP:
@@ -1356,6 +1391,11 @@ public class ActiveModeWarden {
                 return mIsInEmergencyCall || mIsInEmergencyCallbackMode;
             }
 
+            /** Device is in emergency mode & carrier config requires wifi off in emergency mode */
+            private boolean isInEmergencyModeWhichRequiresWifiDisable() {
+                return isInEmergencyMode() && mFacade.getConfigWiFiDisableInECBM(mContext);
+            }
+
             private void updateEmergencyMode(Message msg) {
                 if (msg.what == CMD_EMERGENCY_CALL_STATE_CHANGED) {
                     mIsInEmergencyCall = msg.arg1 == 1;
@@ -1370,8 +1410,15 @@ public class ActiveModeWarden {
                 log("Entering emergency callback mode, "
                         + "CarrierConfigManager.KEY_CONFIG_WIFI_DISABLE_IN_ECBM: "
                         + configWiFiDisableInECBM);
-                if (configWiFiDisableInECBM) {
-                    shutdownWifi();
+                if (!mIsEmergencyScanInProgress) {
+                    if (configWiFiDisableInECBM) {
+                        shutdownWifi();
+                    }
+                } else {
+                    if (configWiFiDisableInECBM) {
+                        switchAllPrimaryClientModeManagersToScanOnlyMode(
+                                mFacade.getSettingsWorkSource(mContext));
+                    }
                 }
             }
 
@@ -1386,51 +1433,99 @@ public class ActiveModeWarden {
                 wifiToggled(mFacade.getSettingsWorkSource(mContext));
             }
 
-            @Override
-            public final boolean processMessage(Message msg) {
-                // potentially enter emergency mode
-                if (msg.what == CMD_EMERGENCY_CALL_STATE_CHANGED
-                        || msg.what == CMD_EMERGENCY_MODE_CHANGED) {
-                    boolean wasInEmergencyMode = isInEmergencyMode();
-                    updateEmergencyMode(msg);
-                    boolean isInEmergencyMode = isInEmergencyMode();
-                    if (!wasInEmergencyMode && isInEmergencyMode) {
-                        enterEmergencyMode();
-                    } else if (wasInEmergencyMode && !isInEmergencyMode) {
-                        exitEmergencyMode();
-                    }
-                    return HANDLED;
-                } else if (isInEmergencyMode()) {
-                    // already in emergency mode, drop all messages other than mode stop messages
-                    // triggered by emergency mode start.
-                    if (msg.what == CMD_STA_STOPPED || msg.what == CMD_AP_STOPPED) {
+            private boolean processMessageInEmergencyMode(Message msg) {
+                // In emergency mode: Some messages need special handling in this mode,
+                // all others are dropped.
+                switch (msg.what) {
+                    case CMD_STA_STOPPED:
+                    case CMD_AP_STOPPED:
                         log("Processing message in Emergency Callback Mode: " + msg);
                         if (!hasAnyModeManager()) {
                             log("No active mode managers, return to DisabledState.");
                             transitionTo(mDisabledState);
                         }
-                    } else if (msg.what == CMD_SET_AP
-                                && msg.arg1 == 1) { // arg1 == 1 => enable AP
-                        log("AP cannot be started in Emergency Callback Mode: " + msg);
-                        // SoftAP was disabled upon entering emergency mode. It also cannot be
-                        // re-enabled during emergency mode. Drop the message and invoke the failure
-                        // callback.
-                        Pair<SoftApModeConfiguration, WorkSource> softApConfigAndWs =
-                                (Pair<SoftApModeConfiguration, WorkSource>) msg.obj;
-                        SoftApModeConfiguration softApConfig = softApConfigAndWs.first;
-                        WifiServiceImpl.SoftApCallbackInternal callback =
-                                softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
-                                        ? mLohsCallback : mSoftApCallback;
-                        // need to notify SoftApCallback that start/stop AP failed
-                        callback.onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                                WifiManager.SAP_START_FAILURE_GENERAL);
-                    } else {
+                        break;
+                    case CMD_SET_AP:
+                        // arg1 == 1 => enable AP
+                        if (msg.arg1 == 1) {
+                            log("AP cannot be started in Emergency Callback Mode: " + msg);
+                            // SoftAP was disabled upon entering emergency mode. It also cannot
+                            // be re-enabled during emergency mode. Drop the message and invoke
+                            // the failure callback.
+                            Pair<SoftApModeConfiguration, WorkSource> softApConfigAndWs =
+                                    (Pair<SoftApModeConfiguration, WorkSource>) msg.obj;
+                            SoftApModeConfiguration softApConfig = softApConfigAndWs.first;
+                            WifiServiceImpl.SoftApCallbackInternal callback =
+                                    softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
+                                            ? mLohsCallback : mSoftApCallback;
+                            // need to notify SoftApCallback that start/stop AP failed
+                            callback.onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
+                                    WifiManager.SAP_START_FAILURE_GENERAL);
+                        }
+                        break;
+                    default:
                         log("Dropping message in emergency callback mode: " + msg);
-                    }
-                    return HANDLED;
+                        break;
+
                 }
-                // not in emergency mode, process messages normally
-                return processMessageFiltered(msg);
+                return HANDLED;
+            }
+
+            private void handleEmergencyModeStateChange(Message msg) {
+                boolean wasInEmergencyMode = isInEmergencyMode();
+                updateEmergencyMode(msg);
+                boolean isInEmergencyMode = isInEmergencyMode();
+                if (!wasInEmergencyMode && isInEmergencyMode) {
+                    enterEmergencyMode();
+                } else if (wasInEmergencyMode && !isInEmergencyMode) {
+                    exitEmergencyMode();
+                }
+            }
+
+            private void handleEmergencyScanStateChange(Message msg) {
+                final boolean scanInProgress = msg.arg1 == 1;
+                final WorkSource requestorWs = (WorkSource) msg.obj;
+                log("Processing scan state change: " + scanInProgress);
+                mIsEmergencyScanInProgress = scanInProgress;
+                if (isInEmergencyModeWhichRequiresWifiDisable())  {
+                    // If wifi was disabled because of emergency mode
+                    // (getConfigWiFiDisableInECBM == true), don't use the
+                    // generic method to handle toggle change since that may put wifi in
+                    // connectivity mode (since wifi toggle may actually be on underneath)
+                    if (getCurrentState() == mDisabledState && scanInProgress) {
+                        // go to scan only mode.
+                        startScanOnlyClientModeManager(requestorWs);
+                        transitionTo(mEnabledState);
+                    } else if (getCurrentState() == mEnabledState && !scanInProgress) {
+                        // shut down to go back to previous state.
+                        stopAllClientModeManagers();
+                    }
+                } else {
+                    if (getCurrentState() == mDisabledState) {
+                        handleStaToggleChangeInDisabledState(requestorWs);
+                    } else if (getCurrentState() == mEnabledState) {
+                        handleStaToggleChangeInEnabledState(requestorWs);
+                    }
+                }
+            }
+
+            @Override
+            public final boolean processMessage(Message msg) {
+                // potentially enter emergency mode
+                if (msg.what == CMD_EMERGENCY_CALL_STATE_CHANGED
+                        || msg.what == CMD_EMERGENCY_MODE_CHANGED) {
+                    handleEmergencyModeStateChange(msg);
+                    return HANDLED;
+                } else if (msg.what == CMD_EMERGENCY_SCAN_STATE_CHANGED) {
+                    // emergency scans need to be allowed even in emergency mode.
+                    handleEmergencyScanStateChange(msg);
+                    return HANDLED;
+                } else if (isInEmergencyMode()) {
+                    return processMessageInEmergencyMode(msg);
+                } else {
+                    // not in emergency mode, process messages normally
+                    return processMessageFiltered(msg);
+                }
             }
 
             protected abstract boolean processMessageFiltered(Message msg);
@@ -1441,6 +1536,7 @@ public class ActiveModeWarden {
             public boolean processMessage(Message msg) {
                 switch (msg.what) {
                     case CMD_SCAN_ALWAYS_MODE_CHANGED:
+                    case CMD_EMERGENCY_SCAN_STATE_CHANGED:
                     case CMD_WIFI_TOGGLED:
                     case CMD_STA_STOPPED:
                     case CMD_STA_START_FAILURE:
@@ -1490,8 +1586,33 @@ public class ActiveModeWarden {
             }
         }
 
+        private boolean shouldEnableScanOnlyMode() {
+            return (mWifiPermissionsUtil.isLocationModeEnabled()
+                    && mSettingsStore.isScanAlwaysAvailable())
+                    || mIsEmergencyScanInProgress;
+        }
+
         private boolean shouldEnableSta() {
-            return mSettingsStore.isWifiToggleEnabled() || checkScanOnlyModeAvailable();
+            return mSettingsStore.isWifiToggleEnabled() || shouldEnableScanOnlyMode();
+        }
+
+        private void handleStaToggleChangeInDisabledState(WorkSource requestorWs) {
+            if (shouldEnableSta()) {
+                startPrimaryOrScanOnlyClientModeManager(requestorWs);
+                transitionTo(mEnabledState);
+            }
+        }
+
+        private void handleStaToggleChangeInEnabledState(WorkSource requestorWs) {
+            if (shouldEnableSta()) {
+                if (hasAnyClientModeManager()) {
+                    switchAllPrimaryOrScanOnlyClientModeManagers(requestorWs);
+                } else {
+                    startPrimaryOrScanOnlyClientModeManager(requestorWs);
+                }
+            } else {
+                stopAllClientModeManagers();
+            }
         }
 
         class DisabledState extends BaseState {
@@ -1515,10 +1636,7 @@ public class ActiveModeWarden {
                 switch (msg.what) {
                     case CMD_WIFI_TOGGLED:
                     case CMD_SCAN_ALWAYS_MODE_CHANGED:
-                        if (shouldEnableSta()) {
-                            startPrimaryOrScanOnlyClientModeManager((WorkSource) msg.obj);
-                            transitionTo(mEnabledState);
-                        }
+                        handleStaToggleChangeInDisabledState((WorkSource) msg.obj);
                         break;
                     case CMD_SET_AP:
                         // note: CMD_SET_AP is handled/dropped in ECM mode - will not start here
@@ -1688,16 +1806,7 @@ public class ActiveModeWarden {
                 switch (msg.what) {
                     case CMD_WIFI_TOGGLED:
                     case CMD_SCAN_ALWAYS_MODE_CHANGED:
-                        WorkSource requestorWs = (WorkSource) msg.obj;
-                        if (shouldEnableSta()) {
-                            if (hasAnyClientModeManager()) {
-                                switchAllPrimaryOrScanOnlyClientModeManagers(requestorWs);
-                            } else {
-                                startPrimaryOrScanOnlyClientModeManager(requestorWs);
-                            }
-                        } else {
-                            stopAllClientModeManagers();
-                        }
+                        handleStaToggleChangeInEnabledState((WorkSource) msg.obj);
                         break;
                     case CMD_REQUEST_ADDITIONAL_CLIENT_MODE_MANAGER:
                         handleAdditionalClientModeManagerRequest(

@@ -4896,4 +4896,15 @@ public class WifiServiceImpl extends BaseWifiService {
                         .removeSuggestionUserApprovalStatusListener(listenerIdentifier,
                                 packageName, uid));
     }
+
+    /**
+     * See {@link android.net.wifi.WifiManager#setEmergencyScanRequestInProgress(boolean)}.
+     */
+    @Override
+    public void setEmergencyScanRequestInProgress(boolean inProgress) {
+        enforceNetworkStackPermission();
+        int uid = Binder.getCallingUid();
+        mLog.info("setEmergencyScanRequestInProgress uid=%").c(uid).flush();
+        mActiveModeWarden.setEmergencyScanRequestInProgress(inProgress);
+    }
 }

@@ -740,4 +740,9 @@ public class BaseWifiService extends IWifiManager.Stub {
             String packageName) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void setEmergencyScanRequestInProgress(boolean inProgress) {
+        throw new UnsupportedOperationException();
+    }
 }
