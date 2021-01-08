@@ -27,6 +27,7 @@ import android.content.Context;
 import android.net.wifi.IWifiScanner;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations;
+import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiScanner.ChannelSpec;
 import android.net.wifi.WifiScanner.PnoSettings;
@@ -406,6 +407,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
     private final FrameworkFacade mFrameworkFacade;
     private final WifiPermissionsUtil mWifiPermissionsUtil;
     private final WifiNative mWifiNative;
+    private final WifiManager mWifiManager;
 
     WifiScanningServiceImpl(Context context, Looper looper,
             WifiScannerImpl.WifiScannerImplFactory scannerImplFactory,
@@ -424,6 +426,9 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
         mFrameworkFacade = wifiInjector.getFrameworkFacade();
         mWifiPermissionsUtil = wifiInjector.getWifiPermissionsUtil();
         mWifiNative = wifiInjector.getWifiNative();
+        // Wifi service is always started before other wifi services. So, there is no problem
+        // obtaining WifiManager in the constructor here.
+        mWifiManager = mContext.getSystemService(WifiManager.class);
         mPreviousSchedule = null;
     }
 
@@ -635,6 +640,21 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
          */
         @VisibleForTesting
         public static final int CACHED_SCAN_RESULTS_MAX_AGE_IN_MILLIS = 180 * 1000;
+        /**
+         * Alarm Tag to use for the delayed indication of emergency scan end.
+         */
+        @VisibleForTesting
+        public static final String EMERGENCY_SCAN_END_INDICATION_ALARM_TAG =
+                TAG + "EmergencyScanEnd";
+        /**
+         * Alarm timeout to use for the delayed indication of emergency scan end.
+         */
+        private static final int EMERGENCY_SCAN_END_INDICATION_DELAY_MILLIS = 15_000;
+        /**
+         * Alarm listener to use for the delayed indication of emergency scan end.
+         */
+        private final AlarmManager.OnAlarmListener mEmergencyScanEndIndicationListener =
+                () -> mWifiManager.setEmergencyScanRequestInProgress(false);
 
         private final DefaultState mDefaultState = new DefaultState();
         private final DriverStartedState mDriverStartedState = new DriverStartedState();
@@ -853,6 +873,11 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                 return;
             }
             if (validateScanRequest(ci, handler, scanSettings)) {
+                if (getCurrentState() == mDefaultState && !scanSettings.ignoreLocationSettings) {
+                    // Reject regular scan requests if scanning is disabled.
+                    replyFailed(msg, WifiScanner.REASON_UNSPECIFIED, "not available");
+                    return;
+                }
                 mWifiMetrics.incrementOneshotScanCount();
                 if ((scanSettings.band & WifiScanner.WIFI_BAND_5_GHZ_DFS_ONLY) != 0) {
                     mWifiMetrics.incrementOneshotScanWithDfsCount();
@@ -860,6 +885,13 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                 logScanRequest("addSingleScanRequest", ci, handler, workSource,
                         scanSettings, null);
                 replySucceeded(msg);
+
+                if (scanSettings.ignoreLocationSettings) {
+                    // Inform wifi manager that an emergency scan is in progress (regardless of
+                    // whether scanning is currently enabled or not). This ensures that
+                    // the wifi chip remains on for the duration of this scan.
+                    mWifiManager.setEmergencyScanRequestInProgress(true);
+                }
 
                 if (getCurrentState() == mScanningState) {
                     // If there is an active scan that will fulfill the scan request then
@@ -875,6 +907,12 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                     // after finishing the current scan.
                     mPendingScans.addRequest(ci, handler, workSource, scanSettings);
                     tryToStartNewScan();
+                } else if (getCurrentState() == mDefaultState) {
+                    // If scanning is disabled and the request is for emergency purposes
+                    // (checked above), add to pending list. this scan will be scheduled when
+                    // transitioning to IdleState when wifi manager enables scanning as a part of
+                    // processing WifiManager.setEmergencyScanRequestInProgress(true)
+                    mPendingScans.addRequest(ci, handler, workSource, scanSettings);
                 }
             } else {
                 logCallback("singleScanInvalidRequest",  ci, handler, "bad request");
@@ -892,6 +930,8 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             }
             @Override
             public boolean processMessage(Message msg) {
+                ClientInfo ci = mClients.get(msg.replyTo);
+
                 switch (msg.what) {
                     case WifiScanner.CMD_ENABLE:
                         if (mScannerImpls.isEmpty()) {
@@ -905,8 +945,10 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         transitionTo(mDefaultState);
                         return HANDLED;
                     case WifiScanner.CMD_START_SINGLE_SCAN:
+                        handleScanStartMessage(ci, msg);
+                        return HANDLED;
                     case WifiScanner.CMD_STOP_SINGLE_SCAN:
-                        replyFailed(msg, WifiScanner.REASON_UNSPECIFIED, "not available");
+                        removeSingleScanRequest(ci, msg.arg2);
                         return HANDLED;
                     case CMD_SCAN_RESULTS_AVAILABLE:
                         if (DBG) localLog("ignored scan results available event");
@@ -962,17 +1004,9 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
 
             @Override
             public boolean processMessage(Message msg) {
-                ClientInfo ci = mClients.get(msg.replyTo);
-
                 switch (msg.what) {
                     case WifiScanner.CMD_ENABLE:
                         // Ignore if we're already in driver loaded state.
-                        return HANDLED;
-                    case WifiScanner.CMD_START_SINGLE_SCAN:
-                        handleScanStartMessage(ci, msg);
-                        return HANDLED;
-                    case WifiScanner.CMD_STOP_SINGLE_SCAN:
-                        removeSingleScanRequest(ci, msg.arg2);
                         return HANDLED;
                     default:
                         return NOT_HANDLED;
@@ -1324,6 +1358,18 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             if (WifiScanner.isFullBandScan(results.getBandsScannedInternal(), true)) {
                 mCachedScanResults.clear();
                 mCachedScanResults.addAll(Arrays.asList(results.getResults()));
+            }
+            if (mActiveScans.stream().anyMatch(rI -> rI.settings.ignoreLocationSettings)) {
+                // We were processing an emergency scan, post an alarm to inform WifiManager the
+                // end of that scan processing. If another scan is processed before the alarm fires,
+                // this timer is restarted (AlarmManager.set() using the same listener resets the
+                // timer). This delayed indication of emergency scan end prevents
+                // quick wifi toggle on/off if there is a burst of emergency scans when wifi is off.
+                mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        mClock.getElapsedSinceBootMillis()
+                                + EMERGENCY_SCAN_END_INDICATION_DELAY_MILLIS,
+                        EMERGENCY_SCAN_END_INDICATION_ALARM_TAG,
+                        mEmergencyScanEndIndicationListener, getHandler());
             }
             mActiveScans.clear();
         }
