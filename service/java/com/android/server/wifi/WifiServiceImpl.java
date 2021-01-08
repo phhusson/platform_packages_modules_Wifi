@@ -3792,7 +3792,7 @@ public class WifiServiceImpl extends BaseWifiService {
             intentToSend.setComponent(new ComponentName(
                     resolveInfo.activityInfo.applicationInfo.packageName,
                     resolveInfo.activityInfo.name));
-            mContext.sendBroadcastAsUser(intentToSend, UserHandle.ALL,
+            mContext.sendBroadcastAsUser(intentToSend, UserHandle.CURRENT,
                     android.Manifest.permission.NETWORK_CARRIER_PROVISIONING);
         }
     }

@@ -1177,8 +1177,6 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     }
 
-
-
     @Test
     public void testForceClientDisconnectInvokeBecauseClientAuthorizationEnabled()
             throws Exception {
@@ -2450,5 +2448,77 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mAlarmManager.getAlarmManager(), never()).setExact(anyInt(), anyLong(),
                 eq(mSoftApManager.SOFT_AP_SEND_MESSAGE_IDLE_IN_BRIDGED_MODE_TIMEOUT_TAG),
                 any(), any());
+    }
+
+    @Test
+    public void schedulesTimeoutTimerOnStartInBridgedModeWhenOpportunisticShutdownDisabled()
+            throws Exception {
+        int[] dual_bands = {SoftApConfiguration.BAND_2GHZ ,
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ};
+        Builder configBuilder = new SoftApConfiguration.Builder();
+        configBuilder.setSsid(TEST_SSID);
+        configBuilder.setBands(dual_bands);
+        configBuilder.setBridgedModeOpportunisticShutdownEnabled(false);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
+                mTestSoftApCapability);
+        startSoftApAndVerifyEnabled(apConfig);
+
+        verify(mResources)
+                .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
+        verify(mResources)
+                .getInteger(R.integer
+                .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
+
+
+        // Verify timer is scheduled
+        verify(mAlarmManager.getAlarmManager()).setExact(anyInt(), anyLong(),
+                eq(mSoftApManager.SOFT_AP_SEND_MESSAGE_TIMEOUT_TAG), any(), any());
+
+        // Verify the bridged mode timer is scheduled
+        verify(mAlarmManager.getAlarmManager(), never()).setExact(anyInt(), anyLong(),
+                eq(mSoftApManager.SOFT_AP_SEND_MESSAGE_IDLE_IN_BRIDGED_MODE_TIMEOUT_TAG),
+                any(), any());
+    }
+
+    @Test
+    public void testBridgedModeOpportunisticShutdownConfigureChanged()
+            throws Exception {
+        int[] dual_bands = {SoftApConfiguration.BAND_2GHZ ,
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ};
+        Builder configBuilder = new SoftApConfiguration.Builder();
+        configBuilder.setSsid(TEST_SSID);
+        configBuilder.setBands(dual_bands);
+        configBuilder.setBridgedModeOpportunisticShutdownEnabled(false);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
+                mTestSoftApCapability);
+        startSoftApAndVerifyEnabled(apConfig);
+
+        verify(mResources)
+                .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
+        verify(mResources)
+                .getInteger(R.integer
+                .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
+
+
+        // Verify timer is scheduled
+        verify(mAlarmManager.getAlarmManager()).setExact(anyInt(), anyLong(),
+                eq(mSoftApManager.SOFT_AP_SEND_MESSAGE_TIMEOUT_TAG), any(), any());
+
+        // Verify the bridged mode timer is scheduled
+        verify(mAlarmManager.getAlarmManager(), never()).setExact(anyInt(), anyLong(),
+                eq(mSoftApManager.SOFT_AP_SEND_MESSAGE_IDLE_IN_BRIDGED_MODE_TIMEOUT_TAG),
+                any(), any());
+        configBuilder.setBridgedModeOpportunisticShutdownEnabled(true);
+        mSoftApManager.updateConfiguration(configBuilder.build());
+        mLooper.dispatchAll();
+        // Verify the bridged mode timer is scheduled
+        verify(mAlarmManager.getAlarmManager()).setExact(anyInt(), anyLong(),
+                eq(mSoftApManager.SOFT_AP_SEND_MESSAGE_IDLE_IN_BRIDGED_MODE_TIMEOUT_TAG),
+                any(), any());
+
+
+
     }
 }

@@ -3239,7 +3239,7 @@ public class WifiMetrics {
                 bssids++;
                 boolean isOpen = matchInfo.networkType == WifiConfiguration.SECURITY_TYPE_OPEN;
                 WifiConfiguration config =
-                        mWifiConfigManager.getConfiguredNetworkForScanDetail(scanDetail);
+                        mWifiConfigManager.getSavedNetworkForScanDetail(scanDetail);
                 boolean isSaved = (config != null) && !config.isEphemeral()
                         && !config.isPasspoint();
                 if (isOpen) {
