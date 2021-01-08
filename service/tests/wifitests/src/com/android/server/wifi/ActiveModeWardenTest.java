@@ -54,6 +54,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.location.LocationManager;
+import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
@@ -82,6 +83,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -136,6 +138,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     @Mock ActiveModeWarden.ModeChangeCallback mModeChangeCallback;
     @Mock ActiveModeWarden.PrimaryClientModeManagerChangedCallback mPrimaryChangedCallback;
     @Mock WifiMetrics mWifiMetrics;
+    @Mock ISubsystemRestartCallback mSubsystemRestartCallback;
 
     ActiveModeManager.Listener<ConcreteClientModeManager> mClientListener;
     ActiveModeManager.Listener<SoftApManager> mSoftApListener;
@@ -219,6 +222,8 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         mActiveModeWarden.registerLohsCallback(mLohsStateMachineCallback);
         mActiveModeWarden.registerModeChangeCallback(mModeChangeCallback);
         mActiveModeWarden.registerPrimaryClientModeManagerChangedCallback(mPrimaryChangedCallback);
+        when(mSubsystemRestartCallback.asBinder()).thenReturn(Mockito.mock(IBinder.class));
+        mActiveModeWarden.registerSubsystemRestartCallback(mSubsystemRestartCallback);
         mTestSoftApInfo = new SoftApInfo();
         mTestSoftApInfo.setFrequency(TEST_AP_FREQUENCY);
         mTestSoftApInfo.setBandwidth(TEST_AP_BANDWIDTH);
@@ -2102,6 +2107,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
                 true);
         mLooper.dispatchAll();
         verify(mWifiDiagnostics).takeBugReport(anyString(), anyString());
+        verify(mSubsystemRestartCallback).onSubsystemRestarting();
     }
 
     @Test
@@ -2113,6 +2119,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
                 "anything", false);
         mLooper.dispatchAll();
         verify(mWifiDiagnostics, never()).takeBugReport(anyString(), anyString());
+        verify(mSubsystemRestartCallback).onSubsystemRestarting();
     }
 
     /**
@@ -2207,6 +2214,9 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
         verify(mWifiInjector, times(2)).makeClientModeManager(any(), any(), any(), anyBoolean());
         assertInEnabledState();
+
+        verify(mSubsystemRestartCallback).onSubsystemRestarting();
+        verify(mSubsystemRestartCallback).onSubsystemRestarted();
     }
 
     /**
@@ -2247,6 +2257,9 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         // started again
         verify(mWifiInjector, times(2)).makeClientModeManager(any(), any(), any(), anyBoolean());
         assertInEnabledState();
+
+        verify(mSubsystemRestartCallback).onSubsystemRestarting();
+        verify(mSubsystemRestartCallback).onSubsystemRestarted();
     }
 
     /**
@@ -2321,6 +2334,9 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiInjector, times(2)).makeSoftApManager(
                 any(), any(), any(), any(), any(), anyBoolean());
         assertInEnabledState();
+
+        verify(mSubsystemRestartCallback).onSubsystemRestarting();
+        verify(mSubsystemRestartCallback).onSubsystemRestarted();
     }
 
     /**
@@ -2364,6 +2380,9 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiInjector, times(2)).makeSoftApManager(
                 any(), any(), any(), any(), any(), anyBoolean());
         assertInEnabledState();
+
+        verify(mSubsystemRestartCallback).onSubsystemRestarting();
+        verify(mSubsystemRestartCallback).onSubsystemRestarted();
     }
 
     /**

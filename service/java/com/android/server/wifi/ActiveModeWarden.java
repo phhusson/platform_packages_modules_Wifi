@@ -33,6 +33,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.LocationManager;
+import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
@@ -44,6 +45,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.os.RemoteCallbackList;
+import android.os.RemoteException;
 import android.os.WorkSource;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -111,6 +114,9 @@ public class ActiveModeWarden {
 
     private WifiServiceImpl.SoftApCallbackInternal mSoftApCallback;
     private WifiServiceImpl.SoftApCallbackInternal mLohsCallback;
+
+    private final RemoteCallbackList<ISubsystemRestartCallback> mRestartCallbacks =
+            new RemoteCallbackList<>();
 
     private boolean mIsShuttingdown = false;
     private boolean mVerboseLoggingEnabled = false;
@@ -485,6 +491,23 @@ public class ActiveModeWarden {
             @Nullable String reasonDetail, boolean requestBugReport) {
         mWifiController.sendMessage(WifiController.CMD_RECOVERY_RESTART_WIFI, reason,
                 requestBugReport ? 1 : 0, reasonDetail);
+    }
+
+    /**
+     * register a callback to monitor the progress of Wi-Fi subsystem operation (started/finished)
+     * - started via {@link #recoveryRestartWifi(int, String, boolean)}.
+     */
+    public boolean registerSubsystemRestartCallback(ISubsystemRestartCallback callback) {
+        return mRestartCallbacks.register(callback);
+    }
+
+    /**
+     * unregister a callback to monitor the progress of Wi-Fi subsystem operation (started/finished)
+     * - started via {@link #recoveryRestartWifi(int, String, boolean)}. Callback is registered via
+     * {@link #registerSubsystemRestartCallback(ISubsystemRestartCallback)}.
+     */
+    public boolean unregisterSubsystemRestartCallback(ISubsystemRestartCallback callback) {
+        return mRestartCallbacks.unregister(callback);
     }
 
     /** Wifi has been toggled. */
@@ -1544,6 +1567,15 @@ public class ActiveModeWarden {
                             }
                         }
                         transitionTo(mEnabledState);
+                        int numCallbacks = mRestartCallbacks.beginBroadcast();
+                        for (int i = 0; i < numCallbacks; i++) {
+                            try {
+                                mRestartCallbacks.getBroadcastItem(i).onSubsystemRestarted();
+                            } catch (RemoteException e) {
+                                Log.e(TAG, "Failure calling onSubsystemRestarted" + e);
+                            }
+                        }
+                        mRestartCallbacks.finishBroadcast();
                         break;
                     default:
                         return NOT_HANDLED;
@@ -1757,6 +1789,15 @@ public class ActiveModeWarden {
                                 .collect(Collectors.toList());
                         deferMessage(obtainMessage(CMD_DEFERRED_RECOVERY_RESTART_WIFI,
                                 modeManagersBeforeRecovery));
+                        int numCallbacks = mRestartCallbacks.beginBroadcast();
+                        for (int i = 0; i < numCallbacks; i++) {
+                            try {
+                                mRestartCallbacks.getBroadcastItem(i).onSubsystemRestarting();
+                            } catch (RemoteException e) {
+                                Log.e(TAG, "Failure calling onSubsystemRestarting" + e);
+                            }
+                        }
+                        mRestartCallbacks.finishBroadcast();
                         shutdownWifi();
                         // onStopped will move the state machine to "DisabledState".
                         break;

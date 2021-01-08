@@ -32,6 +32,7 @@ import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiUsabilityStatsListener;
 import android.net.wifi.IScanResultsCallback;
 import android.net.wifi.ISoftApCallback;
+import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
@@ -303,6 +304,10 @@ interface IWifiManager
     void setCarrierNetworkOffloadEnabled(int subscriptionId, boolean merged, boolean enabled);
 
     boolean isCarrierNetworkOffloadEnabled(int subscriptionId, boolean merged);
+
+    void registerSubsystemRestartCallback(in ISubsystemRestartCallback callback);
+
+    void unregisterSubsystemRestartCallback(in ISubsystemRestartCallback callback);
 
     void restartWifiSubsystem(String reason);
 

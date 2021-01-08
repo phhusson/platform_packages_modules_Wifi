@@ -67,6 +67,7 @@ import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiUsabilityStatsListener;
 import android.net.wifi.IScanResultsCallback;
 import android.net.wifi.ISoftApCallback;
+import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
@@ -876,6 +877,39 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiMetrics.incrementNumWifiToggles(isPrivileged, enable);
         mActiveModeWarden.wifiToggled(new WorkSource(Binder.getCallingUid(), packageName));
         return true;
+    }
+
+    @Override
+    public void registerSubsystemRestartCallback(ISubsystemRestartCallback callback) {
+        if (!SdkLevel.isAtLeastS()) {
+            throw new UnsupportedOperationException();
+        }
+        enforceAccessPermission();
+        if (mVerboseLoggingEnabled) {
+            mLog.info("registerSubsystemRestartCallback uid=%").c(Binder.getCallingUid()).flush();
+        }
+
+        mWifiThreadRunner.post(() -> {
+            if (!mActiveModeWarden.registerSubsystemRestartCallback(callback)) {
+                Log.e(TAG, "registerSubsystemRestartCallback: Failed to register callback");
+            }
+        });
+    }
+
+    @Override
+    public void unregisterSubsystemRestartCallback(ISubsystemRestartCallback callback) {
+        if (!SdkLevel.isAtLeastS()) {
+            throw new UnsupportedOperationException();
+        }
+        enforceAccessPermission();
+        if (mVerboseLoggingEnabled) {
+            mLog.info("registerSubsystemRestartCallback uid=%").c(Binder.getCallingUid()).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            if (!mActiveModeWarden.unregisterSubsystemRestartCallback(callback)) {
+                Log.e(TAG, "unregisterSubsystemRestartCallback: Failed to register callback");
+            }
+        });
     }
 
     @Override
