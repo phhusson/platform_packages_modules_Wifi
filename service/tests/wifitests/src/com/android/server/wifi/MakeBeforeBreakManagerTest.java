@@ -50,6 +50,7 @@ public class MakeBeforeBreakManagerTest extends WifiBaseTest {
     @Mock private ConcreteClientModeManager mUnrelatedCmm;
     @Mock private WorkSource mSettingsWorkSource;
     @Mock private ClientModeImplMonitor mCmiMonitor;
+    @Mock private ClientModeManagerBroadcastQueue mBroadcastQueue;
     @Captor private ArgumentCaptor<ModeChangeCallback> mModeChangeCallbackCaptor;
     @Captor private ArgumentCaptor<ClientModeImplListener> mCmiListenerCaptor;
 
@@ -68,7 +69,7 @@ public class MakeBeforeBreakManagerTest extends WifiBaseTest {
                 .thenReturn(Arrays.asList(mNewPrimaryCmm));
 
         mMbbManager = new MakeBeforeBreakManager(mActiveModeWarden, mFrameworkFacade, mContext,
-                mCmiMonitor);
+                mCmiMonitor, mBroadcastQueue);
 
         verify(mActiveModeWarden).registerModeChangeCallback(mModeChangeCallbackCaptor.capture());
         verify(mCmiMonitor).registerListener(mCmiListenerCaptor.capture());
@@ -108,6 +109,7 @@ public class MakeBeforeBreakManagerTest extends WifiBaseTest {
 
         verify(mOldPrimaryCmm).setRole(ROLE_CLIENT_SECONDARY_TRANSIENT,
                 ActiveModeWarden.INTERNAL_REQUESTOR_WS);
+        verify(mBroadcastQueue).fakeDisconnectionBroadcasts();
 
         when(mOldPrimaryCmm.getRole()).thenReturn(ROLE_CLIENT_SECONDARY_TRANSIENT);
         when(mActiveModeWarden.getClientModeManagersInRoles(ROLE_CLIENT_SECONDARY_TRANSIENT))

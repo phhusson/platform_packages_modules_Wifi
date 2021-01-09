@@ -117,6 +117,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
     private final SelfRecovery mSelfRecovery;
     private final WifiGlobals mWifiGlobals;
     private final DefaultClientModeManager mDefaultClientModeManager;
+    private final ClientModeManagerBroadcastQueue mBroadcastQueue;
     private final long mId;
     private final Graveyard mGraveyard = new Graveyard();
     private final WifiCountryCode mCountryCode;
@@ -162,6 +163,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             SelfRecovery selfRecovery, WifiGlobals wifiGlobals,
             DefaultClientModeManager defaultClientModeManager, long id,
             @NonNull WorkSource requestorWs, @NonNull ClientRole role,
+            @NonNull ClientModeManagerBroadcastQueue broadcastQueue,
             boolean verboseLoggingEnabled,
             @NonNull WifiCountryCode countryCode) {
         mContext = context;
@@ -179,6 +181,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
         mId = id;
         mTargetRole = role;
         mTargetRequestorWs = requestorWs;
+        mBroadcastQueue = broadcastQueue;
         enableVerboseLogging(verboseLoggingEnabled);
         mCountryCode = countryCode;
         mStateMachine.sendMessage(ClientModeStateMachine.CMD_START, Pair.create(role, requestorWs));
@@ -550,7 +553,8 @@ public class ConcreteClientModeManager implements ClientModeManager {
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
         intent.putExtra(WifiManager.EXTRA_WIFI_STATE, newState);
         intent.putExtra(WifiManager.EXTRA_PREVIOUS_WIFI_STATE, currentState);
-        mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
+        mBroadcastQueue.queueOrSendBroadcast(
+                this, () -> mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL));
     }
 
     private void setWifiStateForApiCalls(int newState) {

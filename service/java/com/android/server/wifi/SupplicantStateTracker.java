@@ -245,6 +245,13 @@ public class SupplicantStateTracker extends StateMachine {
             SupplicantState state, boolean failedAuth, int reasonCode) {
         int supplState = supplicantStateToBatteryStatsSupplicantState(state);
         mBatteryStatsManager.reportWifiSupplicantStateChanged(supplState, failedAuth);
+        mBroadcastQueue.queueOrSendBroadcast(
+                mClientModeManager,
+                () -> sendSupplicantStateChangedBroadcast(mContext, state, failedAuth, reasonCode));
+    }
+
+    private static void sendSupplicantStateChangedBroadcast(
+            Context context, SupplicantState state, boolean failedAuth, int reasonCode) {
         Intent intent = new Intent(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT
                 | Intent.FLAG_RECEIVER_REPLACE_PENDING);
@@ -257,9 +264,7 @@ public class SupplicantStateTracker extends StateMachine {
                     WifiManager.EXTRA_SUPPLICANT_ERROR_REASON,
                     reasonCode);
         }
-        mBroadcastQueue.queueOrSendBroadcast(
-                mClientModeManager,
-                () -> mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL));
+        context.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
     }
 
     /********************************************************

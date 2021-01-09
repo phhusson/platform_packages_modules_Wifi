@@ -224,6 +224,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private final WifiLockManager mWifiLockManager;
     private final WifiP2pConnection mWifiP2pConnection;
     private final WifiGlobals mWifiGlobals;
+    private final ClientModeManagerBroadcastQueue mBroadcastQueue;
     private final long mId;
 
     private boolean mScreenOn = false;
@@ -642,6 +643,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             @NonNull String ifaceName,
             @NonNull ConcreteClientModeManager clientModeManager,
             @NonNull ClientModeImplMonitor cmiMonitor,
+            @NonNull ClientModeManagerBroadcastQueue broadcastQueue,
             boolean verboseLoggingEnabled) {
         super(TAG, looper);
         mWifiMetrics = wifiMetrics;
@@ -658,6 +660,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mLinkProbeManager = linkProbeManager;
         mMboOceController = mboOceController;
         mWifiCarrierInfoManager = wifiCarrierInfoManager;
+        mBroadcastQueue = broadcastQueue;
         mNetworkAgentState = DetailedState.DISCONNECTED;
 
         mBatteryStatsManager = batteryStatsManager;
@@ -1144,8 +1147,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     /**
      * Update interface capabilities
      * This method is used to update some of interface capabilities defined in overlay
-     *
-     * @param ifaceName name of interface to update
      */
     private void updateInterfaceCapabilities() {
         DeviceWiphyCapabilities cap = getDeviceWiphyCapabilities();
@@ -2206,14 +2207,18 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         Intent intent = new Intent(WifiManager.RSSI_CHANGED_ACTION);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
         intent.putExtra(WifiManager.EXTRA_NEW_RSSI, newRssi);
-        mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
-                android.Manifest.permission.ACCESS_WIFI_STATE);
+        mBroadcastQueue.queueOrSendBroadcast(
+                mClientModeManager,
+                () -> mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
+                        android.Manifest.permission.ACCESS_WIFI_STATE));
     }
 
     private void sendLinkConfigurationChangedBroadcast() {
         Intent intent = new Intent(WifiManager.ACTION_LINK_CONFIGURATION_CHANGED);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
-        mContext.sendBroadcastAsUser(intent, UserHandle.ALL);
+        mBroadcastQueue.queueOrSendBroadcast(
+                mClientModeManager,
+                () -> mContext.sendBroadcastAsUser(intent, UserHandle.ALL));
     }
 
     /**
@@ -2226,7 +2231,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         Intent intent = new Intent(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
         intent.putExtra(WifiManager.EXTRA_SUPPLICANT_CONNECTED, connected);
-        mContext.sendBroadcastAsUser(intent, UserHandle.ALL);
+        mBroadcastQueue.queueOrSendBroadcast(
+                mClientModeManager,
+                () -> mContext.sendBroadcastAsUser(intent, UserHandle.ALL));
     }
 
     /**
@@ -2253,8 +2260,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             hidden = true;
         }
         if (mVerboseLoggingEnabled) {
-            log("setDetailed state, old ="
-                    + mNetworkAgentState + " and new state=" + state
+            log("sendNetworkChangeBroadcast"
+                    + " oldState=" + mNetworkAgentState
+                    + " newState=" + state
                     + " hidden=" + hidden);
         }
         if (hidden || state == mNetworkAgentState) return;
@@ -2263,17 +2271,28 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     }
 
     private void sendNetworkChangeBroadcastWithCurrentState() {
-        Intent intent = new Intent(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
-        NetworkInfo networkInfo = makeNetworkInfo();
-        intent.putExtra(WifiManager.EXTRA_NETWORK_INFO, networkInfo);
-        //TODO(b/69974497) This should be non-sticky, but settings needs fixing first.
-        mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
+        // copy into local variables to force lambda to capture by value and not reference, since
+        // mNetworkAgentState is mutable and can change
+        final DetailedState networkAgentState = mNetworkAgentState;
+        mBroadcastQueue.queueOrSendBroadcast(
+                mClientModeManager,
+                () -> sendNetworkChangeBroadcast(mContext, networkAgentState));
     }
 
-    private NetworkInfo makeNetworkInfo() {
+    /** Send a NETWORK_STATE_CHANGED_ACTION broadcast. */
+    public static void sendNetworkChangeBroadcast(
+            Context context, DetailedState networkAgentState) {
+        Intent intent = new Intent(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
+        NetworkInfo networkInfo = makeNetworkInfo(networkAgentState);
+        intent.putExtra(WifiManager.EXTRA_NETWORK_INFO, networkInfo);
+        //TODO(b/69974497) This should be non-sticky, but settings needs fixing first.
+        context.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
+    }
+
+    private static NetworkInfo makeNetworkInfo(DetailedState networkAgentState) {
         final NetworkInfo ni = new NetworkInfo(ConnectivityManager.TYPE_WIFI, 0, NETWORKTYPE, "");
-        ni.setDetailedState(mNetworkAgentState, null, null);
+        ni.setDetailedState(networkAgentState, null, null);
         return ni;
     }
 

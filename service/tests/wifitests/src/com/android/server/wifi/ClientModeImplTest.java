@@ -128,6 +128,7 @@ import com.android.internal.util.IState;
 import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.ClientMode.LinkProbeCallback;
+import com.android.server.wifi.ClientModeManagerBroadcastQueue.QueuedBroadcast;
 import com.android.server.wifi.hotspot2.NetworkDetail;
 import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.hotspot2.PasspointProvisioningTestUtil;
@@ -447,6 +448,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock WifiGlobals mWifiGlobals;
     @Mock LinkProbeCallback mLinkProbeCallback;
     @Mock ClientModeImplMonitor mCmiMonitor;
+    @Mock ClientModeManagerBroadcastQueue mBroadcastQueue;
 
     final ArgumentCaptor<WifiConfigManager.OnNetworkUpdateListener> mConfigUpdateListenerCaptor =
             ArgumentCaptor.forClass(WifiConfigManager.OnNetworkUpdateListener.class);
@@ -566,6 +568,11 @@ public class ClientModeImplTest extends WifiBaseTest {
             }
         }).when(mClientModeManager).setShouldReduceNetworkScore(anyBoolean());
         when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
+        doAnswer(new AnswerWithArguments() {
+            public void answer(ClientModeManager manager, QueuedBroadcast broadcast) {
+                broadcast.send();
+            }
+        }).when(mBroadcastQueue).queueOrSendBroadcast(any(), any());
     }
 
     private void registerAsyncChannel(Consumer<AsyncChannel> consumer, Messenger messenger,
@@ -622,7 +629,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 1, mBatteryStatsManager, mSupplicantStateTracker, mMboOceController,
                 mWifiCarrierInfoManager, mEapFailureNotifier, mSimRequiredNotifier,
                 mWifiScoreReport, mWifiP2pConnection, mWifiGlobals,
-                WIFI_IFACE_NAME, mClientModeManager, mCmiMonitor, false);
+                WIFI_IFACE_NAME, mClientModeManager, mCmiMonitor, mBroadcastQueue, false);
 
         mWifiCoreThread = getCmiHandlerThread(mCmi);
 

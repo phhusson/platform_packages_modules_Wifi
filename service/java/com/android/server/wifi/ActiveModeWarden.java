@@ -170,6 +170,13 @@ public class ActiveModeWarden {
     /** Called when the primary ClientModeManager changes. */
     public interface PrimaryClientModeManagerChangedCallback {
         /**
+         * Note: The current implementation for changing primary CMM is not atomic (due to setRole()
+         * needing to go through StateMachine, which is async). Thus, when the primary CMM changes,
+         * the sequence of calls looks like this:
+         * 1. onChange(prevPrimaryCmm, null)
+         * 2. onChange(null, newPrimaryCmm)
+         * Nevertheless, at run time, these two calls should occur in rapid succession.
+         *
          * @param prevPrimaryClientModeManager the previous primary ClientModeManager, or null if
          *                                     there was no previous primary (e.g. Wifi was off).
          * @param newPrimaryClientModeManager the new primary ClientModeManager, or null if there is

@@ -38,6 +38,7 @@ public class MakeBeforeBreakManager {
     private final FrameworkFacade mFrameworkFacade;
     private final Context mContext;
     private final ClientModeImplMonitor mCmiMonitor;
+    private final ClientModeManagerBroadcastQueue mBroadcastQueue;
 
     private boolean mVerboseLoggingEnabled = false;
 
@@ -70,11 +71,13 @@ public class MakeBeforeBreakManager {
             @NonNull ActiveModeWarden activeModeWarden,
             @NonNull FrameworkFacade frameworkFacade,
             @NonNull Context context,
-            @NonNull ClientModeImplMonitor cmiMonitor) {
+            @NonNull ClientModeImplMonitor cmiMonitor,
+            @NonNull ClientModeManagerBroadcastQueue broadcastQueue) {
         mActiveModeWarden = activeModeWarden;
         mFrameworkFacade = frameworkFacade;
         mContext = context;
         mCmiMonitor = cmiMonitor;
+        mBroadcastQueue = broadcastQueue;
 
         mActiveModeWarden.registerModeChangeCallback(new ModeChangeCallback());
         mCmiMonitor.registerListener(new ClientModeImplListener() {
@@ -203,6 +206,11 @@ public class MakeBeforeBreakManager {
 
         currentPrimary.setRole(
                 ROLE_CLIENT_SECONDARY_TRANSIENT, ActiveModeWarden.INTERNAL_REQUESTOR_WS);
+        // immediately send fake disconnection broadcasts upon changing primary CMM's role to
+        // SECONDARY_TRANSIENT, because as soon as the CMM becomes SECONDARY_TRANSIENT, its
+        // broadcasts will never be sent out again (BroadcastQueue only sends broadcasts for the
+        // current primary CMM). This is to preserve the legacy single STA behavior.
+        mBroadcastQueue.fakeDisconnectionBroadcasts();
         mMakeBeforeBreakInfo = new MakeBeforeBreakInfo(currentPrimary, newPrimary);
     }
 

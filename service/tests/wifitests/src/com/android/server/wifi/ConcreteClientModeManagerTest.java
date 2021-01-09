@@ -63,6 +63,7 @@ import android.telephony.ims.RegistrationManager;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 
+import com.android.server.wifi.ClientModeManagerBroadcastQueue.QueuedBroadcast;
 import com.android.wifi.resources.R;
 
 import org.junit.After;
@@ -114,6 +115,7 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
     @Mock ScanOnlyModeImpl mScanOnlyModeImpl;
     @Mock DefaultClientModeManager mDefaultClientModeManager;
     @Mock WifiCountryCode mWifiCountryCode;
+    @Mock ClientModeManagerBroadcastQueue mBroadcastQueue;
 
     private RegistrationManager.RegistrationCallback mImsMmTelManagerRegistrationCallback = null;
     private @RegistrationManager.ImsRegistrationState int mCurrentImsRegistrationState =
@@ -236,6 +238,11 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
         }).when(mClock).getElapsedSinceBootMillis();
         when(mWifiNative.replaceStaIfaceRequestorWs(TEST_INTERFACE_NAME, TEST_WORKSOURCE))
                 .thenReturn(true);
+        doAnswer(new AnswerWithArguments() {
+            public void answer(ClientModeManager manager, QueuedBroadcast broadcast) {
+                broadcast.send();
+            }
+        }).when(mBroadcastQueue).queueOrSendBroadcast(any(), any());
 
         mLooper = new TestLooper();
     }
@@ -248,8 +255,8 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
     private ConcreteClientModeManager createClientModeManager(ActiveModeManager.ClientRole role) {
         return new ConcreteClientModeManager(mContext, mLooper.getLooper(), mClock, mWifiNative,
                 mListener, mWifiMetrics, mWakeupController, mWifiInjector, mSelfRecovery,
-                mWifiGlobals, mDefaultClientModeManager, 0, TEST_WORKSOURCE, role, false,
-                mWifiCountryCode);
+                mWifiGlobals, mDefaultClientModeManager, 0, TEST_WORKSOURCE, role,
+                mBroadcastQueue, false, mWifiCountryCode);
     }
 
     private void startClientInScanOnlyModeAndVerifyEnabled() throws Exception {
