@@ -575,4 +575,13 @@ public class ScanRequestProxy {
                 ssid.equals(ScanResultUtil.createQuotedSSID(r.SSID))
                 && ScanResultUtil.isScanResultForOpenNetwork(r));
     }
+
+    /** Indicate whether there are legacy WPA2 networks. */
+    public boolean isLegacyWpa2EnterpriseNetworkInRange(String ssid) {
+        return mLastScanResultsMap.values().stream().anyMatch(r ->
+                ssid.equals(ScanResultUtil.createQuotedSSID(r.SSID))
+                && ScanResultUtil.isScanResultForEapNetwork(r)
+                && !ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(r)
+                && !ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(r));
+    }
 }

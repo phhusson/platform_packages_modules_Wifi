@@ -1987,7 +1987,9 @@ public class WifiMetrics {
                     || ScanResultUtil.isScanResultForSaeNetwork(scanResult)) {
                 currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.authentication =
                         WifiMetricsProto.RouterFingerPrint.AUTH_PERSONAL;
-            } else if (ScanResultUtil.isScanResultForEapNetwork(scanResult)
+            } else if (ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)
+                    || ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(scanResult)
+                    || ScanResultUtil.isScanResultForEapNetwork(scanResult)
                     || ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)) {
                 currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.authentication =
                         WifiMetricsProto.RouterFingerPrint.AUTH_ENTERPRISE;
@@ -2658,7 +2660,9 @@ public class WifiMetrics {
                 if (scanResult.is6GHz()) {
                     band6gNetworks++;
                 }
-                if (ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)) {
+                if (ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)
+                        || ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)
+                        || ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(scanResult)) {
                     wpa3EnterpriseNetworks++;
                 } else if (ScanResultUtil.isScanResultForWapiPskNetwork(scanResult)) {
                     wapiPersonalNetworks++;

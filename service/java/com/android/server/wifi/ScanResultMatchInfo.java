@@ -122,10 +122,18 @@ public class ScanResultMatchInfo {
             return list;
         }
 
-        // WPA2 enterprise network & its upgradable types
-        // TODO: b/175928875, add support for WPA3_ENTERPRISE type
-        //       by checking MFPR in RSN capabilities.
-        if (ScanResultUtil.isScanResultForEapNetwork(scanResult)) {
+        // WPA2/WPA3 enterprise network & its upgradable types
+        if (ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)) {
+            list.add(SecurityParams.createSecurityParamsBySecurityType(
+                    WifiConfiguration.SECURITY_TYPE_EAP));
+            list.add(SecurityParams.createSecurityParamsBySecurityType(
+                    WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE));
+            return list;
+        } else if (ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(scanResult)) {
+            list.add(SecurityParams.createSecurityParamsBySecurityType(
+                    WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE));
+            return list;
+        } else if (ScanResultUtil.isScanResultForEapNetwork(scanResult)) {
             list.add(SecurityParams.createSecurityParamsBySecurityType(
                     WifiConfiguration.SECURITY_TYPE_EAP));
             return list;

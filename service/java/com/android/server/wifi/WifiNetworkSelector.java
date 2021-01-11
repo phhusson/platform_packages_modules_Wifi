@@ -955,6 +955,12 @@ public class WifiNetworkSelector {
                 candidates,
                 WifiConfiguration.SECURITY_TYPE_OWE,
                 mScanRequestProxy.isLegacyOpenNetworkInRange(ssid));
+        // There is no WPA3 Enterprise offload flag yet, always assume that
+        // WPA3 Enterprise auto-upgrade offload is not supported.
+        removeAutoUpgradeCandidateIfLegacyNetworkInRange(
+                candidates,
+                WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE,
+                mScanRequestProxy.isLegacyWpa2EnterpriseNetworkInRange(ssid));
     }
 
     /**

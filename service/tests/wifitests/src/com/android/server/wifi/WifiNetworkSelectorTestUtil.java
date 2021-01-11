@@ -138,7 +138,7 @@ public class WifiNetworkSelectorTestUtil {
         assertNotNull(ssids);
         String[] caps = new String[ssids.length];
         for (int i = 0; i < ssids.length; i++) {
-            caps[i] = "[EAP][ESS]";
+            caps[i] = "[EAP/SHA1][ESS]";
         }
         List<ScanDetail> scanDetails = buildScanDetails(ssids, bssids, freqs, caps, levels, clock);
         WifiConfiguration[] savedConfigs = new WifiConfiguration[ssids.length];

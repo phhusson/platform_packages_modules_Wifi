@@ -335,6 +335,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(true);
         when(mWifiGlobals.isWpa3SaeUpgradeOffloadEnabled()).thenReturn(true);
         when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
+        when(mWifiGlobals.isWpa3EnterpriseUpgradeEnabled()).thenReturn(true);
     }
 
     private void setupWifiConfigManager() {
@@ -392,7 +393,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-PSK][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-PSK][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G - 1, mThresholdMinimumRssi5G - 1};
         int[] securities = {SECURITY_PSK, SECURITY_EAP};
 
@@ -425,7 +426,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-PSK][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-PSK][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + RSSI_BUMP, mThresholdMinimumRssi5G + RSSI_BUMP};
         int[] securities = {SECURITY_PSK, SECURITY_EAP};
 
@@ -473,7 +474,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + RSSI_BUMP, mThresholdMinimumRssi5G + RSSI_BUMP};
         int[] securities = {SECURITY_EAP, SECURITY_EAP};
 
@@ -634,7 +635,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 2457};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-PSK][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-PSK][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + 20, mThresholdMinimumRssi2G + RSSI_BUMP};
         int[] securities = {SECURITY_EAP, SECURITY_PSK};
 
@@ -709,7 +710,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 2457};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-PSK][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-PSK][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + 20, mThresholdMinimumRssi2G + RSSI_BUMP};
         int[] securities = {SECURITY_EAP, SECURITY_PSK};
 
@@ -740,7 +741,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssidsNew = {"\"test2\""};
         String[] bssidsNew = {"6c:f3:7f:ae:8c:f4"};
         int[] freqsNew = {2457};
-        String[] capsNew = {"[WPA2-EAP-CCMP][ESS]"};
+        String[] capsNew = {"[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levelsNew = {mThresholdMinimumRssi2G + 40};
         scanDetails = WifiNetworkSelectorTestUtil.buildScanDetails(ssidsNew, bssidsNew,
                 freqsNew, capsNew, levelsNew, mClock);
@@ -767,7 +768,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5120};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-PSK][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-PSK][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + 10, mThresholdMinimumRssi2G + 20};
         int[] securities = {SECURITY_EAP, SECURITY_PSK};
         // VHT cap IE
@@ -1378,7 +1379,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + RSSI_BUMP, mThresholdMinimumRssi5G + RSSI_BUMP};
         mPlaceholderNominator.setNominatorToSelectCandidate(false);
 
@@ -1486,7 +1487,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + RSSI_BUMP, mThresholdMinimumRssi5G + RSSI_BUMP};
         mPlaceholderNominator.setNominatorToSelectCandidate(false);
 
@@ -1525,7 +1526,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\"", "\"test3\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4", "6c:f3:7f:ae:8c:f5"};
         int[] freqs = {2437, 5180, 2414};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[ESS]", "[RSN-OWE-CCMP][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[ESS]", "[RSN-OWE-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G, mThresholdMinimumRssi5G + RSSI_BUMP,
                 mThresholdMinimumRssi2G + RSSI_BUMP};
         mPlaceholderNominator.setNominatorToSelectCandidate(false);
@@ -1560,7 +1561,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\"", "\"test3\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4", "6c:f3:7f:ae:8c:f5"};
         int[] freqs = {2437, 5180, 2414};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[ESS]", "[RSN-OWE-CCMP][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[ESS]", "[RSN-OWE-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G, mThresholdMinimumRssi5G + RSSI_BUMP,
                 mThresholdMinimumRssi2G + RSSI_BUMP};
         mPlaceholderNominator.setNominatorToSelectCandidate(false);
@@ -1718,7 +1719,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + 1, mThresholdMinimumRssi5G + 1};
         int[] securities = {SECURITY_EAP, SECURITY_EAP};
         HashSet<String> blocklist = new HashSet<>();
@@ -1750,7 +1751,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 5180};
-        String[] caps = {"[WPA2-EAP-CCMP][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + 1, mThresholdMinimumRssi5G + 1};
         int[] securities = {SECURITY_EAP, SECURITY_EAP};
         HashSet<String> blocklist = new HashSet<>();
@@ -1836,7 +1837,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         String[] ssids = {"\"test1\"", "\"test2\""};
         String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
         int[] freqs = {2437, 2412};
-        String[] caps = {"[WPA2-PSK][ESS]", "[WPA2-EAP-CCMP][ESS]"};
+        String[] caps = {"[WPA2-PSK][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
         int[] levels = {mThresholdMinimumRssi2G + 1, mThresholdMinimumRssi2G + 1};
         int[] securities = {SECURITY_PSK, SECURITY_EAP};
 
@@ -2252,5 +2253,76 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
         assertTrue(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
                 .isSecurityType(WifiConfiguration.SECURITY_TYPE_OPEN));
+    }
+
+    private ScanDetailsAndWifiConfigs setupWpa3EnterpriseAutoUpgradeWithWpa2EnterpriseNetwork() {
+        String ssid = "\"auto-upgrade-network\"";
+        when(mScanRequestProxy.isLegacyWpa2EnterpriseNetworkInRange(eq(ssid)))
+                .thenReturn(true);
+        return setupAutoUpgradeNetworks(
+                WifiConfigurationTestUtil.createEapNetwork(ssid),
+                new String[] {"[RSN-EAP/SHA256-CCMP][ESS][MFPC][MFPR]",
+                        "[RSN-EAP/SHA1-TKIP+CCMP][ESS]"});
+    }
+
+    /**
+     * Verify that WPA3 Enterprise network auto-upgrade behavior.
+     */
+    @Test
+    public void testWpa3EnterpriseAutoUpgradeWithOpenNetworkWhenAutoUpgradeEnabled() {
+        when(mWifiGlobals.isWpa3EnterpriseUpgradeEnabled()).thenReturn(true);
+
+        ScanDetailsAndWifiConfigs scanDetailsAndConfigs =
+                setupWpa3EnterpriseAutoUpgradeWithWpa2EnterpriseNetwork();
+        List<ScanDetail> scanDetails = scanDetailsAndConfigs.getScanDetails();
+        WifiConfiguration[] savedConfigs = scanDetailsAndConfigs.getWifiConfigs();
+        WifiConfiguration networkSelectorChoice = savedConfigs[0];
+
+        List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
+                scanDetails, new HashSet<>(),
+                Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo)),
+                false, true, true);
+        assertEquals(2, candidates.size());
+
+        // Verify that WPA2 Enterprise network is selected (assume offload is not supported.).
+        WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
+        WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
+        assertTrue(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
+                .isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP));
+
+        // Verify that WPA3 Enterprise network is selected if no OPEN network is shown.
+        when(mScanRequestProxy.isLegacyWpa2EnterpriseNetworkInRange(eq(networkSelectorChoice.SSID)))
+                .thenReturn(false);
+        candidate = mWifiNetworkSelector.selectNetwork(candidates);
+        WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
+        assertTrue(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
+                .isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE));
+    }
+
+    /**
+     * Verify that WPA3 Enterprise network is not selected if auto-upgrade is disabled.
+     */
+    @Test
+    public void testWpa3EnterpriseNoAutoUpgradeWithPskNetworkWhenAutoUpgradeDisabled() {
+        when(mWifiGlobals.isWpa3EnterpriseUpgradeEnabled()).thenReturn(false);
+
+        ScanDetailsAndWifiConfigs scanDetailsAndConfigs =
+                setupWpa3EnterpriseAutoUpgradeWithWpa2EnterpriseNetwork();
+        List<ScanDetail> scanDetails = scanDetailsAndConfigs.getScanDetails();
+        WifiConfiguration[] savedConfigs = scanDetailsAndConfigs.getWifiConfigs();
+        WifiConfiguration networkSelectorChoice = savedConfigs[0];
+
+        List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
+                scanDetails, new HashSet<>(),
+                Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo)),
+                false, true, true);
+        // WPA3 Enterprise is not treated as a candidate.
+        assertEquals(1, candidates.size());
+
+        // Verify that WPA2 Enterprise network is selected.
+        WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
+        WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
+        assertTrue(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
+                .isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP));
     }
 }

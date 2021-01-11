@@ -126,10 +126,17 @@ public class WifiConfigurationUtil {
 
     /**
      * Helper method to check if the provided |config| corresponds to a EAP network or not.
-     * TODO: b/175928875, add a method for Wpa3Enterprise.
      */
     public static boolean isConfigForEapNetwork(WifiConfiguration config) {
         return config.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP);
+    }
+
+    /**
+     * Helper method to check if the provided |config| corresponds to
+     * a WPA3 Enterprise network or not.
+     */
+    public static boolean isConfigForWpa3EnterpriseNetwork(WifiConfiguration config) {
+        return config.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE);
     }
 
     /**
@@ -886,6 +893,17 @@ public class WifiConfigurationUtil {
         config.addSecurityParams(saeParams);
     }
 
+    private static void addEapUpgradableSecurityTypeIfNecessary(WifiConfiguration config) {
+        if (!config.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP)) return;
+        if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE)) return;
+
+        Log.d(TAG, "Add upgradable Enterprise configuration.");
+        SecurityParams wpa3EnterpriseParams = SecurityParams.createSecurityParamsBySecurityType(
+                WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE);
+        wpa3EnterpriseParams.setIsAddedByAutoUpgrade(true);
+        config.addSecurityParams(wpa3EnterpriseParams);
+    }
+
     /**
      * Add upgradable securit type to the given wifi configuration.
      *
@@ -894,6 +912,7 @@ public class WifiConfigurationUtil {
     public static void addUpgradableSecurityTypeIfNecessary(WifiConfiguration config) {
         addOpenUpgradableSecurityTypeIfNecessary(config);
         addPskUpgradableSecurityTypeIfNecessary(config);
+        addEapUpgradableSecurityTypeIfNecessary(config);
     }
 
     /**
@@ -910,6 +929,9 @@ public class WifiConfigurationUtil {
         }
         if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE)) {
             return !wifiGlobals.isOweUpgradeEnabled();
+        }
+        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE)) {
+            return !wifiGlobals.isWpa3EnterpriseUpgradeEnabled();
         }
         return false;
     }

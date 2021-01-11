@@ -66,6 +66,7 @@ public class ScanResultMatchInfoTest extends WifiBaseTest {
                 WIFI_FEATURE_OWE | WIFI_FEATURE_WPA3_SAE);
         when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(true);
         when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
+        when(mWifiGlobals.isWpa3EnterpriseUpgradeEnabled()).thenReturn(true);
     }
 
     /**
@@ -413,6 +414,56 @@ public class ScanResultMatchInfoTest extends WifiBaseTest {
 
         // Test both a.equals(b) and b.equals(a) are false:
         // i.e. OWE saved network will never downgrade to a OPEN AP (from scan result)
+        assertFalse(key1.equals(key2));
+        assertFalse(key2.equals(key1));
+    }
+
+    /**
+     * Tests equality properties for WPA2 Enterprise to WPA3 Enterprise upgrades
+     */
+    @Test
+    public void testEqualityRulesForWpa2EnterpriseToWpa3EnterpriseUpgrade() {
+        verifyUpgradeMatching(
+                WifiConfigurationTestUtil.createEapNetwork("\"Upgrade\""),
+                WifiConfigurationTestUtil.createWpa3EnterpriseNetwork("\"Upgrade\""),
+                true);
+    }
+
+    /**
+     * Tests equality properties for WPA2 Enterprise to WPA3 Enterprise upgrades
+     * when feature is disabled
+     */
+    @Test
+    public void testEqualityRulesForWpa2EnterpriseToWpa3EnterpriseUpgradeWithOverlayDisable() {
+        when(mWifiGlobals.isWpa3EnterpriseUpgradeEnabled()).thenReturn(false);
+        verifyUpgradeMatching(
+                WifiConfigurationTestUtil.createEapNetwork("\"Upgrade\""),
+                WifiConfigurationTestUtil.createWpa3EnterpriseNetwork("\"Upgrade\""),
+                false);
+    }
+
+    /**
+     * Test that WPA3 Enterprise saved network will never downgrade to a
+     * WPA2 Enterprise AP (from scan result)
+     */
+    @Test
+    public void testWpa3EnterpriseToWpa2EnterpriseDoesNotDowngrade() {
+        WifiConfiguration wifiConfigurationWpa2Enterprise =
+                WifiConfigurationTestUtil.createEapNetwork("\"Downgrade\"");
+        WifiConfiguration wifiConfigurationWpa3Enterprise =
+                WifiConfigurationTestUtil.createWpa3EnterpriseNetwork("\"Downgrade\"");
+        ScanDetail scanDetailWpa2Enterprise = createScanDetailForNetwork(
+                wifiConfigurationWpa2Enterprise,
+                "AC:AB:AD:AE:AF:FC");
+
+        ScanResultMatchInfo key1 = ScanResultMatchInfo
+                .fromWifiConfiguration(wifiConfigurationWpa3Enterprise);
+        ScanResultMatchInfo key2 = ScanResultMatchInfo
+                .fromScanResult(scanDetailWpa2Enterprise.getScanResult());
+
+        // Test both a.equals(b) and b.equals(a) are false:
+        // i.e. WPA3 Enterprise saved network will never downgrade to
+        // a WPA2 Enterprise AP (from scan result)
         assertFalse(key1.equals(key2));
         assertFalse(key2.equals(key1));
     }

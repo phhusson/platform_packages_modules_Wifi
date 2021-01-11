@@ -51,6 +51,8 @@ public class WifiGlobals {
     private final boolean mIsWpa3SaeUpgradeOffloadEnabled;
     // This is read from the overlay, cache it after boot up.
     private final boolean mIsOweUpgradeEnabled;
+    // This is read from the overlay, cache it after boot up.
+    private final boolean mIsWpa3EnterpriseUpgradeEnabled;
 
     public WifiGlobals(Context context) {
         mContext = context;
@@ -61,6 +63,8 @@ public class WifiGlobals {
                 .getBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled);
         mIsOweUpgradeEnabled = mContext.getResources()
                 .getBoolean(R.bool.config_wifiOweUpgradeEnabled);
+        mIsWpa3EnterpriseUpgradeEnabled = mContext.getResources()
+                .getBoolean(R.bool.config_wifiWpa3EnterpriseUpgradeEnabled);
     }
 
     /** Get the interval between RSSI polls, in milliseconds. */
@@ -149,6 +153,15 @@ public class WifiGlobals {
         return mIsOweUpgradeEnabled;
     }
 
+    /**
+     * Help method to check if WPA3 Enterprise auto-upgrade is enabled.
+     *
+     * @return boolean true if auto-upgrade is enabled, false otherwise.
+     */
+    public boolean isWpa3EnterpriseUpgradeEnabled() {
+        return mIsWpa3EnterpriseUpgradeEnabled;
+    }
+
     /** Dump method for debugging */
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("Dump of WifiGlobals");
@@ -158,5 +171,6 @@ public class WifiGlobals {
         pw.println("mIsWpa3SaeUpgradeEnabled=" + mIsWpa3SaeUpgradeEnabled);
         pw.println("mIsWpa3SaeUpgradeOffloadEnabled=" + mIsWpa3SaeUpgradeOffloadEnabled);
         pw.println("mIsOweUpgradeEnabled=" + mIsOweUpgradeEnabled);
+        pw.println("mIsWpa3EnterpriseUpgradeEnabled=" + mIsWpa3EnterpriseUpgradeEnabled);
     }
 }
