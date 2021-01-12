@@ -52,6 +52,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WifiPermissionsUtil;
@@ -1351,12 +1352,11 @@ public class WifiAwareDataPathStateManager {
             uid = client.getUid();
             packageName = client.getCallingPackage();
 
-            // API change post 27: no longer allow "ANY"-style responders (initiators were never
-            // permitted).
-            // Note: checks are done on the manager. This is a backup for apps which bypass the
-            // check.
-            if (!allowNdpResponderFromAnyOverride && !wifiPermissionsUtil.isTargetSdkLessThan(
-                    client.getCallingPackage(), Build.VERSION_CODES.P, uid)) {
+            // API change post 30: allow accepts any peer responder.
+
+            if (!SdkLevel.isAtLeastS() && !allowNdpResponderFromAnyOverride
+                    && !wifiPermissionsUtil.isTargetSdkLessThan(
+                            client.getCallingPackage(), Build.VERSION_CODES.P, uid)) {
                 if (ns.type != WifiAwareNetworkSpecifier.NETWORK_SPECIFIER_TYPE_IB
                         && ns.type != WifiAwareNetworkSpecifier.NETWORK_SPECIFIER_TYPE_OOB) {
                     Log.e(TAG, "processNetworkSpecifier: networkSpecifier=" + ns

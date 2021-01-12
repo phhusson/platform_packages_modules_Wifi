@@ -1170,29 +1170,6 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
     }
 
     /**
-     * Validate the failure flow of the Responder: using session network specifier with a
-     * Passphrase and no peer ID (i.e. 0) on a NON-LEGACY device.
-     */
-    @Test
-    public void testDataPathResonderMacPassphraseNoPeerIdSuccessNonLegacy() throws Exception {
-        when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(), anyInt(), anyInt()))
-            .thenReturn(false);
-        testDataPathResponderUtility(false, false, false, true, true);
-    }
-
-    /**
-     * Validate the failure flow of the Responder: using session network specifier with a null
-     * PMK/Passphrase and no peer ID (i.e. 0) on a NON-LEGACY device.
-     */
-    @Test
-    public void testDataPathResonderMacOpenNoPeerIdNoPmkPassphraseSuccessNonLegacy()
-            throws Exception {
-        when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(), anyInt(), anyInt()))
-            .thenReturn(false);
-        testDataPathResponderUtility(false, false, false, false, true);
-    }
-
-    /**
      * Validate the success flow of the Responder: using a direct network specifier with a non-null
      * peer mac and non-null PMK.
      */
@@ -1225,28 +1202,6 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
      */
     @Test
     public void testDataPathResonderDirectNoMacNoPmkPassphraseSuccess() throws Exception {
-        testDataPathResponderUtility(true, false, false, false, true);
-    }
-
-    /**
-     * Validate the failure flow of the Responder: using a direct network specifier with a null peer
-     * mac and non-null Passphrase on a NON-LEGACY device.
-     */
-    @Test
-    public void testDataPathResonderDirectNoMacPassphraseSuccessNonLegacy() throws Exception {
-        when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(), anyInt(), anyInt()))
-            .thenReturn(false);
-        testDataPathResponderUtility(true, false, false, true, true);
-    }
-
-    /**
-     * Validate the failure flow of the Responder: using a direct network specifier with a null peer
-     * mac and null Pmk/Passphrase on a NON-LEGACY device.
-     */
-    @Test
-    public void testDataPathResonderDirectNoMacNoPmkPassphraseSuccessNonLegacy() throws Exception {
-        when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(), anyInt(), anyInt()))
-            .thenReturn(false);
         testDataPathResponderUtility(true, false, false, false, true);
     }
 
