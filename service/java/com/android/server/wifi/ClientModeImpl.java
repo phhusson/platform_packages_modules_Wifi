@@ -2267,15 +2267,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         return ni;
     }
 
-    private List<ScanResult.InformationElement> findMatchingInfoElements(@Nullable String bssid) {
-        if (bssid == null) return null;
-        ScanResult matchingScanResult = mScanRequestProxy.getScanResult(bssid);
-        if (matchingScanResult == null || matchingScanResult.informationElements == null) {
-            return null;
-        }
-        return Arrays.asList(matchingScanResult.informationElements);
-    }
-
     private SupplicantState handleSupplicantStateChange(StateChangeResult stateChangeResult) {
         SupplicantState state = stateChangeResult.state;
         mWifiScoreCard.noteSupplicantStateChanging(mWifiInfo, state);
@@ -2292,14 +2283,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (state == SupplicantState.ASSOCIATED) {
                 updateWifiInfoAfterAssociation();
             }
-            mWifiInfo.setInformationElements(findMatchingInfoElements(stateChangeResult.bssid));
         } else {
             // Reset parameters according to WifiInfo.reset()
             mWifiInfo.setNetworkId(WifiConfiguration.INVALID_NETWORK_ID);
             mWifiInfo.setBSSID(null);
             mWifiInfo.setSSID(null);
             mWifiInfo.setWifiStandard(ScanResult.WIFI_STANDARD_UNKNOWN);
-            mWifiInfo.setInformationElements(null);
         }
         updateLayer2Information();
         // SSID might have been updated, so call updateCapabilities
@@ -4096,7 +4085,14 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                             // The cached scan result of connected network would be null at the
                             // first connection, try to check full scan result list again to look up
                             // matched scan result associated to the current SSID and BSSID.
-                            scanResult = mScanRequestProxy.getScanResult(mLastBssid);
+                            List<ScanResult> scanResults = mScanRequestProxy.getScanResults();
+                            for (ScanResult result : scanResults) {
+                                if (result.SSID.equals(WifiInfo.removeDoubleQuotes(config.SSID))
+                                        && result.BSSID.equals(mLastBssid)) {
+                                    scanResult = result;
+                                    break;
+                                }
+                            }
                         }
                         if (scanResult != null) {
                             mPasspointManager.requestVenueUrlAnqpElement(scanResult);

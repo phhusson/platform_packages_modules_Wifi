@@ -840,12 +840,6 @@ public class ClientModeImplTest extends WifiBaseTest {
                 getGoogleGuestScanDetail(TEST_RSSI, sBSSID, sFreq));
         when(mScanDetailCache.getScanResult(sBSSID)).thenReturn(
                 getGoogleGuestScanDetail(TEST_RSSI, sBSSID, sFreq).getScanResult());
-        ScanResult scanResult = new ScanResult(WifiSsid.createFromAsciiEncoded(sFilsSsid),
-                sFilsSsid, sBSSID, 1245, 0, "", -78, 2412, 1025, 22, 33, 20, 0, 0, true);
-        ScanResult.InformationElement ie = createIE(ScanResult.InformationElement.EID_SSID,
-                sFilsSsid.getBytes(StandardCharsets.UTF_8));
-        scanResult.informationElements = new ScanResult.InformationElement[]{ie};
-        when(mScanRequestProxy.getScanResult(eq(sBSSID))).thenReturn(scanResult);
 
         mCmi.sendMessage(WifiMonitor.SUPPLICANT_STATE_CHANGE_EVENT, 0, 0,
                 new StateChangeResult(0, sWifiSsid, sBSSID, SupplicantState.ASSOCIATED));
@@ -892,8 +886,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         assertEquals(sFreq, wifiInfo.getFrequency());
         assertTrue(sWifiSsid.equals(wifiInfo.getWifiSsid()));
         assertNull(wifiInfo.getPasspointProviderFriendlyName());
-        assertEquals(Arrays.asList(scanResult.informationElements),
-                wifiInfo.getInformationElements());
         expectRegisterNetworkAgent((na) -> {
         }, (nc) -> {
                 if (SdkLevel.isAtLeastS()) {
