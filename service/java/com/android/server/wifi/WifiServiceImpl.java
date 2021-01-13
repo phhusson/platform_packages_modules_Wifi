@@ -2986,7 +2986,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 hideLocationSensitiveData = false;
             } catch (SecurityException ignored) {
             }
-            WifiInfo result = wifiInfo.makeCopy(!hideLocationSensitiveData);
+            WifiInfo result = wifiInfo.makeCopyInternal(!hideLocationSensitiveData);
             if (hideDefaultMacAddress) {
                 result.setMacAddress(WifiInfo.DEFAULT_MAC_ADDRESS);
             }

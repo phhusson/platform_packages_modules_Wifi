@@ -1373,6 +1373,18 @@ public class WifiInfo implements TransportInfo, Parcelable {
      *
      * @param parcelSensitiveFields Whether to parcel location sensitive fields or not.
      * @return instance of {@link WifiInfo}.
+     * @hide
+     */
+    @NonNull
+    public WifiInfo makeCopyInternal(boolean parcelSensitiveFields) {
+        return new WifiInfo(this, parcelSensitiveFields);
+    }
+
+    /**
+     * Make a copy of WifiInfo instance.
+     *
+     * @param parcelSensitiveFields Whether to parcel location sensitive fields or not.
+     * @return instance of {@link WifiInfo}.
      */
     @NonNull
     @Override
@@ -1380,7 +1392,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
         if (!SdkLevel.isAtLeastS()) {
             throw new UnsupportedOperationException();
         }
-        return new WifiInfo(this, parcelSensitiveFields);
+        return makeCopyInternal(parcelSensitiveFields);
     }
 
     /**
