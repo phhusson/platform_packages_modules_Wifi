@@ -21,9 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.os.Parcel;
 import android.telephony.SubscriptionManager;
@@ -62,17 +60,12 @@ public class WifiInfoTest {
      *  Verify parcel write/read with WifiInfo.
      */
     @Test
-    public void testWifiInfoParcelWriteReadWithLocationSensitiveInfo() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastS());
-
+    public void testWifiInfoParcelWriteRead() throws Exception {
         WifiInfo writeWifiInfo = new WifiInfo();
         writeWifiInfo.txSuccess = TEST_TX_SUCCESS;
         writeWifiInfo.txRetries = TEST_TX_RETRIES;
         writeWifiInfo.txBad = TEST_TX_BAD;
         writeWifiInfo.rxSuccess = TEST_RX_SUCCESS;
-        writeWifiInfo.setSSID(WifiSsid.createFromAsciiEncoded(TEST_SSID));
-        writeWifiInfo.setBSSID(TEST_BSSID);
-        writeWifiInfo.setNetworkId(TEST_NETWORK_ID);
         writeWifiInfo.setTrusted(true);
         writeWifiInfo.setOemPaid(true);
         writeWifiInfo.setOemPrivate(true);
@@ -86,11 +79,8 @@ public class WifiInfoTest {
         writeWifiInfo.setMaxSupportedRxLinkSpeedMbps(TEST_MAX_SUPPORTED_RX_LINK_SPEED_MBPS);
         writeWifiInfo.setSubscriptionId(TEST_SUB_ID);
 
-        // Make a copy which allows parcelling of location sensitive data.
-        WifiInfo writeWifiInfoWithLocationSensitiveInfo = writeWifiInfo.makeCopy(true);
-
         Parcel parcel = Parcel.obtain();
-        writeWifiInfoWithLocationSensitiveInfo.writeToParcel(parcel, 0);
+        writeWifiInfo.writeToParcel(parcel, 0);
         // Rewind the pointer to the head of the parcel.
         parcel.setDataPosition(0);
         WifiInfo readWifiInfo = WifiInfo.CREATOR.createFromParcel(parcel);
@@ -100,9 +90,6 @@ public class WifiInfoTest {
         assertEquals(TEST_TX_RETRIES, readWifiInfo.txRetries);
         assertEquals(TEST_TX_BAD, readWifiInfo.txBad);
         assertEquals(TEST_RX_SUCCESS, readWifiInfo.rxSuccess);
-        assertEquals("\"" + TEST_SSID + "\"", readWifiInfo.getSSID());
-        assertEquals(TEST_BSSID, readWifiInfo.getBSSID());
-        assertEquals(TEST_NETWORK_ID, readWifiInfo.getNetworkId());
         assertTrue(readWifiInfo.isTrusted());
         assertTrue(readWifiInfo.isOemPaid());
         assertTrue(readWifiInfo.isOemPrivate());
@@ -112,68 +99,6 @@ public class WifiInfoTest {
         assertEquals(TEST_PACKAGE_NAME, readWifiInfo.getRequestingPackageName());
         assertEquals(TEST_FQDN, readWifiInfo.getPasspointFqdn());
         assertEquals(TEST_PROVIDER_NAME, readWifiInfo.getPasspointProviderFriendlyName());
-        assertEquals(TEST_WIFI_STANDARD, readWifiInfo.getWifiStandard());
-        assertEquals(TEST_MAX_SUPPORTED_TX_LINK_SPEED_MBPS,
-                readWifiInfo.getMaxSupportedTxLinkSpeedMbps());
-        assertEquals(TEST_MAX_SUPPORTED_RX_LINK_SPEED_MBPS,
-                readWifiInfo.getMaxSupportedRxLinkSpeedMbps());
-        assertEquals(TEST_SUB_ID, readWifiInfo.getSubscriptionId());
-    }
-
-    /**
-     *  Verify parcel write/read with WifiInfo.
-     */
-    @Test
-    public void testWifiInfoParcelWriteReadWithoutLocationSensitiveInfo() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastS());
-
-        WifiInfo writeWifiInfo = new WifiInfo();
-        writeWifiInfo.txSuccess = TEST_TX_SUCCESS;
-        writeWifiInfo.txRetries = TEST_TX_RETRIES;
-        writeWifiInfo.txBad = TEST_TX_BAD;
-        writeWifiInfo.rxSuccess = TEST_RX_SUCCESS;
-        writeWifiInfo.setSSID(WifiSsid.createFromAsciiEncoded(TEST_SSID));
-        writeWifiInfo.setBSSID(TEST_BSSID);
-        writeWifiInfo.setNetworkId(TEST_NETWORK_ID);
-        writeWifiInfo.setTrusted(true);
-        writeWifiInfo.setOemPaid(true);
-        writeWifiInfo.setOemPrivate(true);
-        writeWifiInfo.setCarrierMerged(true);
-        writeWifiInfo.setOsuAp(true);
-        writeWifiInfo.setFQDN(TEST_FQDN);
-        writeWifiInfo.setProviderFriendlyName(TEST_PROVIDER_NAME);
-        writeWifiInfo.setRequestingPackageName(TEST_PACKAGE_NAME);
-        writeWifiInfo.setWifiStandard(TEST_WIFI_STANDARD);
-        writeWifiInfo.setMaxSupportedTxLinkSpeedMbps(TEST_MAX_SUPPORTED_TX_LINK_SPEED_MBPS);
-        writeWifiInfo.setMaxSupportedRxLinkSpeedMbps(TEST_MAX_SUPPORTED_RX_LINK_SPEED_MBPS);
-        writeWifiInfo.setSubscriptionId(TEST_SUB_ID);
-
-        // Make a copy which allows parcelling of location sensitive data.
-        WifiInfo writeWifiInfoWithoutLocationSensitiveInfo = writeWifiInfo.makeCopy(false);
-
-        Parcel parcel = Parcel.obtain();
-        writeWifiInfoWithoutLocationSensitiveInfo.writeToParcel(parcel, 0);
-        // Rewind the pointer to the head of the parcel.
-        parcel.setDataPosition(0);
-        WifiInfo readWifiInfo = WifiInfo.CREATOR.createFromParcel(parcel);
-
-        assertNotNull(readWifiInfo);
-        assertEquals(TEST_TX_SUCCESS, readWifiInfo.txSuccess);
-        assertEquals(TEST_TX_RETRIES, readWifiInfo.txRetries);
-        assertEquals(TEST_TX_BAD, readWifiInfo.txBad);
-        assertEquals(TEST_RX_SUCCESS, readWifiInfo.rxSuccess);
-        assertEquals(WifiManager.UNKNOWN_SSID, readWifiInfo.getSSID());
-        assertEquals(WifiInfo.DEFAULT_MAC_ADDRESS, readWifiInfo.getBSSID());
-        assertEquals(WifiConfiguration.INVALID_NETWORK_ID, readWifiInfo.getNetworkId());
-        assertTrue(readWifiInfo.isTrusted());
-        assertTrue(readWifiInfo.isOemPaid());
-        assertTrue(readWifiInfo.isOemPrivate());
-        assertTrue(readWifiInfo.isCarrierMerged());
-        assertTrue(readWifiInfo.isOsuAp());
-        assertFalse(readWifiInfo.isPasspointAp()); // fqdn & friendly name is masked.
-        assertEquals(TEST_PACKAGE_NAME, readWifiInfo.getRequestingPackageName());
-        assertNull(readWifiInfo.getPasspointFqdn());
-        assertNull(readWifiInfo.getPasspointProviderFriendlyName());
         assertEquals(TEST_WIFI_STANDARD, readWifiInfo.getWifiStandard());
         assertEquals(TEST_MAX_SUPPORTED_TX_LINK_SPEED_MBPS,
                 readWifiInfo.getMaxSupportedTxLinkSpeedMbps());
