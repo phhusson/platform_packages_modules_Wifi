@@ -86,6 +86,7 @@ public class WifiMonitor {
     public static final int ANQP_DONE_EVENT                      = BASE + 44;
     public static final int ASSOCIATED_BSSID_EVENT               = BASE + 45;
     public static final int TARGET_BSSID_EVENT                   = BASE + 46;
+    public static final int NETWORK_NOT_FOUND_EVENT              = BASE + 47;
 
     /* Passpoint ANQP events */
     public static final int GAS_QUERY_START_EVENT                = BASE + 51;
@@ -581,5 +582,15 @@ public class WifiMonitor {
      */
     public void broadcastBssTmHandlingDoneEvent(String iface, BtmFrameData btmFrmData) {
         sendMessage(iface, MBO_OCE_BSS_TM_HANDLING_DONE, btmFrmData);
+    }
+
+    /**
+     * Broadcast network not found event
+     * to all the handlers registered for this event.
+     *
+     * @param iface Name of iface on which this occurred.
+     */
+    public void broadcastNetworkNotFoundEvent(String iface, String ssid) {
+        sendMessage(iface, NETWORK_NOT_FOUND_EVENT, ssid);
     }
 }
