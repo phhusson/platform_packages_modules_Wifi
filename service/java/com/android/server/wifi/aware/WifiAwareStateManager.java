@@ -346,11 +346,11 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                 AwareResources resources = getAvailableAwareResources();
                 if (resources != null) {
                     try {
-                        j.put("numOfAvailableNdps", resources.getNumOfAvailableDataPaths());
+                        j.put("numOfAvailableNdps", resources.getAvailableDataPathsCount());
                         j.put("numOfAvailablePublishSessions",
-                                resources.getNumOfAvailablePublishSessions());
+                                resources.getAvailablePublishSessionsCount());
                         j.put("numOfAvailableSubscribeSessions",
-                                resources.getNumOfAvailableSubscribeSessions());
+                                resources.getAvailableSubscribeSessionsCount());
                     } catch (JSONException e) {
                         Log.e(TAG, "onCommand: get_aware_resources e=" + e);
                     }
