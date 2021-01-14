@@ -291,6 +291,7 @@ package android.net.wifi {
     method public int getRssi();
     method @IntRange(from=0xffffffff) public int getRxLinkSpeedMbps();
     method public String getSSID();
+    method public int getSubscriptionId();
     method public android.net.wifi.SupplicantState getSupplicantState();
     method @IntRange(from=0xffffffff) public int getTxLinkSpeedMbps();
     method public int getWifiStandard();

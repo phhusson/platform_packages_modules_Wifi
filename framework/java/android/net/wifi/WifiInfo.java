@@ -947,9 +947,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
      *
      * @see WifiNetworkSuggestion.Builder#setSubscriptionId(int)
      * @see android.telephony.SubscriptionInfo#getSubscriptionId()
-     * {@hide}
      */
-    @SystemApi
     public int getSubscriptionId() {
         if (!SdkLevel.isAtLeastS()) {
             throw new UnsupportedOperationException();
