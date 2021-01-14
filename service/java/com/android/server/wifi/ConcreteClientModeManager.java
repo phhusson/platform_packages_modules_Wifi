@@ -155,6 +155,8 @@ public class ConcreteClientModeManager implements ClientModeManager {
      */
     private final AtomicInteger mWifiState = new AtomicInteger(WIFI_STATE_DISABLED);
 
+    private boolean mIsStopped = true;
+
     ConcreteClientModeManager(
             Context context, @NonNull Looper looper, Clock clock,
             WifiNative wifiNative, Listener<ConcreteClientModeManager> listener,
@@ -493,6 +495,13 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
             pw.println();
         }
+
+        boolean hasAllClientModeImplsQuit() {
+            for (ClientModeImpl cmi : mClientModeImpls) {
+                if (!cmi.hasQuit()) return false;
+            }
+            return true;
+        }
     }
 
     /**
@@ -723,11 +732,6 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
 
             @Override
-            public void exit() {
-                mModeListener.onStopped(ConcreteClientModeManager.this);
-            }
-
-            @Override
             public boolean processMessage(Message message) {
                 switch (message.what) {
                     case CMD_START:
@@ -775,6 +779,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             public void enter() {
                 Log.d(getTag(), "entering StartedState");
                 mIfaceIsUp = false;
+                mIsStopped = false;
                 onUpChanged(mWifiNative.isInterfaceUp(mClientInterfaceName));
             }
 
@@ -845,7 +850,9 @@ public class ConcreteClientModeManager implements ClientModeManager {
                     mIfaceIsUp = false;
                 }
 
-                mRole = null;
+                Log.i(getTag(), "StartedState#exit(), setting mRole = null");
+                mIsStopped = true;
+                cleanupOnQuitIfApplicable();
             }
         }
 
@@ -982,6 +989,28 @@ public class ConcreteClientModeManager implements ClientModeManager {
                 }
                 mConnectRoleToSetOnTransition = null;
             }
+        }
+    }
+
+    /** Called by a ClientModeImpl owned by this CMM informing it has fully stopped. */
+    public void onClientModeImplQuit() {
+        cleanupOnQuitIfApplicable();
+    }
+
+    /**
+     * Only clean up this CMM once the CMM and all associated ClientModeImpls have been stopped.
+     * This is necessary because ClientModeImpl sends broadcasts during stop, and the role must
+     * remain primary for {@link ClientModeManagerBroadcastQueue} to send them out.
+     */
+    private void cleanupOnQuitIfApplicable() {
+        if (mIsStopped && mGraveyard.hasAllClientModeImplsQuit()) {
+            mRole = null;
+            // only call onStopped() after role has been reset to null since ActiveModeWarden
+            // expects the CMM to be fully stopped before onStopped().
+            mModeListener.onStopped(ConcreteClientModeManager.this);
+
+            // reset to false so that onStopped() won't be triggered again.
+            mIsStopped = false;
         }
     }
 

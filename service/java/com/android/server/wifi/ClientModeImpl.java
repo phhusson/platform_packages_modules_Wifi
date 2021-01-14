@@ -6116,4 +6116,17 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
         linkProperties.setCaptivePortalData(captivePortalDataBuilder.build());
     }
+
+    private boolean mHasQuit = false;
+
+    @Override
+    protected void onQuitting() {
+        mHasQuit = true;
+        mClientModeManager.onClientModeImplQuit();
+    }
+
+    /** Returns true if the ClientModeImpl has fully stopped, false otherwise. */
+    public boolean hasQuit() {
+        return mHasQuit;
+    }
 }
