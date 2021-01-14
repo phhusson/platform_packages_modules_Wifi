@@ -592,9 +592,9 @@ package android.net.wifi.aware {
 
   public final class AwareResources implements android.os.Parcelable {
     method public int describeContents();
-    method public int getNumOfAvailableDataPaths();
-    method public int getNumOfAvailablePublishSessions();
-    method public int getNumOfAvailableSubscribeSessions();
+    method @IntRange(from=0) public int getAvailableDataPathsCount();
+    method @IntRange(from=0) public int getAvailablePublishSessionsCount();
+    method @IntRange(from=0) public int getAvailableSubscribeSessionsCount();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.aware.AwareResources> CREATOR;
   }

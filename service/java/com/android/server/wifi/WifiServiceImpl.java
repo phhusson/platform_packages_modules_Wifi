@@ -1232,7 +1232,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private final class CountryCodeListenerProxy implements WifiCountryCode.ChangeListener {
         @Override
         public void onDriverCountryCodeChanged(String countryCode) {
-            Log.i(TAG, "onDriverCountryCodeChanged" + countryCode);
+            Log.i(TAG, "onDriverCountryCodeChanged " + countryCode);
             mTetheredSoftApTracker.updateAvailChannelListInSoftApCapability();
             mActiveModeWarden.updateSoftApCapability(
                     mTetheredSoftApTracker.getSoftApCapability());
@@ -2659,6 +2659,14 @@ public class WifiServiceImpl extends BaseWifiService {
             }
             // There is no network ID associated with a Passpoint profile.
             return 0;
+        }
+
+        if (config.isEnterprise()) {
+            if (config.enterpriseConfig.isInsecure()) {
+                Log.e(TAG, "Enterprise network configuration is missing either a Root CA "
+                        + "or a domain name");
+                return -1;
+            }
         }
 
         Log.i("addOrUpdateNetwork", " uid = " + Binder.getCallingUid()
