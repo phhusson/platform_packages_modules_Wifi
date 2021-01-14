@@ -2216,9 +2216,14 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private void sendLinkConfigurationChangedBroadcast() {
         Intent intent = new Intent(WifiManager.ACTION_LINK_CONFIGURATION_CHANGED);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
+        String summary = "broadcast=ACTION_LINK_CONFIGURATION_CHANGED";
+        if (mVerboseLoggingEnabled) Log.d(getTag(), "Queuing " + summary);
         mBroadcastQueue.queueOrSendBroadcast(
                 mClientModeManager,
-                () -> mContext.sendBroadcastAsUser(intent, UserHandle.ALL));
+                () -> {
+                    if (mVerboseLoggingEnabled) Log.d(getTag(), "Sending " + summary);
+                    mContext.sendBroadcastAsUser(intent, UserHandle.ALL);
+                });
     }
 
     /**
@@ -2231,9 +2236,15 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         Intent intent = new Intent(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
         intent.putExtra(WifiManager.EXTRA_SUPPLICANT_CONNECTED, connected);
+        String summary = "broadcast=SUPPLICANT_CONNECTION_CHANGE_ACTION"
+                + " EXTRA_SUPPLICANT_CONNECTED=" + connected;
+        if (mVerboseLoggingEnabled) Log.d(getTag(), "Queuing " + summary);
         mBroadcastQueue.queueOrSendBroadcast(
                 mClientModeManager,
-                () -> mContext.sendBroadcastAsUser(intent, UserHandle.ALL));
+                () -> {
+                    if (mVerboseLoggingEnabled) Log.d(getTag(), "Sending " + summary);
+                    mContext.sendBroadcastAsUser(intent, UserHandle.ALL);
+                });
     }
 
     /**
@@ -2274,18 +2285,27 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         // copy into local variables to force lambda to capture by value and not reference, since
         // mNetworkAgentState is mutable and can change
         final DetailedState networkAgentState = mNetworkAgentState;
+        if (mVerboseLoggingEnabled) {
+            Log.d(getTag(), "Queueing broadcast=NETWORK_STATE_CHANGED_ACTION"
+                    + " networkAgentState=" + networkAgentState);
+        }
         mBroadcastQueue.queueOrSendBroadcast(
                 mClientModeManager,
-                () -> sendNetworkChangeBroadcast(mContext, networkAgentState));
+                () -> sendNetworkChangeBroadcast(
+                        mContext, networkAgentState, mVerboseLoggingEnabled));
     }
 
     /** Send a NETWORK_STATE_CHANGED_ACTION broadcast. */
     public static void sendNetworkChangeBroadcast(
-            Context context, DetailedState networkAgentState) {
+            Context context, DetailedState networkAgentState, boolean verboseLoggingEnabled) {
         Intent intent = new Intent(WifiManager.NETWORK_STATE_CHANGED_ACTION);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
         NetworkInfo networkInfo = makeNetworkInfo(networkAgentState);
         intent.putExtra(WifiManager.EXTRA_NETWORK_INFO, networkInfo);
+        if (verboseLoggingEnabled) {
+            Log.d(TAG, "Sending broadcast=NETWORK_STATE_CHANGED_ACTION"
+                    + " networkAgentState=" + networkAgentState);
+        }
         //TODO(b/69974497) This should be non-sticky, but settings needs fixing first.
         context.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
     }

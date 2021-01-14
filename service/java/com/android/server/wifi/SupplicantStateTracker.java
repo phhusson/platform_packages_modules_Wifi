@@ -245,9 +245,17 @@ public class SupplicantStateTracker extends StateMachine {
             SupplicantState state, boolean failedAuth, int reasonCode) {
         int supplState = supplicantStateToBatteryStatsSupplicantState(state);
         mBatteryStatsManager.reportWifiSupplicantStateChanged(supplState, failedAuth);
+        String summary = "broadcast=SUPPLICANT_STATE_CHANGED_ACTION"
+                + " state=" + state
+                + " failedAuth=" + failedAuth
+                + " reasonCode=" + reasonCode;
+        if (mVerboseLoggingEnabled) Log.d(TAG, "Queuing " + summary);
         mBroadcastQueue.queueOrSendBroadcast(
                 mClientModeManager,
-                () -> sendSupplicantStateChangedBroadcast(mContext, state, failedAuth, reasonCode));
+                () -> {
+                    if (mVerboseLoggingEnabled) Log.d(TAG, "Sending " + summary);
+                    sendSupplicantStateChangedBroadcast(mContext, state, failedAuth, reasonCode);
+                });
     }
 
     private static void sendSupplicantStateChangedBroadcast(

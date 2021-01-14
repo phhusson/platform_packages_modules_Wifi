@@ -51,6 +51,8 @@ public class ClientModeManagerBroadcastQueue {
         void send();
     }
 
+    private boolean mVerboseLoggingEnabled = false;
+
     public ClientModeManagerBroadcastQueue(@NonNull ActiveModeWarden activeModeWarden,
             @NonNull Context context) {
         mActiveModeWarden = activeModeWarden;
@@ -59,6 +61,10 @@ public class ClientModeManagerBroadcastQueue {
         mActiveModeWarden.registerModeChangeCallback(new ModeChangeCallback());
         mActiveModeWarden.registerPrimaryClientModeManagerChangedCallback(
                 new PrimaryClientModeManagerChangedCallback());
+    }
+
+    public void setVerboseLoggingEnabled(boolean verboseLoggingEnabled) {
+        mVerboseLoggingEnabled = verboseLoggingEnabled;
     }
 
     /**
@@ -107,7 +113,8 @@ public class ClientModeManagerBroadcastQueue {
      * to be only one connection at a time.
      */
     public void fakeDisconnectionBroadcasts() {
-        ClientModeImpl.sendNetworkChangeBroadcast(mContext, NetworkInfo.DetailedState.DISCONNECTED);
+        ClientModeImpl.sendNetworkChangeBroadcast(
+                mContext, NetworkInfo.DetailedState.DISCONNECTED, mVerboseLoggingEnabled);
     }
 
     private class PrimaryClientModeManagerChangedCallback

@@ -553,8 +553,15 @@ public class ConcreteClientModeManager implements ClientModeManager {
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT);
         intent.putExtra(WifiManager.EXTRA_WIFI_STATE, newState);
         intent.putExtra(WifiManager.EXTRA_PREVIOUS_WIFI_STATE, currentState);
+        String summary = "broadcast=WIFI_STATE_CHANGED_ACTION"
+                + " EXTRA_WIFI_STATE=" + newState
+                + " EXTRA_PREVIOUS_WIFI_STATE=" + currentState;
+        if (mVerboseLoggingEnabled) Log.d(getTag(), "Queuing " + summary);
         mBroadcastQueue.queueOrSendBroadcast(
-                this, () -> mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL));
+                this, () -> {
+                    if (mVerboseLoggingEnabled) Log.d(getTag(), "Sending " + summary);
+                    mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
+                });
     }
 
     private void setWifiStateForApiCalls(int newState) {

@@ -523,6 +523,7 @@ public class WifiInjector {
         mWifiConnectivityManager.enableVerboseLogging(verboseBool);
         mWifiNetworkSelector.enableVerboseLogging(verboseBool);
         mMakeBeforeBreakManager.setVerboseLoggingEnabled(verboseBool);
+        mBroadcastQueue.setVerboseLoggingEnabled(verboseBool);
     }
 
     public UserManager getUserManager() {
