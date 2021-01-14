@@ -89,6 +89,7 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private android.hardware.wifi.supplicant.V1_4.ISupplicantStaNetwork mISupplicantStaNetworkV14;
     @Mock private Context mContext;
     @Mock private WifiMonitor mWifiMonitor;
+    @Mock private WifiGlobals mWifiGlobals;
 
     private SupplicantNetworkVariables mSupplicantVariables;
     private MockResources mResources;
@@ -111,8 +112,8 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private class SupplicantStaNetworkHalSpyV1_2 extends SupplicantStaNetworkHal {
         SupplicantStaNetworkHalSpyV1_2(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
-                Context context, WifiMonitor monitor) {
-            super(iSupplicantStaNetwork, ifaceName, context, monitor);
+                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
+            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals);
         }
 
         @Override
@@ -129,8 +130,8 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private class SupplicantStaNetworkHalSpyV1_3 extends SupplicantStaNetworkHalSpyV1_2 {
         SupplicantStaNetworkHalSpyV1_3(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
-                Context context, WifiMonitor monitor) {
-            super(iSupplicantStaNetwork, ifaceName, context, monitor);
+                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
+            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals);
         }
 
         @Override
@@ -147,8 +148,8 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private class SupplicantStaNetworkHalSpyV1_4 extends SupplicantStaNetworkHalSpyV1_3 {
         SupplicantStaNetworkHalSpyV1_4(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
-                Context context, WifiMonitor monitor) {
-            super(iSupplicantStaNetwork, ifaceName, context, monitor);
+                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
+            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals);
         }
 
         @Override
@@ -172,6 +173,7 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
 
         mResources = new MockResources();
         when(mContext.getResources()).thenReturn(mResources);
+        when(mWifiGlobals.isWpa3SaeUpgradeOffloadEnabled()).thenReturn(true);
         createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_0);
     }
 
@@ -909,6 +911,58 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
 
         // Check the supplicant variables to ensure that we have NOT change the OCSP status.
         assertEquals(WifiEnterpriseConfig.OCSP_NONE, mSupplicantVariables.ocsp);
+    }
+
+    /**
+     * Tests the addition of multiple AKM when the device supports it.
+     */
+    @Test
+    public void testAddPskSaeAkmWhenAutoUpgradeOffloadIsSupported() throws Exception {
+        createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_2);
+
+        WifiConfiguration config = WifiConfigurationTestUtil.createPskNetwork();
+        config.getNetworkSelectionStatus().setCandidateSecurityParams(
+                config.getDefaultSecurityParams());
+        assertTrue(mSupplicantNetwork.saveWifiConfiguration(config));
+
+        // Check the supplicant variables to ensure that we have added the FT flags.
+        assertEquals(ISupplicantStaNetwork.KeyMgmtMask.WPA_PSK,
+                (mSupplicantVariables.keyMgmtMask & ISupplicantStaNetwork.KeyMgmtMask.WPA_PSK));
+        assertEquals(android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork.KeyMgmtMask.SAE,
+                (mSupplicantVariables.keyMgmtMask & android.hardware.wifi.supplicant.V1_2
+                .ISupplicantStaNetwork.KeyMgmtMask.SAE));
+
+        WifiConfiguration loadConfig = new WifiConfiguration();
+        Map<String, String> networkExtras = new HashMap<>();
+        assertTrue(mSupplicantNetwork.loadWifiConfiguration(loadConfig, networkExtras));
+        // The additional SAE AMK should be stripped out when reading it back.
+        WifiConfigurationTestUtil.assertConfigurationEqualForSupplicant(config, loadConfig);
+    }
+
+    /**
+     * Tests the addition of multiple AKM when the device does not support it.
+     */
+    @Test
+    public void testAddPskSaeAkmWhenAutoUpgradeOffloadIsNotSupported() throws Exception {
+        when(mWifiGlobals.isWpa3SaeUpgradeOffloadEnabled()).thenReturn(false);
+        createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_2);
+
+        WifiConfiguration config = WifiConfigurationTestUtil.createPskNetwork();
+        config.getNetworkSelectionStatus().setCandidateSecurityParams(
+                config.getDefaultSecurityParams());
+        assertTrue(mSupplicantNetwork.saveWifiConfiguration(config));
+
+        // Check the supplicant variables to ensure that we have added the FT flags.
+        assertEquals(ISupplicantStaNetwork.KeyMgmtMask.WPA_PSK,
+                (mSupplicantVariables.keyMgmtMask & ISupplicantStaNetwork.KeyMgmtMask.WPA_PSK));
+        assertEquals(0,
+                (mSupplicantVariables.keyMgmtMask & android.hardware.wifi.supplicant.V1_2
+                .ISupplicantStaNetwork.KeyMgmtMask.SAE));
+
+        WifiConfiguration loadConfig = new WifiConfiguration();
+        Map<String, String> networkExtras = new HashMap<>();
+        assertTrue(mSupplicantNetwork.loadWifiConfiguration(loadConfig, networkExtras));
+        WifiConfigurationTestUtil.assertConfigurationEqualForSupplicant(config, loadConfig);
     }
 
     /**
@@ -2083,19 +2137,23 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
         switch (version) {
             case V1_0:
                 mSupplicantNetwork = new SupplicantStaNetworkHal(
-                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor);
+                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
+                        mWifiGlobals);
                 break;
             case V1_2:
                 mSupplicantNetwork = new SupplicantStaNetworkHalSpyV1_2(
-                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor);
+                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
+                        mWifiGlobals);
                 break;
             case V1_3:
                 mSupplicantNetwork = new SupplicantStaNetworkHalSpyV1_3(
-                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor);
+                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
+                        mWifiGlobals);
                 break;
             case V1_4:
                 mSupplicantNetwork = new SupplicantStaNetworkHalSpyV1_4(
-                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor);
+                        mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
+                        mWifiGlobals);
                 break;
         }
         mSupplicantNetwork.enableVerboseLogging(true);

@@ -93,6 +93,7 @@ public class SupplicantStaNetworkHal {
     private final Context mContext;
     private final String mIfaceName;
     private final WifiMonitor mWifiMonitor;
+    private final WifiGlobals mWifiGlobals;
     private ISupplicantStaNetwork mISupplicantStaNetwork;
     private ISupplicantStaNetworkCallback mISupplicantStaNetworkCallback;
 
@@ -134,11 +135,12 @@ public class SupplicantStaNetworkHal {
     private String mWapiCertSuite;
 
     SupplicantStaNetworkHal(ISupplicantStaNetwork iSupplicantStaNetwork, String ifaceName,
-            Context context, WifiMonitor monitor) {
+            Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
         mISupplicantStaNetwork = iSupplicantStaNetwork;
         mContext = context;
         mIfaceName = ifaceName;
         mWifiMonitor = monitor;
+        mWifiGlobals = wifiGlobals;
     }
 
     /**
@@ -214,6 +216,7 @@ public class SupplicantStaNetworkHal {
                 BitSet keyMgmtMask = supplicantToWifiConfigurationKeyMgmtMask(mKeyMgmtMask);
                 keyMgmtMask = removeFastTransitionFlags(keyMgmtMask);
                 keyMgmtMask = removeSha256KeyMgmtFlags(keyMgmtMask);
+                keyMgmtMask = removePskSaeUpgradableTypeFlags(keyMgmtMask);
                 config.setSecurityParams(keyMgmtMask);
                 config.enableFils(
                         keyMgmtMask.get(WifiConfiguration.KeyMgmt.FILS_SHA256),
@@ -312,6 +315,9 @@ public class SupplicantStaNetworkHal {
                 BitSet keyMgmtMask = addFastTransitionFlags(allowedKeyManagement);
                 // Add SHA256 key management flags.
                 keyMgmtMask = addSha256KeyMgmtFlags(keyMgmtMask);
+                // Add upgradable type key management flags for PSK/SAE.
+                keyMgmtMask = addPskSaeUpgradableTypeFlagsIfSupported(
+                        config, keyMgmtMask);
                 if (!setKeyMgmt(wifiConfigurationToSupplicantKeyMgmtMask(keyMgmtMask))) {
                     Log.e(TAG, "failed to set Key Management");
                     return false;
@@ -3694,6 +3700,40 @@ public class SupplicantStaNetworkHal {
             modifiedFlags.clear(WifiConfiguration.KeyMgmt.WPA_EAP_SHA256);
             return modifiedFlags;
         }
+    }
+
+    /**
+     * Adds both PSK and SAE AKM if auto-upgrade offload is supported.
+     */
+    private BitSet addPskSaeUpgradableTypeFlagsIfSupported(
+            WifiConfiguration config,
+            BitSet keyManagementFlags) {
+        synchronized (mLock) {
+            if (!config.isSecurityType(WifiConfiguration.SECURITY_TYPE_PSK)
+                    || !config.getSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK).isEnabled()
+                    || !mWifiGlobals.isWpa3SaeUpgradeOffloadEnabled()) {
+                return keyManagementFlags;
+            }
+
+            BitSet modifiedFlags = (BitSet) keyManagementFlags.clone();
+            modifiedFlags.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+            modifiedFlags.set(WifiConfiguration.KeyMgmt.SAE);
+            return modifiedFlags;
+        }
+    }
+
+    /**
+     * Removes SAE AKM when PSK and SAE AKM are both set, it only happens when
+     * auto-upgrade offload is supported.
+     */
+    private BitSet removePskSaeUpgradableTypeFlags(BitSet keyManagementFlags) {
+        if (!keyManagementFlags.get(WifiConfiguration.KeyMgmt.WPA_PSK)
+                || !keyManagementFlags.get(WifiConfiguration.KeyMgmt.SAE)) {
+            return keyManagementFlags;
+        }
+        BitSet modifiedFlags = (BitSet) keyManagementFlags.clone();
+        modifiedFlags.clear(WifiConfiguration.KeyMgmt.SAE);
+        return modifiedFlags;
     }
 
     /**
