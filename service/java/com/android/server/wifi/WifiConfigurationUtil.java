@@ -150,6 +150,7 @@ public class WifiConfigurationUtil {
      */
     public static boolean isConfigForOpenNetwork(WifiConfiguration config) {
         return (!(isConfigForWepNetwork(config) || isConfigForPskNetwork(config)
+                || isConfigForWapiPskNetwork(config) || isConfigForWapiCertNetwork(config)
                 || isConfigForEapNetwork(config) || isConfigForSaeNetwork(config)
                 || isConfigForWpa3Enterprise192BitNetwork(config)));
     }
@@ -262,6 +263,10 @@ public class WifiConfigurationUtil {
             }
             if (!TextUtils.equals(newEnterpriseConfig.getAltSubjectMatch(),
                     existingEnterpriseConfig.getAltSubjectMatch())) {
+                return true;
+            }
+            if (!TextUtils.equals(newEnterpriseConfig.getWapiCertSuite(),
+                    existingEnterpriseConfig.getWapiCertSuite())) {
                 return true;
             }
             if (newEnterpriseConfig.getOcsp() != existingEnterpriseConfig.getOcsp()) {
