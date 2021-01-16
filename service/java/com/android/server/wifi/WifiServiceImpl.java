@@ -2661,7 +2661,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
 
         if (config.isEnterprise()) {
-            if (config.enterpriseConfig.isInsecure()) {
+            if (config.enterpriseConfig.isTlsBasedEapMethod()
+                    && !config.enterpriseConfig.isMandatoryParameterSetForServerCertValidation()) {
                 Log.e(TAG, "Enterprise network configuration is missing either a Root CA "
                         + "or a domain name");
                 return -1;

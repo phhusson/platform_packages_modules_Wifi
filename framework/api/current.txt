@@ -209,6 +209,7 @@ package android.net.wifi {
     ctor public WifiEnterpriseConfig();
     ctor public WifiEnterpriseConfig(android.net.wifi.WifiEnterpriseConfig);
     method public int describeContents();
+    method public boolean doesEapMethodUseServerCert();
     method public String getAltSubjectMatch();
     method public String getAnonymousIdentity();
     method @Nullable public java.security.cert.X509Certificate getCaCertificate();
@@ -225,6 +226,7 @@ package android.net.wifi {
     method public String getRealm();
     method @Deprecated public String getSubjectMatch();
     method public boolean isAuthenticationSimBased();
+    method public boolean isServerCertValidationEnabled();
     method public void setAltSubjectMatch(String);
     method public void setAnonymousIdentity(String);
     method public void setCaCertificate(@Nullable java.security.cert.X509Certificate);
