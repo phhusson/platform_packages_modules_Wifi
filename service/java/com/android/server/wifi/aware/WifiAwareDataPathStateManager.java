@@ -850,10 +850,9 @@ public class WifiAwareDataPathStateManager {
         }
 
         @Override
-        public boolean acceptRequest(NetworkRequest request, int score) {
+        public boolean acceptRequest(NetworkRequest request) {
             if (VDBG) {
-                Log.v(TAG, "WifiAwareNetworkFactory.acceptRequest: request=" + request + ", score="
-                        + score);
+                Log.v(TAG, "WifiAwareNetworkFactory.acceptRequest: request=" + request);
             }
 
             NetworkSpecifier networkSpecifierBase = request.getNetworkSpecifier();
@@ -935,10 +934,10 @@ public class WifiAwareDataPathStateManager {
         }
 
         @Override
-        protected void needNetworkFor(NetworkRequest networkRequest, int score) {
+        protected void needNetworkFor(NetworkRequest networkRequest) {
             if (mDbg) {
                 Log.v(TAG, "WifiAwareNetworkFactory.needNetworkFor: networkRequest="
-                        + networkRequest + ", score=" + score);
+                        + networkRequest);
             }
 
             NetworkSpecifier networkSpecifierObj = networkRequest.getNetworkSpecifier();
