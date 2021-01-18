@@ -135,6 +135,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     private SoftApConfiguration mDefaultApConfig = createDefaultApConfig();
     private final int mBand256G = SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
             | SoftApConfiguration.BAND_6GHZ;
+    private static final int[] TEST_SUPPORTED_24G_CHANNELS = new int[] {1, 2};
+    private static final int[] TEST_SUPPORTED_5G_CHANNELS = new int[] {36, 149};
 
 
     private TestLooper mLooper;
@@ -254,6 +256,10 @@ public class SoftApManagerTest extends WifiBaseTest {
                 | SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTOMIZATION;
         mTestSoftApCapability = new SoftApCapability(testSoftApFeature);
         mTestSoftApCapability.setMaxSupportedClients(10);
+        mTestSoftApCapability.setSupportedChannelList(
+                SoftApConfiguration.BAND_2GHZ, TEST_SUPPORTED_24G_CHANNELS);
+        mTestSoftApCapability.setSupportedChannelList(
+                SoftApConfiguration.BAND_5GHZ, TEST_SUPPORTED_5G_CHANNELS);
         when(mWifiApConfigStore.getApConfiguration()).thenReturn(mDefaultApConfig);
         when(mWifiNative.isHalStarted()).thenReturn(true);
 
@@ -1770,31 +1776,38 @@ public class SoftApManagerTest extends WifiBaseTest {
     /** Starts soft AP and verifies that it is enabled successfully. */
     protected void startSoftApAndVerifyEnabled(
             SoftApModeConfiguration softApConfig) throws Exception {
-        startSoftApAndVerifyEnabled(softApConfig, TEST_COUNTRY_CODE);
+        startSoftApAndVerifyEnabled(softApConfig, TEST_COUNTRY_CODE, null);
     }
 
     /** Starts soft AP and verifies that it is enabled successfully. */
     protected void startSoftApAndVerifyEnabled(
             SoftApModeConfiguration softApConfig, String countryCode) throws Exception {
-        // The expected config to pass to Native
-        SoftApConfiguration expectedConfig = null;
+        startSoftApAndVerifyEnabled(softApConfig, countryCode, null);
+    }
+
+    /** Starts soft AP and verifies that it is enabled successfully. */
+    protected void startSoftApAndVerifyEnabled(
+            SoftApModeConfiguration softApConfig, String countryCode,
+            SoftApConfiguration expectedConfig) throws Exception {
         // The config which base on mDefaultApConfig and generate ramdonized mac address
         SoftApConfiguration randomizedBssidConfig = null;
         InOrder order = inOrder(mCallback, mWifiNative);
 
         SoftApConfiguration config = softApConfig.getSoftApConfiguration();
-        if (config == null) {
-            // Only generate randomized mac for default config since test case doesn't care it.
-            randomizedBssidConfig =
-                    new SoftApConfiguration.Builder(mDefaultApConfig)
-                    .setBssid(TEST_INTERFACE_MAC_ADDRESS).build();
-            when(mWifiApConfigStore.randomizeBssidIfUnset(any(), any())).thenReturn(
-                    randomizedBssidConfig);
-            expectedConfig = new SoftApConfiguration.Builder(randomizedBssidConfig)
-                    .build();
-        } else {
-            expectedConfig = new SoftApConfiguration.Builder(config)
-                    .build();
+        if (expectedConfig == null) {
+            if (config == null) {
+                // Only generate randomized mac for default config since test case doesn't care it.
+                randomizedBssidConfig =
+                        new SoftApConfiguration.Builder(mDefaultApConfig)
+                        .setBssid(TEST_INTERFACE_MAC_ADDRESS).build();
+                when(mWifiApConfigStore.randomizeBssidIfUnset(any(), any())).thenReturn(
+                        randomizedBssidConfig);
+                expectedConfig = new SoftApConfiguration.Builder(randomizedBssidConfig)
+                        .build();
+            } else {
+                expectedConfig = new SoftApConfiguration.Builder(config)
+                        .build();
+            }
         }
         mSoftApManager = createSoftApManager(softApConfig, countryCode,
                 softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
@@ -1833,7 +1846,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).addSoftApUpChangedEvent(true, softApConfig.getTargetMode(),
                 TEST_DEFAULT_SHUTDOWN_TIMEOUT_MILLS);
         verify(mWifiMetrics).updateSoftApConfiguration(config == null
-                ? randomizedBssidConfig : config, softApConfig.getTargetMode());
+                ? randomizedBssidConfig : expectedConfig, softApConfig.getTargetMode());
         verify(mWifiMetrics).updateSoftApCapability(softApConfig.getCapability(),
                 softApConfig.getTargetMode());
     }
@@ -2520,5 +2533,24 @@ public class SoftApManagerTest extends WifiBaseTest {
 
 
 
+    }
+
+    @Test
+    public void testBridgedModeFallbackToSingleMode()
+            throws Exception {
+        int[] dual_bands = {SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_6GHZ,
+                SoftApConfiguration.BAND_5GHZ};
+        SoftApCapability testCapability = new SoftApCapability(mTestSoftApCapability);
+        testCapability.setSupportedChannelList(SoftApConfiguration.BAND_6GHZ, new int[0]);
+        Builder configBuilder = new SoftApConfiguration.Builder();
+        configBuilder.setSsid(TEST_SSID);
+        configBuilder.setBands(dual_bands);
+
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
+                testCapability);
+        // Reset band to 2.4G | 5G to generate expected configure
+        configBuilder.setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ);
+        startSoftApAndVerifyEnabled(apConfig, TEST_COUNTRY_CODE, configBuilder.build());
     }
 }
