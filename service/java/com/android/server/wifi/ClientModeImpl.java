@@ -368,7 +368,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private final UntrustedWifiNetworkFactory mUntrustedNetworkFactory;
     private final OemPaidWifiNetworkFactory mOemPaidWifiNetworkFactory;
     @Nullable private final OemPrivateWifiNetworkFactory mOemPrivateWifiNetworkFactory;
-    private WifiNetworkAgent mNetworkAgent;
+    @VisibleForTesting
+    WifiNetworkAgent mNetworkAgent;
 
     private byte[] mRssiRanges;
 
@@ -6024,9 +6025,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         // Update the friendly name to populate the notification
-        CaptivePortalData.Builder captivePortalDataBuilder = new CaptivePortalData.Builder();
-        // TODO: Add when new API is available
-        //    .setVenueFriendlyName(currentNetwork.providerFriendlyName);
+        CaptivePortalData.Builder captivePortalDataBuilder = new CaptivePortalData.Builder()
+                .setVenueFriendlyName(currentNetwork.providerFriendlyName);
 
         // Update the Venue URL if available
         if (venueUrl != null) {
