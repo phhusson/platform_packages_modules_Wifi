@@ -548,6 +548,16 @@ public class WifiApConfigStore {
             return false;
         }
 
+        if (SdkLevel.isAtLeastS()) {
+            if (!validateSoftApBands(apConfig.getBands(), context)) {
+                return false;
+            }
+        } else {
+            if (!validateSoftApBand(apConfig.getBand(), context)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -563,5 +573,47 @@ public class WifiApConfigStore {
             sb.append(allowed.charAt(random.nextInt(allowed.length())));
         }
         return sb.toString();
+    }
+
+    private static boolean validateSoftApBands(@NonNull int[] apBands, Context context) {
+        for (int band : apBands) {
+            if (!validateSoftApBand(band, context)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean validateSoftApBand(int apBand, Context context) {
+        if (!ApConfigUtil.isBandValid(apBand)) {
+            Log.e(TAG, "Invalid SoftAp band. ");
+            return false;
+        }
+
+        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_2GHZ)
+                && !ApConfigUtil.isSoftAp24GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 2GHz band, not supported.");
+            return false;
+        }
+
+        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_5GHZ)
+                && !ApConfigUtil.isSoftAp5GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 5GHz band, not supported.");
+            return false;
+        }
+
+        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_6GHZ)
+                && !ApConfigUtil.isSoftAp6GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 6GHz band, not supported.");
+            return false;
+        }
+
+        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_60GHZ)
+                && !ApConfigUtil.isSoftAp60GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 6GHz band, not supported.");
+            return false;
+        }
+
+        return true;
     }
 }

@@ -1107,30 +1107,6 @@ public class WifiServiceImpl extends BaseWifiService {
         return true;
     }
 
-    private boolean validateSoftApBand(int apBand) {
-        if (!ApConfigUtil.isBandValid(apBand)) {
-            mLog.err("Invalid SoftAp band. ").flush();
-            return false;
-        }
-
-        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_5GHZ)
-                && !is5GhzBandSupportedInternal()) {
-            mLog.err("Can not start softAp with 5GHz band, not supported.").flush();
-            return false;
-        }
-
-        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_6GHZ)) {
-            if (!is6GhzBandSupportedInternal()
-                    || !mContext.getResources().getBoolean(
-                            R.bool.config_wifiSoftap6ghzSupported)) {
-                mLog.err("Can not start softAp with 6GHz band, not supported.").flush();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     /**
      * see {@link android.net.wifi.WifiManager#startTetheredHotspot(SoftApConfiguration)}
      * @param softApConfig SSID, security and channel details as part of SoftApConfiguration
@@ -1182,8 +1158,7 @@ public class WifiServiceImpl extends BaseWifiService {
         SoftApConfiguration softApConfig = apConfig.getSoftApConfiguration();
         if (softApConfig != null
                 && (!WifiApConfigStore.validateApWifiConfiguration(
-                    softApConfig, privileged, mContext)
-                    || !validateSoftApBand(softApConfig.getBand()))) {
+                    softApConfig, privileged, mContext))) {
             Log.e(TAG, "Invalid SoftApConfiguration");
             return false;
         }
@@ -1329,12 +1304,14 @@ public class WifiServiceImpl extends BaseWifiService {
             }
             List<Integer> supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                     SoftApConfiguration.BAND_2GHZ, mWifiNative, mContext.getResources(), false);
-            if (supportedChannelList != null) {
-                newSoftApCapability.setSupportedChannelList(
-                        SoftApConfiguration.BAND_2GHZ,
-                        supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
+            if (ApConfigUtil.isSoftAp24GhzSupported(mContext)) {
+                if (supportedChannelList != null) {
+                    newSoftApCapability.setSupportedChannelList(
+                            SoftApConfiguration.BAND_2GHZ,
+                            supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
+                }
             }
-            if (is5GhzBandSupportedInternal()) {
+            if (ApConfigUtil.isSoftAp5GhzSupported(mContext)) {
                 supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                         SoftApConfiguration.BAND_5GHZ, mWifiNative, mContext.getResources(), false);
                 if (supportedChannelList != null) {
@@ -1343,7 +1320,7 @@ public class WifiServiceImpl extends BaseWifiService {
                             supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
                 }
             }
-            if (is6GhzBandSupportedInternal()) {
+            if (ApConfigUtil.isSoftAp6GhzSupported(mContext)) {
                 supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                         SoftApConfiguration.BAND_6GHZ, mWifiNative, mContext.getResources(), false);
                 if (supportedChannelList != null) {
@@ -1352,7 +1329,7 @@ public class WifiServiceImpl extends BaseWifiService {
                             supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
                 }
             }
-            if (is60GHzBandSupportedInternal()) {
+            if (ApConfigUtil.isSoftAp60GhzSupported(mContext)) {
                 supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                         SoftApConfiguration.BAND_60GHZ, mWifiNative, mContext.getResources(),
                         false);
@@ -3281,10 +3258,10 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("is60GHzBandSupported uid=%").c(Binder.getCallingUid()).flush();
         }
 
-        return is60GHzBandSupportedInternal();
+        return is60GhzBandSupportedInternal();
     }
 
-    private boolean is60GHzBandSupportedInternal() {
+    private boolean is60GhzBandSupportedInternal() {
         if (mContext.getResources().getBoolean(R.bool.config_wifi60ghzSupport)) {
             return true;
         }

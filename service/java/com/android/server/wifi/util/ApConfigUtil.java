@@ -641,6 +641,54 @@ public class ApConfigUtil {
     }
 
     /**
+     * Helper function to get whether or not 2.4G Soft AP support.
+     *
+     * @param context the caller context used to get value from resource file.
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isSoftAp24GhzSupported(@NonNull Context context) {
+        return context.getResources().getBoolean(R.bool.config_wifi24ghzSupport)
+                && context.getResources().getBoolean(
+                R.bool.config_wifiSoftap24ghzSupported);
+    }
+
+    /**
+     * Helper function to get whether or not 5G Soft AP support.
+     *
+     * @param context the caller context used to get value from resource file.
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isSoftAp5GhzSupported(@NonNull Context context) {
+        return context.getResources().getBoolean(R.bool.config_wifi5ghzSupport)
+                && context.getResources().getBoolean(
+                R.bool.config_wifiSoftap5ghzSupported);
+    }
+
+    /**
+     * Helper function to get whether or not 6G Soft AP support
+     *
+     * @param context the caller context used to get value from resource file.
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isSoftAp6GhzSupported(@NonNull Context context) {
+        return context.getResources().getBoolean(R.bool.config_wifi6ghzSupport)
+                && context.getResources().getBoolean(
+                R.bool.config_wifiSoftap6ghzSupported);
+    }
+
+    /**
+     * Helper function to get whether or not 60G Soft AP support.
+     *
+     * @param context the caller context used to get value from resource file.
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isSoftAp60GhzSupported(@NonNull Context context) {
+        return context.getResources().getBoolean(R.bool.config_wifi60ghzSupport)
+                && context.getResources().getBoolean(
+                R.bool.config_wifiSoftap60ghzSupported);
+    }
+
+    /**
      * Helper function for comparing two SoftApConfiguration.
      *
      * @param currentConfig the original configuration.
