@@ -166,6 +166,20 @@ public class ApConfigUtil {
     }
 
     /**
+     * Add 2.4Ghz to target band when 2.4Ghz SoftAp supported.
+     *
+     * @param targetBand The band is needed to add 2.4G.
+     * @return The band includes 2.4Ghz when 2.4G SoftAp supported.
+     */
+    public static @BandType int append24GToBandIf24GSupported(@BandType int targetBand,
+            Context context) {
+        if (isBandSupported(SoftApConfiguration.BAND_2GHZ, context)) {
+            return targetBand | SoftApConfiguration.BAND_2GHZ;
+        }
+        return targetBand;
+    }
+
+    /**
      * Checks if band is a valid combination of {link  SoftApConfiguration#BandType} values
      */
     public static boolean isBandValid(@BandType int band) {
@@ -197,25 +211,40 @@ public class ApConfigUtil {
 
     /**
      * Checks whether or not band configuration is supported.
-     * @param band a combination of the bands
+     * @param apBand a combination of the bands
      * @param context the caller context used to get value from resource file.
      * @return true if band is supported, false otherwise
      */
-    public static boolean isBandSupported(@BandType int band, Context context) {
-        if (!context.getResources().getBoolean(R.bool.config_wifi6ghzSupport)
-                && (band & SoftApConfiguration.BAND_6GHZ) != 0) {
+    public static boolean isBandSupported(@BandType int apBand, Context context) {
+        if (!isBandValid(apBand)) {
+            Log.e(TAG, "Invalid SoftAp band. ");
             return false;
         }
 
-        if (!context.getResources().getBoolean(R.bool.config_wifi5ghzSupport)
-                && (band & SoftApConfiguration.BAND_5GHZ) != 0) {
+        if (containsBand(apBand, SoftApConfiguration.BAND_2GHZ)
+                && !isSoftAp24GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 2GHz band, not supported.");
             return false;
         }
 
-        if (!context.getResources().getBoolean(R.bool.config_wifi60ghzSupport)
-                && (band & SoftApConfiguration.BAND_60GHZ) != 0) {
+        if (containsBand(apBand, SoftApConfiguration.BAND_5GHZ)
+                && !isSoftAp5GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 5GHz band, not supported.");
             return false;
         }
+
+        if (containsBand(apBand, SoftApConfiguration.BAND_6GHZ)
+                && !isSoftAp6GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 6GHz band, not supported.");
+            return false;
+        }
+
+        if (containsBand(apBand, SoftApConfiguration.BAND_60GHZ)
+                && !isSoftAp60GhzSupported(context)) {
+            Log.e(TAG, "Can not start softAp with 6GHz band, not supported.");
+            return false;
+        }
+
         return true;
     }
 
@@ -396,10 +425,9 @@ public class ApConfigUtil {
         return -1;
     }
 
-
     /**
-     * Remove all unsupported bands from the input band and return the resulting
-     * (remaining) support bands. Unsupported bands are those which don't have channels available.
+     * Remove unavailable bands from the input band and return the resulting
+     * (remaining) available bands. Unavailable bands are those which don't have channels available.
      *
      * @param capability SoftApCapability which inidcates supported channel list.
      * @param band The target band which plan to enable
@@ -407,7 +435,7 @@ public class ApConfigUtil {
      * @return the available band which removed the unsupported band.
      *         0 when all of the band is not supported.
      */
-    public static @BandType int removeUnsupportedBands(SoftApCapability capability,
+    public static @BandType int removeUnavailableBands(SoftApCapability capability,
             @NonNull int band) {
         int availableBand = band;
         if (SdkLevel.isAtLeastS()) {
@@ -435,6 +463,34 @@ public class ApConfigUtil {
                     availableBand &= ~SoftApConfiguration.BAND_60GHZ;
                 }
             }
+        }
+        return availableBand;
+    }
+
+    /**
+     * Remove all unsupported bands from the input band and return the resulting
+     * (remaining) support bands. Unsupported bands are those which don't have channels available.
+     *
+     * @param context The caller context used to get value from resource file.
+     * @param band The target band which plan to enable
+     *
+     * @return the available band which removed the unsupported band.
+     *         0 when all of the band is not supported.
+     */
+    public static @BandType int removeUnsupportedBands(Context context,
+            @NonNull int band) {
+        int availableBand = band;
+        if (((band & SoftApConfiguration.BAND_2GHZ) != 0) && !isSoftAp24GhzSupported(context)) {
+            availableBand &= ~SoftApConfiguration.BAND_2GHZ;
+        }
+        if (((band & SoftApConfiguration.BAND_5GHZ) != 0) && !isSoftAp5GhzSupported(context)) {
+            availableBand &= ~SoftApConfiguration.BAND_5GHZ;
+        }
+        if (((band & SoftApConfiguration.BAND_6GHZ) != 0) && !isSoftAp6GhzSupported(context)) {
+            availableBand &= ~SoftApConfiguration.BAND_6GHZ;
+        }
+        if (((band & SoftApConfiguration.BAND_60GHZ) != 0) && !isSoftAp60GhzSupported(context)) {
+            availableBand &= ~SoftApConfiguration.BAND_60GHZ;
         }
         return availableBand;
     }

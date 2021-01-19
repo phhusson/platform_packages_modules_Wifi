@@ -1302,9 +1302,10 @@ public class WifiServiceImpl extends BaseWifiService {
                 // It might be a failure or stuck during wificond init.
                 return newSoftApCapability;
             }
-            List<Integer> supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
-                    SoftApConfiguration.BAND_2GHZ, mWifiNative, mContext.getResources(), false);
+            List<Integer> supportedChannelList = null;
             if (ApConfigUtil.isSoftAp24GhzSupported(mContext)) {
+                supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
+                    SoftApConfiguration.BAND_2GHZ, mWifiNative, mContext.getResources(), false);
                 if (supportedChannelList != null) {
                     newSoftApCapability.setSupportedChannelList(
                             SoftApConfiguration.BAND_2GHZ,
@@ -1685,17 +1686,16 @@ public class WifiServiceImpl extends BaseWifiService {
 
         @GuardedBy("mLocalOnlyHotspotRequests")
         private void startForFirstRequestLocked(LocalOnlyHotspotRequestInfo request) {
-            int band = SoftApConfiguration.BAND_2GHZ;
+            int band = WifiApConfigStore.generateDefaultBand(mContext);
 
             // For auto only
             if (hasAutomotiveFeature(mContext)) {
                 if (mContext.getResources().getBoolean(R.bool.config_wifiLocalOnlyHotspot6ghz)
-                        && mContext.getResources().getBoolean(R.bool.config_wifiSoftap6ghzSupported)
-                        && is6GhzBandSupportedInternal()) {
+                        && ApConfigUtil.isBandSupported(SoftApConfiguration.BAND_6GHZ, mContext)) {
                     band = SoftApConfiguration.BAND_6GHZ;
                 } else if (mContext.getResources().getBoolean(
                         R.bool.config_wifi_local_only_hotspot_5ghz)
-                        && is5GhzBandSupportedInternal()) {
+                        && ApConfigUtil.isBandSupported(SoftApConfiguration.BAND_5GHZ, mContext)) {
                     band = SoftApConfiguration.BAND_5GHZ;
                 }
             }
