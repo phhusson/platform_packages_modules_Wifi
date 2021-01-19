@@ -914,6 +914,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         assertEquals(sBSSID, wifiInfo.getBSSID());
         assertEquals(sFreq, wifiInfo.getFrequency());
         assertTrue(sWifiSsid.equals(wifiInfo.getWifiSsid()));
+        assertNotEquals(WifiInfo.DEFAULT_MAC_ADDRESS, wifiInfo.getMacAddress());
         assertNull(wifiInfo.getPasspointProviderFriendlyName());
         assertEquals(Arrays.asList(scanResult.informationElements),
                 wifiInfo.getInformationElements());
@@ -923,6 +924,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                     WifiInfo wifiInfoFromTi = (WifiInfo) nc.getTransportInfo();
                     assertEquals(sBSSID, wifiInfoFromTi.getBSSID());
                     assertEquals(sFreq, wifiInfoFromTi.getFrequency());
+                    assertEquals(WifiInfo.DEFAULT_MAC_ADDRESS, wifiInfoFromTi.getMacAddress());
                     assertTrue(sWifiSsid.equals(wifiInfoFromTi.getWifiSsid()));
                     assertNull(wifiInfoFromTi.getPasspointProviderFriendlyName());
                 }

@@ -3770,7 +3770,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
         // Only send out WifiInfo in >= Android S devices.
         if (SdkLevel.isAtLeastS()) {
-            builder.setTransportInfo(new WifiInfo(mWifiInfo));
+            WifiInfo wifiInfo = new WifiInfo(mWifiInfo);
+            // Always mask MAC address when set in TransportInfo since this field is protected
+            // with LOCAL_MAC_ADDRESS permission which cannot be enforced by connectivity stack.
+            // Connectivity stack only enforces location permission on TransportInfo.
+            wifiInfo.setMacAddress(WifiInfo.DEFAULT_MAC_ADDRESS);
+            builder.setTransportInfo(wifiInfo);
         }
 
         Pair<Integer, String> specificRequestUidAndPackageName =
