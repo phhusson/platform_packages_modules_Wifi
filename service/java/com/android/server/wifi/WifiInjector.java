@@ -949,7 +949,7 @@ public class WifiInjector {
     /**
      * Useful for mocking {@link WorkSourceHelper} instance in {@link HalDeviceManager} unit tests.
      */
-    public WorkSourceHelper makeWsHelper(WorkSource ws) {
+    public WorkSourceHelper makeWsHelper(@NonNull WorkSource ws) {
         return new WorkSourceHelper(ws, mWifiPermissionsUtil,
                 mContext.getSystemService(ActivityManager.class), mContext.getPackageManager());
     }
