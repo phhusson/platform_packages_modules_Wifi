@@ -130,6 +130,7 @@ import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.ClientMode.LinkProbeCallback;
 import com.android.server.wifi.ClientModeManagerBroadcastQueue.QueuedBroadcast;
+import com.android.server.wifi.WifiScoreCard.PerNetwork;
 import com.android.server.wifi.hotspot2.NetworkDetail;
 import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.hotspot2.PasspointProvisioningTestUtil;
@@ -408,6 +409,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock WifiConfigManager mWifiConfigManager;
     @Mock WifiNative mWifiNative;
     @Mock WifiScoreCard mWifiScoreCard;
+    @Mock PerNetwork mPerNetwork;
     @Mock WifiHealthMonitor mWifiHealthMonitor;
     @Mock WifiTrafficPoller mWifiTrafficPoller;
     @Mock WifiConnectivityManager mWifiConnectivityManager;
@@ -563,6 +565,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 .thenReturn(WifiHealthMonitor.REASON_NO_FAILURE);
         when(mWifiScoreCard.detectAbnormalDisconnection())
                 .thenReturn(WifiHealthMonitor.REASON_NO_FAILURE);
+        when(mWifiScoreCard.lookupNetwork(any())).thenReturn(mPerNetwork);
         when(mThroughputPredictor.predictMaxTxThroughput(any())).thenReturn(90);
         when(mThroughputPredictor.predictMaxRxThroughput(any())).thenReturn(80);
 
