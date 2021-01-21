@@ -312,6 +312,7 @@ package android.net.wifi {
 
   public final class SoftApInfo implements android.os.Parcelable {
     method public int describeContents();
+    method public long getAutoShutdownTimeoutMillis();
     method public int getBandwidth();
     method @Nullable public android.net.MacAddress getBssid();
     method public int getFrequency();
