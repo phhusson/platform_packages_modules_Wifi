@@ -1384,6 +1384,8 @@ public class WifiManager {
     @GuardedBy("mLock")
     private LocalOnlyHotspotObserverProxy mLOHSObserverProxy;
 
+    private static final SparseArray<IOnWifiUsabilityStatsListener>
+            sOnWifiUsabilityStatsListenerMap = new SparseArray();
     /**
      * Create a new WifiManager instance.
      * Applications will almost always want to use
@@ -6526,7 +6528,8 @@ public class WifiManager {
      * Adds a listener for Wi-Fi usability statistics. See {@link OnWifiUsabilityStatsListener}.
      * Multiple listeners can be added. Callers will be invoked periodically by framework to
      * inform clients about the current Wi-Fi usability statistics. Callers can remove a previously
-     * added listener using {@link removeOnWifiUsabilityStatsListener}.
+     * added listener using
+     * {@link #removeOnWifiUsabilityStatsListener(OnWifiUsabilityStatsListener)}.
      *
      * @param executor The executor on which callback will be invoked.
      * @param listener Listener for Wifi usability statistics.
@@ -6543,22 +6546,25 @@ public class WifiManager {
             Log.v(TAG, "addOnWifiUsabilityStatsListener: listener=" + listener);
         }
         try {
-            mService.addOnWifiUsabilityStatsListener(new Binder(),
-                    new IOnWifiUsabilityStatsListener.Stub() {
-                        @Override
-                        public void onWifiUsabilityStats(int seqNum, boolean isSameBssidAndFreq,
-                                WifiUsabilityStatsEntry stats) {
-                            if (mVerboseLoggingEnabled) {
-                                Log.v(TAG, "OnWifiUsabilityStatsListener: "
-                                        + "onWifiUsabilityStats: seqNum=" + seqNum);
+            synchronized (sOnWifiUsabilityStatsListenerMap) {
+                IOnWifiUsabilityStatsListener.Stub binderCallback =
+                        new IOnWifiUsabilityStatsListener.Stub() {
+                            @Override
+                            public void onWifiUsabilityStats(int seqNum, boolean isSameBssidAndFreq,
+                                    WifiUsabilityStatsEntry stats) {
+                                if (mVerboseLoggingEnabled) {
+                                    Log.v(TAG, "OnWifiUsabilityStatsListener: "
+                                            + "onWifiUsabilityStats: seqNum=" + seqNum);
+                                }
+                                Binder.clearCallingIdentity();
+                                executor.execute(() -> listener.onWifiUsabilityStats(
+                                        seqNum, isSameBssidAndFreq, stats));
                             }
-                            Binder.clearCallingIdentity();
-                            executor.execute(() -> listener.onWifiUsabilityStats(
-                                    seqNum, isSameBssidAndFreq, stats));
-                        }
-                    },
-                    listener.hashCode()
-            );
+                        };
+                sOnWifiUsabilityStatsListenerMap.put(System.identityHashCode(listener),
+                        binderCallback);
+                mService.addOnWifiUsabilityStatsListener(binderCallback);
+            }
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -6580,7 +6586,16 @@ public class WifiManager {
             Log.v(TAG, "removeOnWifiUsabilityStatsListener: listener=" + listener);
         }
         try {
-            mService.removeOnWifiUsabilityStatsListener(listener.hashCode());
+            synchronized (sOnWifiUsabilityStatsListenerMap) {
+                int listenerIdentifier = System.identityHashCode(listener);
+                if (!sOnWifiUsabilityStatsListenerMap.contains(listenerIdentifier)) {
+                    Log.w(TAG, "Unknown external callback " + listenerIdentifier);
+                    return;
+                }
+                mService.removeOnWifiUsabilityStatsListener(
+                        sOnWifiUsabilityStatsListenerMap.get(listenerIdentifier));
+                sOnWifiUsabilityStatsListenerMap.remove(listenerIdentifier);
+            }
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

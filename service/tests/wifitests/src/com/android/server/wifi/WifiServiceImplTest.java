@@ -228,7 +228,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
     private static final int TEST_USER_HANDLE = 13;
     private static final int TEST_TRAFFIC_STATE_CALLBACK_IDENTIFIER = 17;
     private static final int TEST_NETWORK_REQUEST_MATCH_CALLBACK_IDENTIFIER = 234;
-    private static final int TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER = 2;
     private static final int TEST_WIFI_CONNECTED_NETWORK_SCORER_IDENTIFIER = 1;
     private static final String WIFI_IFACE_NAME = "wlan0";
     private static final String WIFI_IFACE_NAME2 = "wlan1";
@@ -5670,8 +5669,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                         eq(android.Manifest.permission.WIFI_UPDATE_USABILITY_STATS_SCORE),
                         eq("WifiService"));
         try {
-            mWifiServiceImpl.addOnWifiUsabilityStatsListener(mAppBinder,
-                    mOnWifiUsabilityStatsListener, TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+            mWifiServiceImpl.addOnWifiUsabilityStatsListener(mOnWifiUsabilityStatsListener);
             fail("expected SecurityException");
         } catch (SecurityException expected) {
         }
@@ -5684,8 +5682,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testAddStatsListenerThrowsIllegalArgumentExceptionOnInvalidArguments() {
         try {
-            mWifiServiceImpl.addOnWifiUsabilityStatsListener(
-                    mAppBinder, null, TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+            mWifiServiceImpl.addOnWifiUsabilityStatsListener(null);
             fail("expected IllegalArgumentException");
         } catch (IllegalArgumentException expected) {
         }
@@ -5702,8 +5699,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                         eq(android.Manifest.permission.WIFI_UPDATE_USABILITY_STATS_SCORE),
                         eq("WifiService"));
         try {
-            mWifiServiceImpl.removeOnWifiUsabilityStatsListener(
-                    TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+            mWifiServiceImpl.removeOnWifiUsabilityStatsListener(mOnWifiUsabilityStatsListener);
             fail("expected SecurityException");
         } catch (SecurityException expected) {
         }
@@ -5714,11 +5710,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testAddOnWifiUsabilityStatsListenerAndVerify() throws Exception {
-        mWifiServiceImpl.addOnWifiUsabilityStatsListener(mAppBinder, mOnWifiUsabilityStatsListener,
-                TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+        mWifiServiceImpl.addOnWifiUsabilityStatsListener(mOnWifiUsabilityStatsListener);
         mLooper.dispatchAll();
-        verify(mWifiMetrics).addOnWifiUsabilityListener(mAppBinder, mOnWifiUsabilityStatsListener,
-                TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+        verify(mWifiMetrics).addOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
     }
 
     /**
@@ -5727,9 +5721,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testRemoveOnWifiUsabilityStatsListenerAndVerify() throws Exception {
-        mWifiServiceImpl.removeOnWifiUsabilityStatsListener(0);
+        mWifiServiceImpl.removeOnWifiUsabilityStatsListener(mOnWifiUsabilityStatsListener);
         mLooper.dispatchAll();
-        verify(mWifiMetrics).removeOnWifiUsabilityListener(0);
+        verify(mWifiMetrics).removeOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
     }
 
     /**

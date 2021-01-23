@@ -4456,24 +4456,16 @@ public class WifiServiceImpl extends BaseWifiService {
 
     /**
      * see {@link android.net.wifi.WifiManager#addOnWifiUsabilityStatsListener(Executor,
-     * OnWifiUsabilityStatsListener)}
+     * WifiManager.OnWifiUsabilityStatsListener)}
      *
-     * @param binder IBinder instance to allow cleanup if the app dies
      * @param listener WifiUsabilityStatsEntry listener to add
-     * @param listenerIdentifier Unique ID of the adding listener. This ID will be used to
-     *        remove the listener. See {@link removeOnWifiUsabilityStatsListener(int)}
      *
      * @throws SecurityException if the caller does not have permission to add a listener
      * @throws RemoteException if remote exception happens
      * @throws IllegalArgumentException if the arguments are null or invalid
      */
     @Override
-    public void addOnWifiUsabilityStatsListener(IBinder binder,
-            IOnWifiUsabilityStatsListener listener, int listenerIdentifier) {
-        // verify arguments
-        if (binder == null) {
-            throw new IllegalArgumentException("Binder must not be null");
-        }
+    public void addOnWifiUsabilityStatsListener(IOnWifiUsabilityStatsListener listener) {
         if (listener == null) {
             throw new IllegalArgumentException("Listener must not be null");
         }
@@ -4485,19 +4477,19 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         // Post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mWifiMetrics.addOnWifiUsabilityListener(binder, listener, listenerIdentifier));
+                mWifiMetrics.addOnWifiUsabilityListener(listener));
     }
 
     /**
-     * see {@link android.net.wifi.WifiManager#removeOnWifiUsabilityStatsListener(
-     * OnWifiUsabilityStatsListener)}
+     * see {@link android.net.wifi.WifiManager#removeOnWifiUsabilityStatsListener
+     * (WifiManager.OnWifiUsabilityStatsListener)}
      *
-     * @param listenerIdentifier Unique ID of the listener to be removed.
+     * @param listener listener to be removed.
      *
      * @throws SecurityException if the caller does not have permission to add a listener
      */
     @Override
-    public void removeOnWifiUsabilityStatsListener(int listenerIdentifier) {
+    public void removeOnWifiUsabilityStatsListener(IOnWifiUsabilityStatsListener listener) {
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.WIFI_UPDATE_USABILITY_STATS_SCORE, "WifiService");
         if (mVerboseLoggingEnabled) {
@@ -4506,7 +4498,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         // Post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mWifiMetrics.removeOnWifiUsabilityListener(listenerIdentifier));
+                mWifiMetrics.removeOnWifiUsabilityListener(listener));
     }
 
     /**

@@ -161,7 +161,6 @@ public class WifiMetricsTest extends WifiBaseTest {
     WifiMetricsProto.WifiLog mDecodedProto;
     TestLooper mTestLooper;
     Random mRandom = new Random();
-    private static final int TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER = 2;
     private static final int TEST_NETWORK_ID = 42;
     public static final String TEST_IFACE_NAME = "wlan0";
     public static final String TEST_IFACE_NAME2 = "wlan1";
@@ -213,6 +212,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         mWifiMetrics.setWifiDataStall(mWifiDataStall);
         mWifiMetrics.setWifiHealthMonitor(mWifiHealthMonitor);
         mWifiMetrics.setWifiScoreCard(mWifiScoreCard);
+        when(mOnWifiUsabilityStatsListener.asBinder()).thenReturn(mAppBinder);
         when(mWifiScoreCard.lookupNetwork(anyString())).thenReturn(mPerNetwork);
         when(mPerNetwork.getRecentStats()).thenReturn(mNetworkConnectionStats);
         verify(mContext, atLeastOnce()).registerReceiver(
@@ -4100,8 +4100,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         // Register Client for verification.
         ArgumentCaptor<android.net.wifi.WifiUsabilityStatsEntry> usabilityStats =
                 ArgumentCaptor.forClass(android.net.wifi.WifiUsabilityStatsEntry.class);
-        mWifiMetrics.addOnWifiUsabilityListener(mAppBinder, mOnWifiUsabilityStatsListener,
-                TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+        mWifiMetrics.addOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
         WifiInfo info = mock(WifiInfo.class);
         when(info.getRssi()).thenReturn(nextRandInt());
         when(info.getLinkSpeed()).thenReturn(nextRandInt());
@@ -4127,9 +4126,8 @@ public class WifiMetricsTest extends WifiBaseTest {
     @Test
     public void testRemoveClient() throws RemoteException {
         // Register Client for verification.
-        mWifiMetrics.addOnWifiUsabilityListener(mAppBinder, mOnWifiUsabilityStatsListener,
-                TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
-        mWifiMetrics.removeOnWifiUsabilityListener(TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+        mWifiMetrics.addOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
+        mWifiMetrics.removeOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
         verify(mAppBinder).unlinkToDeath(any(), anyInt());
 
         WifiInfo info = mock(WifiInfo.class);
@@ -4147,8 +4145,7 @@ public class WifiMetricsTest extends WifiBaseTest {
      */
     @Test
     public void testAddsForBinderDeathOnAddClient() throws Exception {
-        mWifiMetrics.addOnWifiUsabilityListener(mAppBinder, mOnWifiUsabilityStatsListener,
-                TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+        mWifiMetrics.addOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
         verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
     }
 
@@ -4159,8 +4156,7 @@ public class WifiMetricsTest extends WifiBaseTest {
     public void testAddsListenerFailureOnLinkToDeath() throws Exception {
         doThrow(new RemoteException())
                 .when(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
-        mWifiMetrics.addOnWifiUsabilityListener(mAppBinder, mOnWifiUsabilityStatsListener,
-                TEST_WIFI_USABILITY_STATS_LISTENER_IDENTIFIER);
+        mWifiMetrics.addOnWifiUsabilityListener(mOnWifiUsabilityStatsListener);
         verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
 
         WifiInfo info = mock(WifiInfo.class);
