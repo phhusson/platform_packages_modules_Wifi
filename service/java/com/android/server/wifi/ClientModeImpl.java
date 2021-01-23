@@ -4881,7 +4881,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         /**
-         * Fetches link stats, updates Wifi Data Stall and Score Report.
+         * Fetches link stats, updates Wifi Data Stall, Score Card and Score Report.
          */
         private WifiLinkLayerStats updateLinkLayerStatsRssiDataStallScoreReport() {
             WifiLinkLayerStats stats = getWifiLinkLayerStats();
@@ -4892,6 +4892,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             // mWifiScoreReport.calculateAndReportScore() which needs the latest throughput
             int statusDataStall = mWifiDataStall.checkDataStallAndThroughputSufficiency(
                     mLastLinkLayerStats, stats, mWifiInfo);
+            WifiScoreCard.PerNetwork network = mWifiScoreCard.lookupNetwork(mWifiInfo.getSSID());
+            network.updateLinkBandwidth(mLastLinkLayerStats, stats, mWifiInfo);
             if (mDataStallTriggerTimeMs == -1
                     && statusDataStall != WifiIsUnusableEvent.TYPE_UNKNOWN) {
                 mDataStallTriggerTimeMs = mClock.getElapsedSinceBootMillis();
