@@ -90,7 +90,6 @@ import android.net.wifi.WifiManager.SuggestionConnectionStatusListener;
 import android.net.wifi.WifiManager.WifiApState;
 import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiScanner;
-import android.net.wifi.WifiSsid;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
@@ -1108,30 +1107,6 @@ public class WifiServiceImpl extends BaseWifiService {
         return true;
     }
 
-    private boolean validateSoftApBand(int apBand) {
-        if (!ApConfigUtil.isBandValid(apBand)) {
-            mLog.err("Invalid SoftAp band. ").flush();
-            return false;
-        }
-
-        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_5GHZ)
-                && !is5GhzBandSupportedInternal()) {
-            mLog.err("Can not start softAp with 5GHz band, not supported.").flush();
-            return false;
-        }
-
-        if (ApConfigUtil.containsBand(apBand, SoftApConfiguration.BAND_6GHZ)) {
-            if (!is6GhzBandSupportedInternal()
-                    || !mContext.getResources().getBoolean(
-                            R.bool.config_wifiSoftap6ghzSupported)) {
-                mLog.err("Can not start softAp with 6GHz band, not supported.").flush();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     /**
      * see {@link android.net.wifi.WifiManager#startTetheredHotspot(SoftApConfiguration)}
      * @param softApConfig SSID, security and channel details as part of SoftApConfiguration
@@ -1183,8 +1158,7 @@ public class WifiServiceImpl extends BaseWifiService {
         SoftApConfiguration softApConfig = apConfig.getSoftApConfiguration();
         if (softApConfig != null
                 && (!WifiApConfigStore.validateApWifiConfiguration(
-                    softApConfig, privileged, mContext)
-                    || !validateSoftApBand(softApConfig.getBand()))) {
+                    softApConfig, privileged, mContext))) {
             Log.e(TAG, "Invalid SoftApConfiguration");
             return false;
         }
@@ -1232,7 +1206,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private final class CountryCodeListenerProxy implements WifiCountryCode.ChangeListener {
         @Override
         public void onDriverCountryCodeChanged(String countryCode) {
-            Log.i(TAG, "onDriverCountryCodeChanged" + countryCode);
+            Log.i(TAG, "onDriverCountryCodeChanged " + countryCode);
             mTetheredSoftApTracker.updateAvailChannelListInSoftApCapability();
             mActiveModeWarden.updateSoftApCapability(
                     mTetheredSoftApTracker.getSoftApCapability());
@@ -1328,14 +1302,17 @@ public class WifiServiceImpl extends BaseWifiService {
                 // It might be a failure or stuck during wificond init.
                 return newSoftApCapability;
             }
-            List<Integer> supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
+            List<Integer> supportedChannelList = null;
+            if (ApConfigUtil.isSoftAp24GhzSupported(mContext)) {
+                supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                     SoftApConfiguration.BAND_2GHZ, mWifiNative, mContext.getResources(), false);
-            if (supportedChannelList != null) {
-                newSoftApCapability.setSupportedChannelList(
-                        SoftApConfiguration.BAND_2GHZ,
-                        supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
+                if (supportedChannelList != null) {
+                    newSoftApCapability.setSupportedChannelList(
+                            SoftApConfiguration.BAND_2GHZ,
+                            supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
+                }
             }
-            if (is5GhzBandSupportedInternal()) {
+            if (ApConfigUtil.isSoftAp5GhzSupported(mContext)) {
                 supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                         SoftApConfiguration.BAND_5GHZ, mWifiNative, mContext.getResources(), false);
                 if (supportedChannelList != null) {
@@ -1344,7 +1321,7 @@ public class WifiServiceImpl extends BaseWifiService {
                             supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
                 }
             }
-            if (is6GhzBandSupportedInternal()) {
+            if (ApConfigUtil.isSoftAp6GhzSupported(mContext)) {
                 supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                         SoftApConfiguration.BAND_6GHZ, mWifiNative, mContext.getResources(), false);
                 if (supportedChannelList != null) {
@@ -1353,7 +1330,7 @@ public class WifiServiceImpl extends BaseWifiService {
                             supportedChannelList.stream().mapToInt(Integer::intValue).toArray());
                 }
             }
-            if (is60GHzBandSupportedInternal()) {
+            if (ApConfigUtil.isSoftAp60GhzSupported(mContext)) {
                 supportedChannelList = ApConfigUtil.getAvailableChannelFreqsForBand(
                         SoftApConfiguration.BAND_60GHZ, mWifiNative, mContext.getResources(),
                         false);
@@ -1709,17 +1686,16 @@ public class WifiServiceImpl extends BaseWifiService {
 
         @GuardedBy("mLocalOnlyHotspotRequests")
         private void startForFirstRequestLocked(LocalOnlyHotspotRequestInfo request) {
-            int band = SoftApConfiguration.BAND_2GHZ;
+            int band = WifiApConfigStore.generateDefaultBand(mContext);
 
             // For auto only
             if (hasAutomotiveFeature(mContext)) {
                 if (mContext.getResources().getBoolean(R.bool.config_wifiLocalOnlyHotspot6ghz)
-                        && mContext.getResources().getBoolean(R.bool.config_wifiSoftap6ghzSupported)
-                        && is6GhzBandSupportedInternal()) {
+                        && ApConfigUtil.isBandSupported(SoftApConfiguration.BAND_6GHZ, mContext)) {
                     band = SoftApConfiguration.BAND_6GHZ;
                 } else if (mContext.getResources().getBoolean(
                         R.bool.config_wifi_local_only_hotspot_5ghz)
-                        && is5GhzBandSupportedInternal()) {
+                        && ApConfigUtil.isBandSupported(SoftApConfiguration.BAND_5GHZ, mContext)) {
                     band = SoftApConfiguration.BAND_5GHZ;
                 }
             }
@@ -2661,6 +2637,15 @@ public class WifiServiceImpl extends BaseWifiService {
             return 0;
         }
 
+        if (config.isEnterprise()) {
+            if (config.enterpriseConfig.isTlsBasedEapMethod()
+                    && !config.enterpriseConfig.isMandatoryParameterSetForServerCertValidation()) {
+                Log.e(TAG, "Enterprise network configuration is missing either a Root CA "
+                        + "or a domain name");
+                return -1;
+            }
+        }
+
         Log.i("addOrUpdateNetwork", " uid = " + Binder.getCallingUid()
                 + " SSID " + config.SSID
                 + " nid=" + config.networkId);
@@ -3005,13 +2990,12 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         long ident = Binder.clearCallingIdentity();
         try {
-            WifiInfo result = mWifiThreadRunner.call(
+            WifiInfo wifiInfo = mWifiThreadRunner.call(
                     () -> getClientModeManagerIfSecondaryCmmRequestedByCallerPresent(
                             uid, callingPackage)
                             .syncRequestConnectionInfo(), new WifiInfo());
             boolean hideDefaultMacAddress = true;
-            boolean hideBssidSsidNetworkIdAndFqdn = true;
-
+            boolean hideLocationSensitiveData = true;
             try {
                 if (mWifiInjector.getWifiPermissionsWrapper().getLocalMacAddressPermission(uid)
                         == PERMISSION_GRANTED) {
@@ -3019,25 +3003,18 @@ public class WifiServiceImpl extends BaseWifiService {
                 }
                 mWifiPermissionsUtil.enforceCanAccessScanResults(callingPackage, callingFeatureId,
                         uid, null);
-                hideBssidSsidNetworkIdAndFqdn = false;
+                hideLocationSensitiveData = false;
             } catch (SecurityException ignored) {
             }
+            WifiInfo result = wifiInfo.makeCopyInternal(!hideLocationSensitiveData);
+            // TODO (b/162602799): Do we need to expose the MAC address of the secondary STA?
             if (hideDefaultMacAddress) {
                 result.setMacAddress(WifiInfo.DEFAULT_MAC_ADDRESS);
             }
-            if (hideBssidSsidNetworkIdAndFqdn) {
-                result.setBSSID(WifiInfo.DEFAULT_MAC_ADDRESS);
-                result.setSSID(WifiSsid.createFromHex(null));
-                result.setNetworkId(WifiConfiguration.INVALID_NETWORK_ID);
-                result.setFQDN(null);
-                result.setProviderFriendlyName(null);
-                result.setPasspointUniqueId(null);
-            }
-
             if (mVerboseLoggingEnabled
-                    && (hideBssidSsidNetworkIdAndFqdn || hideDefaultMacAddress)) {
-                mLog.v("getConnectionInfo: hideBssidSsidAndNetworkId="
-                        + hideBssidSsidNetworkIdAndFqdn
+                    && (hideLocationSensitiveData || hideDefaultMacAddress)) {
+                mLog.v("getConnectionInfo: hideLocationSensitiveData="
+                        + hideLocationSensitiveData
                         + ", hideDefaultMacAddress="
                         + hideDefaultMacAddress);
             }
@@ -3282,10 +3259,10 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("is60GHzBandSupported uid=%").c(Binder.getCallingUid()).flush();
         }
 
-        return is60GHzBandSupportedInternal();
+        return is60GhzBandSupportedInternal();
     }
 
-    private boolean is60GHzBandSupportedInternal() {
+    private boolean is60GhzBandSupportedInternal() {
         if (mContext.getResources().getBoolean(R.bool.config_wifi60ghzSupport)) {
             return true;
         }
@@ -3461,6 +3438,23 @@ public class WifiServiceImpl extends BaseWifiService {
                 Binder.getCallingUid()));
     }
 
+    private void removeAppStateInternal(int uid, @NonNull String pkgName) {
+        ApplicationInfo ai = new ApplicationInfo();
+        ai.packageName = pkgName;
+        ai.uid = uid;
+        mWifiConfigManager.removeNetworksForApp(ai);
+        mScanRequestProxy.clearScanRequestTimestampsForApp(pkgName, uid);
+
+        // Remove all suggestions from the package.
+        mWifiNetworkSuggestionsManager.removeApp(pkgName);
+        mWifiInjector.getWifiNetworkFactory().removeUserApprovedAccessPointsForApp(
+                pkgName);
+
+        // Remove all Passpoint profiles from package.
+        mWifiInjector.getPasspointManager().removePasspointProviderWithPackage(
+                pkgName);
+    }
+
     private void registerForBroadcasts() {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED);
@@ -3493,20 +3487,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 Log.d(TAG, "Remove settings for package:" + pkgName);
                 // Call the method in the main Wifi thread.
                 mWifiThreadRunner.post(() -> {
-                    ApplicationInfo ai = new ApplicationInfo();
-                    ai.packageName = pkgName;
-                    ai.uid = uid;
-                    mWifiConfigManager.removeNetworksForApp(ai);
-                    mScanRequestProxy.clearScanRequestTimestampsForApp(pkgName, uid);
-
-                    // Remove all suggestions from the package.
-                    mWifiNetworkSuggestionsManager.removeApp(pkgName);
-                    mWifiInjector.getWifiNetworkFactory().removeUserApprovedAccessPointsForApp(
-                            pkgName);
-
-                    // Remove all Passpoint profiles from package.
-                    mWifiInjector.getPasspointManager().removePasspointProviderWithPackage(
-                            pkgName);
+                    removeAppStateInternal(uid, pkgName);
                 });
             }
         }, intentFilter);
@@ -4906,5 +4887,18 @@ public class WifiServiceImpl extends BaseWifiService {
         int uid = Binder.getCallingUid();
         mLog.info("setEmergencyScanRequestInProgress uid=%").c(uid).flush();
         mActiveModeWarden.setEmergencyScanRequestInProgress(inProgress);
+    }
+
+    /**
+     * See {@link android.net.wifi.WifiManager#removeAppState(int, String)}.
+     */
+    @Override
+    public void removeAppState(int targetAppUid, @NonNull String targetAppPackageName) {
+        enforceNetworkSettingsPermission();
+        mLog.info("removeAppState uid=%").c(Binder.getCallingUid()).flush();
+
+        mWifiThreadRunner.post(() -> {
+            removeAppStateInternal(targetAppUid, targetAppPackageName);
+        });
     }
 }

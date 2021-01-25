@@ -393,10 +393,13 @@ public class WifiMonitorTest extends WifiBaseTest {
         mWifiMonitor.registerHandler(
                 WLAN_IFACE_NAME, WifiMonitor.ASSOCIATION_REJECTION_EVENT, mHandlerSpy);
         int status = 5;
-        String ssid = SSID;
-        String bssid = BSSID;
-        mWifiMonitor.broadcastAssociationRejectionEvent(
-                WLAN_IFACE_NAME, status, false, ssid, bssid);
+        int deltaRssi = 10;
+        int retryDelay = 25;
+        AssocRejectEventInfo assocRejectInfo = new AssocRejectEventInfo(
+                SSID,
+                BSSID,
+                status, false);
+        mWifiMonitor.broadcastAssociationRejectionEvent(WLAN_IFACE_NAME, assocRejectInfo);
         mLooper.dispatchAll();
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
@@ -407,8 +410,10 @@ public class WifiMonitorTest extends WifiBaseTest {
         assertNotNull(assocRejectEventInfo);
         assertEquals(status, assocRejectEventInfo.statusCode);
         assertFalse(assocRejectEventInfo.timedOut);
-        assertEquals(ssid, assocRejectEventInfo.ssid);
-        assertEquals(bssid, assocRejectEventInfo.bssid);
+        assertEquals(SSID, assocRejectEventInfo.ssid);
+        assertEquals(BSSID, assocRejectEventInfo.bssid);
+        assertNull(assocRejectEventInfo.oceRssiBasedAssocRejectInfo);
+        assertNull(assocRejectEventInfo.mboAssocDisallowedInfo);
     }
 
     /**
@@ -672,5 +677,25 @@ public class WifiMonitorTest extends WifiBaseTest {
         assertEquals(WifiMonitor.HS20_TERMS_AND_CONDITIONS_ACCEPTANCE_REQUIRED_EVENT,
                 messageCaptor.getValue().what);
         assertTrue(wnmData.equals(messageCaptor.getValue().obj));
+    }
+
+    /**
+     * Broadcast message when iface handler is null.
+     */
+    @Test
+    public void testBroadcastTransitionDisableEvent() {
+        final int indication = WifiMonitor.TDI_USE_WPA3_PERSONAL
+                | WifiMonitor.TDI_USE_SAE_PK;
+        mWifiMonitor.registerHandler(
+                WLAN_IFACE_NAME, WifiMonitor.TRANSITION_DISABLE_INDICATION, mHandlerSpy);
+        mWifiMonitor.broadcastTransitionDisableEvent(
+                WLAN_IFACE_NAME, NETWORK_ID, indication);
+        mLooper.dispatchAll();
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(mHandlerSpy).handleMessage(messageCaptor.capture());
+        assertEquals(WifiMonitor.TRANSITION_DISABLE_INDICATION, messageCaptor.getValue().what);
+        assertEquals(NETWORK_ID, messageCaptor.getValue().arg1);
+        assertEquals(indication, messageCaptor.getValue().arg2);
     }
 }

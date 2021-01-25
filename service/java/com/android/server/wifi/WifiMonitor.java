@@ -16,6 +16,7 @@
 
 package com.android.server.wifi;
 
+import android.annotation.IntDef;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiManager;
@@ -34,6 +35,8 @@ import com.android.server.wifi.hotspot2.AnqpEvent;
 import com.android.server.wifi.hotspot2.IconEvent;
 import com.android.server.wifi.hotspot2.WnmData;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -97,6 +100,10 @@ public class WifiMonitor {
     /* MBO/OCE events */
     public static final int MBO_OCE_BSS_TM_HANDLING_DONE         = BASE + 71;
 
+    /* Transition Disable Indication */
+    public static final int TRANSITION_DISABLE_INDICATION        = BASE + 72;
+
+
     /* WPS config errrors */
     private static final int CONFIG_MULTIPLE_PBC_DETECTED = 12;
     private static final int CONFIG_AUTH_FAILURE = 18;
@@ -104,6 +111,21 @@ public class WifiMonitor {
     /* WPS error indications */
     private static final int REASON_TKIP_ONLY_PROHIBITED = 1;
     private static final int REASON_WEP_PROHIBITED = 2;
+
+    /* Transition disable indication */
+    public static final int TDI_USE_WPA3_PERSONAL = 1 << 0;
+    public static final int TDI_USE_SAE_PK = 1 << 1;
+    public static final int TDI_USE_WPA3_ENTERPRISE = 1 << 2;
+    public static final int TDI_USE_ENHANCED_OPEN = 1 << 3;
+
+    @IntDef(flag = true, prefix = { "TDI_" }, value = {
+            TDI_USE_WPA3_PERSONAL,
+            TDI_USE_SAE_PK,
+            TDI_USE_WPA3_ENTERPRISE,
+            TDI_USE_ENHANCED_OPEN,
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    @interface TransitionDisableIndication{}
 
     /**
      * Use this key to get the interface name of the message sent by WifiMonitor,
@@ -394,6 +416,19 @@ public class WifiMonitor {
     }
 
     /**
+     * Broadcast the transition disable event to all the handlers registered for this event.
+     *
+     * @param iface Name of iface on which this occurred.
+     * @param networkId ID of the network in wpa_supplicant.
+     * @param indicationBits bits of the disable indication.
+     */
+    public void broadcastTransitionDisableEvent(
+            String iface, int networkId,
+            @TransitionDisableIndication int indicationBits) {
+        sendMessage(iface, TRANSITION_DISABLE_INDICATION, networkId, indicationBits);
+    }
+
+    /**
      * Broadcast the Network Gsm Sim auth request event to all the handlers registered for this
      * event.
      *
@@ -467,15 +502,12 @@ public class WifiMonitor {
      * Broadcast the association rejection event to all the handlers registered for this event.
      *
      * @param iface Name of iface on which this occurred.
-     * @param status Status code for association rejection.
-     * @param timedOut Indicates if the association timed out.
-     * @param ssid SSID of the access point.
-     * @param bssid BSSID of the access point from which we received the reject.
+     * @param assocRejectInfo Instance of AssocRejectEventInfo containing the association
+     *                        rejection info.
      */
-    public void broadcastAssociationRejectionEvent(String iface, int status, boolean timedOut,
-            String ssid, String bssid) {
-        sendMessage(iface, ASSOCIATION_REJECTION_EVENT,
-                new AssocRejectEventInfo(ssid, bssid, status, timedOut));
+    public void broadcastAssociationRejectionEvent(String iface,
+            AssocRejectEventInfo assocRejectInfo) {
+        sendMessage(iface, ASSOCIATION_REJECTION_EVENT, assocRejectInfo);
     }
 
     /**

@@ -39,6 +39,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.wifi.util.ScanResultUtil;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 
 import java.util.ArrayList;
@@ -262,7 +263,7 @@ public class ScanRequestProxy {
         }
         mWifiScanner.setScanningEnabled(enable);
         sendScanAvailableBroadcast(mContext, enable);
-        clearScanResults();
+        if (!enable) clearScanResults();
         Log.i(TAG, "Scanning is " + (enable ? "enabled" : "disabled"));
     }
 
@@ -558,5 +559,29 @@ public class ScanRequestProxy {
      */
     public boolean isScanThrottleEnabled() {
         return mThrottleEnabled;
+    }
+
+    /** Indicate whether there are legacy WPA2 networks. */
+    public boolean isLegacyWpa2NetworkInRange(String ssid) {
+        return mLastScanResultsMap.values().stream().anyMatch(r ->
+                ssid.equals(ScanResultUtil.createQuotedSSID(r.SSID))
+                && ScanResultUtil.isScanResultForPskNetwork(r)
+                && !ScanResultUtil.isScanResultForSaeNetwork(r));
+    }
+
+    /** Indicate whether there are legacy OPEN networks. */
+    public boolean isLegacyOpenNetworkInRange(String ssid) {
+        return mLastScanResultsMap.values().stream().anyMatch(r ->
+                ssid.equals(ScanResultUtil.createQuotedSSID(r.SSID))
+                && ScanResultUtil.isScanResultForOpenNetwork(r));
+    }
+
+    /** Indicate whether there are legacy WPA2 networks. */
+    public boolean isLegacyWpa2EnterpriseNetworkInRange(String ssid) {
+        return mLastScanResultsMap.values().stream().anyMatch(r ->
+                ssid.equals(ScanResultUtil.createQuotedSSID(r.SSID))
+                && ScanResultUtil.isScanResultForEapNetwork(r)
+                && !ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(r)
+                && !ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(r));
     }
 }

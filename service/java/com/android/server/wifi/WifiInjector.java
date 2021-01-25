@@ -270,7 +270,8 @@ public class WifiInjector {
         mHalDeviceManager = new HalDeviceManager(mClock, this, wifiHandler);
         mWifiVendorHal = new WifiVendorHal(mContext, mHalDeviceManager, wifiHandler);
         mSupplicantStaIfaceHal = new SupplicantStaIfaceHal(
-                mContext, mWifiMonitor, mFrameworkFacade, wifiHandler, mClock, mWifiMetrics);
+                mContext, mWifiMonitor, mFrameworkFacade, wifiHandler, mClock, mWifiMetrics,
+                mWifiGlobals);
         mHostapdHal = new HostapdHal(mContext, wifiHandler);
         mWifiCondManager = (WifiNl80211Manager) mContext.getSystemService(
                 Context.WIFI_NL80211_SERVICE);
@@ -304,7 +305,8 @@ public class WifiInjector {
                 subscriptionManager, this, mFrameworkFacade, mContext,
                 mWifiConfigStore, wifiHandler, mWifiMetrics);
         String l2KeySeed = Secure.getString(mContext.getContentResolver(), Secure.ANDROID_ID);
-        mWifiScoreCard = new WifiScoreCard(mClock, l2KeySeed, mDeviceConfigFacade);
+        mWifiScoreCard = new WifiScoreCard(mClock, l2KeySeed, mDeviceConfigFacade,
+                mFrameworkFacade);
         mWifiMetrics.setWifiScoreCard(mWifiScoreCard);
         mLruConnectionTracker = new LruConnectionTracker(MAX_RECENTLY_CONNECTED_NETWORK,
                 mContext);
@@ -338,9 +340,15 @@ public class WifiInjector {
 
         mWifiMetrics.setScoringParams(mScoringParams);
         mThroughputPredictor = new ThroughputPredictor(mContext);
+        mScanRequestProxy = new ScanRequestProxy(mContext,
+                mContext.getSystemService(AppOpsManager.class),
+                mContext.getSystemService(ActivityManager.class),
+                this, mWifiConfigManager,
+                mWifiPermissionsUtil, mWifiMetrics, mClock, wifiHandler, mSettingsConfigStore);
         mWifiNetworkSelector = new WifiNetworkSelector(mContext, mWifiScoreCard, mScoringParams,
                 mWifiConfigManager, mClock, mConnectivityLocalLog, mWifiMetrics, this,
-                mThroughputPredictor, mWifiChannelUtilizationScan, mWifiGlobals);
+                mThroughputPredictor, mWifiChannelUtilizationScan, mWifiGlobals,
+                mScanRequestProxy);
         CompatibilityScorer compatibilityScorer = new CompatibilityScorer(mScoringParams);
         mWifiNetworkSelector.registerCandidateScorer(compatibilityScorer);
         ScoreCardBasedScorer scoreCardBasedScorer = new ScoreCardBasedScorer(mScoringParams);
@@ -371,11 +379,6 @@ public class WifiInjector {
                 mWifiNetworkScoreCache, mWifiPermissionsUtil);
 
         mWifiMetrics.setPasspointManager(mPasspointManager);
-        mScanRequestProxy = new ScanRequestProxy(mContext,
-                (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE),
-                (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE),
-                this, mWifiConfigManager,
-                mWifiPermissionsUtil, mWifiMetrics, mClock, wifiHandler, mSettingsConfigStore);
         WifiChannelUtilization wifiChannelUtilizationConnected =
                 new WifiChannelUtilization(mClock, mContext);
         mWifiDataStall = new WifiDataStall(mFrameworkFacade, mWifiMetrics, mContext,
@@ -405,7 +408,7 @@ public class WifiInjector {
                 mClock, mConnectivityLocalLog, mWifiScoreCard, mWifiBlocklistMonitor,
                 mWifiChannelUtilizationScan, mPasspointManager, mDeviceConfigFacade,
                 mActiveModeWarden);
-        mBroadcastQueue = new ClientModeManagerBroadcastQueue(mActiveModeWarden);
+        mBroadcastQueue = new ClientModeManagerBroadcastQueue(mActiveModeWarden, mContext);
         mMboOceController = new MboOceController(makeTelephonyManager(), mActiveModeWarden);
         mCountryCode = new WifiCountryCode(mContext, mActiveModeWarden,
                 SystemProperties.get(BOOT_DEFAULT_WIFI_COUNTRY_CODE));
@@ -474,7 +477,7 @@ public class WifiInjector {
         mSimRequiredNotifier = new SimRequiredNotifier(mContext, mFrameworkFacade);
 
         mMakeBeforeBreakManager = new MakeBeforeBreakManager(mActiveModeWarden, mFrameworkFacade,
-                mContext, mCmiMonitor);
+                mContext, mCmiMonitor, mBroadcastQueue);
     }
 
     /**
@@ -523,6 +526,7 @@ public class WifiInjector {
         mWifiConnectivityManager.enableVerboseLogging(verboseBool);
         mWifiNetworkSelector.enableVerboseLogging(verboseBool);
         mMakeBeforeBreakManager.setVerboseLoggingEnabled(verboseBool);
+        mBroadcastQueue.setVerboseLoggingEnabled(verboseBool);
     }
 
     public UserManager getUserManager() {
@@ -691,7 +695,7 @@ public class WifiInjector {
                         mDeviceConfigFacade, mContext, mAdaptiveConnectivityEnabledSettingObserver,
                         ifaceName),
                 mWifiP2pConnection, mWifiGlobals, ifaceName, clientModeManager,
-                mCmiMonitor, verboseLoggingEnabled);
+                mCmiMonitor, mBroadcastQueue, mWifiNetworkSelector, verboseLoggingEnabled);
     }
 
     /**
@@ -709,7 +713,8 @@ public class WifiInjector {
                 mContext, mWifiHandlerThread.getLooper(), mClock,
                 mWifiNative, listener, mWifiMetrics, mWakeupController,
                 this, mSelfRecovery, mWifiGlobals, mDefaultClientModeManager,
-                mClock.getElapsedSinceBootMillis(), requestorWs, role, verboseLoggingEnabled);
+                mClock.getElapsedSinceBootMillis(), requestorWs, role, mBroadcastQueue,
+                verboseLoggingEnabled, mCountryCode);
     }
 
     public ScanOnlyModeImpl makeScanOnlyModeImpl(@NonNull String ifaceName) {
@@ -948,7 +953,7 @@ public class WifiInjector {
     /**
      * Useful for mocking {@link WorkSourceHelper} instance in {@link HalDeviceManager} unit tests.
      */
-    public WorkSourceHelper makeWsHelper(WorkSource ws) {
+    public WorkSourceHelper makeWsHelper(@NonNull WorkSource ws) {
         return new WorkSourceHelper(ws, mWifiPermissionsUtil,
                 mContext.getSystemService(ActivityManager.class), mContext.getPackageManager());
     }
