@@ -2700,9 +2700,7 @@ public class WifiManager {
      * Check if the chipset supports the 60GHz frequency band.
      *
      * @return {@code true} if supported, {@code false} otherwise.
-     * @hide
      */
-    @SystemApi
     public boolean is60GHzBandSupported() {
         try {
             return mService.is60GHzBandSupported();
