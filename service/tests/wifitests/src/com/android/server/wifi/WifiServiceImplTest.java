@@ -538,6 +538,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiConfig.networkId = TEST_NETWORK_ID;
 
         mWifiThreadRunner.prepareForAutoDispatch();
+        setup24GhzSupported();
     }
 
     /**
@@ -1820,22 +1821,126 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiNative).getChannelsForBand(WifiScanner.WIFI_BAND_6_GHZ);
     }
 
-    private void setup5GhzSupported() {
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
+    private void setup24GhzSupported() {
+        when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
+        when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);
     }
 
-    private void setup5GhzUnsupported() {
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
-        when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_5_GHZ)).thenReturn(new int[0]);
+    private void setup24GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
+        when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(false);
+        if (!isOnlyUnsupportedSoftAp) {
+            when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
+            when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_24_GHZ))
+                    .thenReturn(new int[0]);
+        }
+    }
+
+    private void setup5GhzSupported() {
+        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
+        when(mResources.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(true);
+    }
+
+    private void setup5GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
+        when(mResources.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(false);
+        if (!isOnlyUnsupportedSoftAp) {
+            when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
+            when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_5_GHZ))
+                    .thenReturn(new int[0]);
+        }
     }
 
     private void setup6GhzSupported() {
         when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
+        when(mResources.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(true);
     }
 
-    private void setup6GhzUnsupported() {
-        when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
-        when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_6_GHZ)).thenReturn(new int[0]);
+    private void setup6GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
+        when(mResources.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(false);
+        if (!isOnlyUnsupportedSoftAp) {
+            when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
+            when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_6_GHZ))
+                    .thenReturn(new int[0]);
+        }
+    }
+
+    private void setup60GhzSupported() {
+        when(mResources.getBoolean(R.bool.config_wifi60ghzSupport)).thenReturn(true);
+        when(mResources.getBoolean(R.bool.config_wifiSoftap60ghzSupported)).thenReturn(true);
+    }
+
+    private void setup60GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
+        when(mResources.getBoolean(R.bool.config_wifiSoftap60ghzSupported)).thenReturn(false);
+        if (!isOnlyUnsupportedSoftAp) {
+            when(mResources.getBoolean(R.bool.config_wifi60ghzSupport)).thenReturn(false);
+            when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_60_GHZ))
+                    .thenReturn(new int[0]);
+        }
+    }
+
+    /**
+     * Verify attempt to start softAp with a supported 24GHz band succeeds.
+     */
+    @Test
+    public void testStartTetheredHotspotWithSupported24gBand() {
+        setup24GhzSupported();
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_2GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertTrue(result);
+        verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
+                eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
+        assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+    }
+
+    /**
+     * Verify attempt to start softAp with a non-supported 2.4GHz band fails.
+     */
+    @Test
+    public void testStartTetheredHotspotWithUnSupported24gBand() {
+        setup24GhzUnsupported(false);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_2GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertFalse(result);
+        verify(mActiveModeWarden, never()).startSoftAp(any(), any());
+    }
+
+    /**
+     * Verify attempt to start softAp with a non-supported 2.4GHz band fails.
+     */
+    @Test
+    public void testStartTetheredHotspotWithUnSupportedSoftAp24gBand() {
+        setup24GhzSupported();
+        setup24GhzUnsupported(true);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_2GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertFalse(result);
+        verify(mActiveModeWarden, never()).startSoftAp(any(), any());
     }
 
     /**
@@ -1866,7 +1971,29 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStartTetheredHotspotWithUnSupported5gBand() {
-        setup5GhzUnsupported();
+        setup5GhzUnsupported(false);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_5GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertFalse(result);
+        verify(mActiveModeWarden, never()).startSoftAp(any(), any());
+    }
+
+    /**
+     * Verify attempt to start softAp with a non-supported 5GHz band fails.
+     */
+    @Test
+    public void testStartTetheredHotspotWithUnSupportedSoftAp5gBand() {
+        setup5GhzSupported();
+        setup5GhzUnsupported(true);
 
         SoftApConfiguration config = new SoftApConfiguration.Builder()
                 .setSsid("TestAp")
@@ -1887,9 +2014,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStartTetheredHotspotWithSupported6gBand() {
-        when(mResources.getBoolean(
-                eq(R.bool.config_wifiSoftap6ghzSupported)))
-                .thenReturn(true);
         setup6GhzSupported();
 
         SoftApConfiguration config = new SoftApConfiguration.Builder()
@@ -1913,15 +2037,101 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStartTetheredHotspotWithUnSupported6gBand() {
-        when(mResources.getBoolean(
-                eq(R.bool.config_wifiSoftap6ghzSupported)))
-                .thenReturn(false);
-        setup6GhzSupported();
+        setup6GhzUnsupported(false);
 
         SoftApConfiguration config = new SoftApConfiguration.Builder()
                 .setSsid("TestAp")
                 .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
                 .setBand(SoftApConfiguration.BAND_6GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertFalse(result);
+        verify(mActiveModeWarden, never()).startSoftAp(any(), any());
+    }
+
+    /**
+     * Verify attempt to start softAp with a non-supported 6GHz band fails.
+     */
+    @Test
+    public void testStartTetheredHotspotWithUnSupportedSoftAp6gBand() {
+        setup6GhzSupported();
+        setup6GhzUnsupported(true);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_6GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertFalse(result);
+        verify(mActiveModeWarden, never()).startSoftAp(any(), any());
+    }
+
+
+    /**
+     * Verify attempt to start softAp with a supported 60GHz band succeeds.
+     */
+    @Test
+    public void testStartTetheredHotspotWithSupported60gBand() {
+        setup60GhzSupported();
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_60GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertTrue(result);
+        verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
+                eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
+        assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+    }
+
+    /**
+     * Verify attempt to start softAp with a non-supported 60GHz band fails.
+     */
+    @Test
+    public void testStartTetheredHotspotWithUnSupported60gBand() {
+        setup60GhzUnsupported(false);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_60GHZ)
+                .build();
+
+        mLooper.startAutoDispatch();
+        boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        assertFalse(result);
+        verify(mActiveModeWarden, never()).startSoftAp(any(), any());
+    }
+
+    /**
+     * Verify attempt to start softAp with a non-supported 60GHz band fails.
+     */
+    @Test
+    public void testStartTetheredHotspotWithUnSupportedSoftAp60gBand() {
+        setup60GhzSupported();
+        setup60GhzUnsupported(true);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder()
+                .setSsid("TestAp")
+                .setPassphrase("thisIsABadPassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setBand(SoftApConfiguration.BAND_60GHZ)
                 .build();
 
         mLooper.startAutoDispatch();

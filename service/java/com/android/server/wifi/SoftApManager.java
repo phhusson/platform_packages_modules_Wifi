@@ -701,18 +701,18 @@ public class SoftApManager implements ActiveModeManager {
                         }
                         if (isBridgedMode()) {
                             boolean isFallbackToSingleAp = false;
-                            int newSingleApBand = SoftApConfiguration.BAND_2GHZ;
+                            int newSingleApBand = 0;
                             for (int targetBand : config.getBands()) {
-                                int availableBand = ApConfigUtil.removeUnsupportedBands(
+                                int availableBand = ApConfigUtil.removeUnavailableBands(
                                         mCurrentSoftApCapability, targetBand);
                                 if (targetBand != availableBand) {
                                     isFallbackToSingleAp = true;
                                 }
-                                if (availableBand != 0) {
-                                    newSingleApBand |= availableBand;
-                                }
+                                newSingleApBand |= availableBand;
                             }
                             if (isFallbackToSingleAp) {
+                                newSingleApBand = ApConfigUtil.append24GToBandIf24GSupported(
+                                        newSingleApBand, mContext);
                                 Log.i(getTag(), "Fallback to single AP mode with band "
                                         + newSingleApBand);
                                 SoftApConfiguration singleBandConfig =
