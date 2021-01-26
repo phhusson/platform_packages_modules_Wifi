@@ -221,7 +221,11 @@ package android.net.wifi {
   }
 
   public final class ScanResult implements android.os.Parcelable {
+    field public static final int CIPHER_BIP_CMAC_256 = 9; // 0x9
+    field public static final int CIPHER_BIP_GMAC_128 = 7; // 0x7
+    field public static final int CIPHER_BIP_GMAC_256 = 8; // 0x8
     field public static final int CIPHER_CCMP = 3; // 0x3
+    field public static final int CIPHER_GCMP_128 = 6; // 0x6
     field public static final int CIPHER_GCMP_256 = 4; // 0x4
     field public static final int CIPHER_NONE = 0; // 0x0
     field public static final int CIPHER_NO_GROUP_ADDRESSED = 1; // 0x1
@@ -312,6 +316,7 @@ package android.net.wifi {
 
   public final class SoftApInfo implements android.os.Parcelable {
     method public int describeContents();
+    method public long getAutoShutdownTimeoutMillis();
     method public int getBandwidth();
     method @Nullable public android.net.MacAddress getBssid();
     method public int getFrequency();

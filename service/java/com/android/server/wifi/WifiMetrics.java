@@ -1987,7 +1987,9 @@ public class WifiMetrics {
                     || ScanResultUtil.isScanResultForSaeNetwork(scanResult)) {
                 currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.authentication =
                         WifiMetricsProto.RouterFingerPrint.AUTH_PERSONAL;
-            } else if (ScanResultUtil.isScanResultForEapNetwork(scanResult)
+            } else if (ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)
+                    || ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(scanResult)
+                    || ScanResultUtil.isScanResultForEapNetwork(scanResult)
                     || ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)) {
                 currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.authentication =
                         WifiMetricsProto.RouterFingerPrint.AUTH_ENTERPRISE;
@@ -2658,7 +2660,9 @@ public class WifiMetrics {
                 if (scanResult.is6GHz()) {
                     band6gNetworks++;
                 }
-                if (ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)) {
+                if (ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)
+                        || ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)
+                        || ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(scanResult)) {
                     wpa3EnterpriseNetworks++;
                 } else if (ScanResultUtil.isScanResultForWapiPskNetwork(scanResult)) {
                     wapiPersonalNetworks++;
@@ -3236,7 +3240,8 @@ public class WifiMetrics {
 
                 ssids.add(matchInfo);
                 bssids++;
-                boolean isOpen = matchInfo.networkType == WifiConfiguration.SECURITY_TYPE_OPEN;
+                boolean isOpen = ScanResultUtil.isScanResultForOpenNetwork(scanResult)
+                        || ScanResultUtil.isScanResultForOweNetwork(scanResult);
                 WifiConfiguration config =
                         mWifiConfigManager.getSavedNetworkForScanDetail(scanDetail);
                 boolean isSaved = (config != null) && !config.isEphemeral()
@@ -4121,10 +4126,11 @@ public class WifiMetrics {
                         mWifiLogProto.numLegacyEnterpriseNetworks++;
                     }
                 } else {
-                    if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
-                        mWifiLogProto.numWpa3PersonalNetworks++;
-                    } else {
+                    if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_PSK)) {
                         mWifiLogProto.numLegacyPersonalNetworks++;
+                    }
+                    else if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
+                        mWifiLogProto.numWpa3PersonalNetworks++;
                     }
                 }
                 mWifiLogProto.numNetworksAddedByApps++;
