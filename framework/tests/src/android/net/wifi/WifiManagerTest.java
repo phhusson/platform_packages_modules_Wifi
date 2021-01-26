@@ -2494,6 +2494,18 @@ public class WifiManagerTest {
     }
 
     /**
+     * Test behavior of {@link WifiManager#is60GHzBandSupported()}
+     */
+    @Test
+    public void testIs60GHzBandSupported() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+
+        when(mWifiService.is60GHzBandSupported()).thenReturn(true);
+        assertTrue(mWifiManager.is60GHzBandSupported());
+        verify(mWifiService).is60GHzBandSupported();
+    }
+
+    /**
      * Test behavior of {@link WifiManager#isWifiStandardSupported()}
      */
     @Test
