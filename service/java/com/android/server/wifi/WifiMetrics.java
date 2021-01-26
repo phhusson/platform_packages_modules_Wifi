@@ -48,10 +48,10 @@ import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.ProvisioningCallback;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.os.WorkSource;
@@ -114,7 +114,6 @@ import com.android.server.wifi.proto.nano.WifiMetricsProto.WifiUsabilityStats;
 import com.android.server.wifi.proto.nano.WifiMetricsProto.WifiUsabilityStatsEntry;
 import com.android.server.wifi.rtt.RttMetrics;
 import com.android.server.wifi.scanner.KnownBandsChannelHelper;
-import com.android.server.wifi.util.ExternalCallbackTracker;
 import com.android.server.wifi.util.InformationElementUtil;
 import com.android.server.wifi.util.IntCounter;
 import com.android.server.wifi.util.IntHistogram;
@@ -409,7 +408,7 @@ public class WifiMetrics {
     private final LinkedList<WifiUsabilityStats> mWifiUsabilityStatsListGood = new LinkedList<>();
     private int mWifiUsabilityStatsCounter = 0;
     private final Random mRand = new Random();
-    private final ExternalCallbackTracker<IOnWifiUsabilityStatsListener> mOnWifiUsabilityListeners;
+    private final RemoteCallbackList<IOnWifiUsabilityStatsListener> mOnWifiUsabilityListeners;
 
     private final SparseArray<DeviceMobilityStatePnoScanStats> mMobilityStatePnoStatsMap =
             new SparseArray<>();
@@ -1435,8 +1434,7 @@ public class WifiMetrics {
         unknownStateStats.numTimesEnteredState++;
         mCurrentDeviceMobilityStateStartMs = mClock.getElapsedSinceBootMillis();
         mCurrentDeviceMobilityStatePnoScanStartMs = -1;
-        mOnWifiUsabilityListeners =
-                new ExternalCallbackTracker<IOnWifiUsabilityStatsListener>(mHandler);
+        mOnWifiUsabilityListeners = new RemoteCallbackList<>();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -5891,14 +5889,16 @@ public class WifiMetrics {
      */
     private void sendWifiUsabilityStats(int seqNum, boolean isSameBssidAndFreq,
             android.net.wifi.WifiUsabilityStatsEntry statsEntry) {
-        for (IOnWifiUsabilityStatsListener listener : mOnWifiUsabilityListeners.getCallbacks()) {
+        int itemCount = mOnWifiUsabilityListeners.beginBroadcast();
+        for (int i = 0; i < itemCount; i++) {
             try {
-                listener.onWifiUsabilityStats(seqNum, isSameBssidAndFreq, statsEntry);
+                mOnWifiUsabilityListeners.getBroadcastItem(i).onWifiUsabilityStats(seqNum,
+                        isSameBssidAndFreq, statsEntry);
             } catch (RemoteException e) {
-                Log.e(TAG, "Unable to invoke Wifi usability stats entry listener "
-                        + listener, e);
+                Log.e(TAG, "Unable to invoke Wifi usability stats entry listener ", e);
             }
         }
+        mOnWifiUsabilityListeners.finishBroadcast();
     }
 
     private android.net.wifi.WifiUsabilityStatsEntry createNewWifiUsabilityStatsEntryParcelable(
@@ -6145,26 +6145,25 @@ public class WifiMetrics {
     /**
      * Add a new listener for Wi-Fi usability stats handling.
      */
-    public void addOnWifiUsabilityListener(IBinder binder, IOnWifiUsabilityStatsListener listener,
-            int listenerIdentifier) {
-        if (!mOnWifiUsabilityListeners.add(binder, listener, listenerIdentifier)) {
+    public void addOnWifiUsabilityListener(IOnWifiUsabilityStatsListener listener) {
+        if (!mOnWifiUsabilityListeners.register(listener)) {
             Log.e(TAG, "Failed to add listener");
             return;
         }
         if (DBG) {
             Log.v(TAG, "Adding listener. Num listeners: "
-                    + mOnWifiUsabilityListeners.getNumCallbacks());
+                    + mOnWifiUsabilityListeners.getRegisteredCallbackCount());
         }
     }
 
     /**
      * Remove an existing listener for Wi-Fi usability stats handling.
      */
-    public void removeOnWifiUsabilityListener(int listenerIdentifier) {
-        mOnWifiUsabilityListeners.remove(listenerIdentifier);
+    public void removeOnWifiUsabilityListener(IOnWifiUsabilityStatsListener listener) {
+        mOnWifiUsabilityListeners.unregister(listener);
         if (DBG) {
             Log.v(TAG, "Removing listener. Num listeners: "
-                    + mOnWifiUsabilityListeners.getNumCallbacks());
+                    + mOnWifiUsabilityListeners.getRegisteredCallbackCount());
         }
     }
 
