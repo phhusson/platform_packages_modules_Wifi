@@ -993,6 +993,8 @@ public class WifiMetrics {
         public static final int FAILURE_DHCP = 10;
         // ASSOCIATION_TIMED_OUT
         public static final int FAILURE_ASSOCIATION_TIMED_OUT = 11;
+        // NETWORK_NOT_FOUND
+        public static final int FAILURE_NETWORK_NOT_FOUND = 12;
 
         RouterFingerPrint mRouterFingerPrint;
         private String mConfigSsid;
@@ -1083,6 +1085,9 @@ public class WifiMetrics {
                         break;
                     case FAILURE_ASSOCIATION_TIMED_OUT:
                         sb.append("ASSOCIATION_TIMED_OUT");
+                        break;
+                    case FAILURE_NETWORK_NOT_FOUND:
+                        sb.append("FAILURE_NETWORK_NOT_FOUND");
                         break;
                     default:
                         sb.append("UNKNOWN");
