@@ -737,6 +737,31 @@ public class WifiConfiguration implements Parcelable {
     }
 
     /**
+     * Set whether a type is added by auto-upgrade.
+     *
+     * @param securityType One of the following security types:
+     * {@link #SECURITY_TYPE_OPEN},
+     * {@link #SECURITY_TYPE_WEP},
+     * {@link #SECURITY_TYPE_PSK},
+     * {@link #SECURITY_TYPE_EAP},
+     * {@link #SECURITY_TYPE_SAE},
+     * {@link #SECURITY_TYPE_OWE},
+     * {@link #SECURITY_TYPE_WAPI_PSK},
+     * {@link #SECURITY_TYPE_WAPI_CERT},
+     * {@link #SECURITY_TYPE_EAP_WPA3_ENTERPRISE},
+     * {@link #SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT},
+     *
+     * @hide
+     */
+    public void setSecurityParamsIsAddedByAutoUpgrade(
+            @SecurityType int securityType, boolean isAddedByAutoUpgrade) {
+        mSecurityParamsList.stream()
+                .filter(params -> params.isSecurityType(securityType))
+                .findAny()
+                .ifPresent(params -> params.setIsAddedByAutoUpgrade(isAddedByAutoUpgrade));
+    }
+
+    /**
      * Get the specific security param.
      *
      * @param securityType One of the following security types:
@@ -795,6 +820,16 @@ public class WifiConfiguration implements Parcelable {
      */
     public List<SecurityParams> getSecurityParamsList() {
         return Collections.unmodifiableList(mSecurityParamsList);
+    }
+
+    /**
+     * Get the default params which is the same as the legacy fields.
+     *
+     * @return the default security params.
+     * @hide
+     */
+    public @NonNull SecurityParams getDefaultSecurityParams() {
+        return new SecurityParams(mSecurityParamsList.get(0));
     }
 
     /**
@@ -1988,6 +2023,11 @@ public class WifiConfiguration implements Parcelable {
         private int mCandidateScore;
 
         /**
+         * Used to cache the select security params from the candidate.
+         */
+        private SecurityParams mCandidateSecurityParams;
+
+        /**
          * Indicate whether this network is visible in latest Qualified Network Selection. This
          * means there is scan result found related to this Configuration and meet the minimum
          * requirement. The saved network need not join latest Qualified Network Selection. For
@@ -2066,6 +2106,24 @@ public class WifiConfiguration implements Parcelable {
          */
         public int getCandidateScore() {
             return mCandidateScore;
+        }
+
+        /**
+         * set the security type of the temporary candidate of current network selection procedure
+         * @param params value to set to mCandidateSecurityParams
+         * @hide
+         */
+        public void setCandidateSecurityParams(SecurityParams params) {
+            mCandidateSecurityParams = params;
+        }
+
+        /**
+         * get the security type of the temporary candidate of current network selection procedure
+         * @return return the security params
+         * @hide
+         */
+        public SecurityParams getCandidateSecurityParams() {
+            return mCandidateSecurityParams;
         }
 
         /**
@@ -2405,6 +2463,7 @@ public class WifiConfiguration implements Parcelable {
             setSeenInLastQualifiedNetworkSelection(source.getSeenInLastQualifiedNetworkSelection());
             setCandidate(source.getCandidate());
             setCandidateScore(source.getCandidateScore());
+            setCandidateSecurityParams(source.getCandidateSecurityParams());
             setConnectChoice(source.getConnectChoice());
             setConnectChoiceRssi(source.getConnectChoiceRssi());
             setHasEverConnected(source.hasEverConnected());

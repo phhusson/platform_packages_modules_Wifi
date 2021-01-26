@@ -144,9 +144,11 @@ import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of ClientMode.  Event handling for Client mode logic is done here,
@@ -576,6 +578,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
     private final ClientModeImplMonitor mCmiMonitor;
 
+    private final WifiNetworkSelector mWifiNetworkSelector;
+
     // Maximum duration to continue to log Wifi usability stats after a data stall is triggered.
     @VisibleForTesting
     public static final long DURATION_TO_WAIT_ADD_STATS_AFTER_DATA_STALL_MS = 30 * 1000;
@@ -645,6 +649,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             @NonNull ConcreteClientModeManager clientModeManager,
             @NonNull ClientModeImplMonitor cmiMonitor,
             @NonNull ClientModeManagerBroadcastQueue broadcastQueue,
+            @NonNull WifiNetworkSelector wifiNetworkSelector,
             boolean verboseLoggingEnabled) {
         super(TAG, looper);
         mWifiMetrics = wifiMetrics;
@@ -729,6 +734,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mOnNetworkUpdateListener = new OnNetworkUpdateListener();
         mWifiConfigManager.addOnNetworkUpdateListener(mOnNetworkUpdateListener);
 
+        mWifiNetworkSelector = wifiNetworkSelector;
+
         enableVerboseLogging(verboseLoggingEnabled);
 
         addState(mConnectableState); {
@@ -770,6 +777,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             WifiMonitor.SUP_REQUEST_IDENTITY,
             WifiMonitor.SUP_REQUEST_SIM_AUTH,
             WifiMonitor.MBO_OCE_BSS_TM_HANDLING_DONE,
+            WifiMonitor.TRANSITION_DISABLE_INDICATION,
     };
 
     private void registerForWifiMonitorEvents()  {
@@ -1974,6 +1982,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 return "GAS_QUERY_START_EVENT";
             case WifiMonitor.MBO_OCE_BSS_TM_HANDLING_DONE:
                 return "MBO_OCE_BSS_TM_HANDLING_DONE";
+            case WifiMonitor.TRANSITION_DISABLE_INDICATION:
+                return "TRANSITION_DISABLE_INDICATION";
             case WifiP2pServiceImpl.GROUP_CREATING_TIMED_OUT:
                 return "GROUP_CREATING_TIMED_OUT";
             case WifiP2pServiceImpl.P2P_CONNECTION_CHANGED:
@@ -3042,24 +3052,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     }
 
     /**
-     * Helper method to check if WPA2 network upgrade feature is enabled in the framework
-     *
-     * @return boolean true if feature is enabled.
-     */
-    private boolean isWpa3SaeUpgradeEnabled() {
-        return mContext.getResources().getBoolean(R.bool.config_wifiSaeUpgradeEnabled);
-    }
-
-    /**
-     * Helper method to check if WPA2 network upgrade offload is enabled in the driver/fw
-     *
-     * @return boolean true if feature is enabled.
-     */
-    private boolean isWpa3SaeUpgradeOffloadEnabled() {
-        return mContext.getResources().getBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled);
-    }
-
-    /**
      * Helper method to start other services and get state ready for client mode
      */
     private void setupClientMode() {
@@ -3641,6 +3633,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 case WifiMonitor.SUP_REQUEST_SIM_AUTH:
                 case WifiMonitor.TARGET_BSSID_EVENT:
                 case WifiMonitor.ASSOCIATED_BSSID_EVENT:
+                case WifiMonitor.TRANSITION_DISABLE_INDICATION:
                 case CMD_UNWANTED_NETWORK:
                 case CMD_CONNECTING_WATCHDOG_TIMER:
                 case CMD_ROAM_WATCHDOG_TIMER: {
@@ -4518,6 +4511,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                                 WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__CONNECTING_WATCHDOG_TIMER);
                         transitionTo(mDisconnectedState);
                     }
+                    break;
+                }
+                case WifiMonitor.TRANSITION_DISABLE_INDICATION: {
+                    log("Received TRANSITION_DISABLE_INDICATION: networkId=" + message.arg1
+                            + ", indication=" + message.arg2);
+                    mWifiConfigManager.updateNetworkTransitionDisable(message.arg1, message.arg2);
                     break;
                 }
                 default: {
@@ -5793,6 +5792,46 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
     }
 
+    private void selectCandidateSecurityParamsIfNecessary(
+            WifiConfiguration config,
+            List<ScanResult> scanResults) {
+        if (null != config.getNetworkSelectionStatus().getCandidateSecurityParams()) return;
+
+        // This comes from wifi picker directly so there is no candidate security params.
+        // Run network selection against this SSID.
+        List<ScanDetail> scanDetailsList = scanResults.stream()
+                .filter(scanResult -> config.SSID.equals(
+                        ScanResultUtil.createQuotedSSID(scanResult.SSID)))
+                .map(ScanResultUtil::toScanDetail)
+                .collect(Collectors.toList());
+        List<WifiNetworkSelector.ClientModeManagerState> cmmState = new ArrayList<>();
+        cmmState.add(new WifiNetworkSelector.ClientModeManagerState(mClientModeManager));
+        List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
+                scanDetailsList,
+                new HashSet<String>(),
+                cmmState,
+                true, true, true);
+        WifiConfiguration selectedConfig = mWifiNetworkSelector.selectNetwork(candidates);
+        if (null != selectedConfig && selectedConfig.networkId == config.networkId) {
+            config.getNetworkSelectionStatus().setCandidateSecurityParams(
+                    selectedConfig.getNetworkSelectionStatus().getCandidateSecurityParams());
+            return;
+        }
+
+        // When a connecting request comes from network request or adding a network via
+        // API directly, there might be no scan result to know the proper security params.
+        // In this case, we use the first available security params to have a try first.
+        if (null == selectedConfig || selectedConfig.networkId != config.networkId) {
+            Log.i(getTag(), "Cannot select a candidate security params from scan results,"
+                    + "try to select the first available security params.");
+            config.getNetworkSelectionStatus().setCandidateSecurityParams(
+                    config.getSecurityParamsList().stream()
+                            .filter(WifiConfigurationUtil::isSecurityParamsValid)
+                            .findFirst()
+                            .orElse(null));
+        }
+    }
+
     /**
      * Update the wifi configuration before sending connect to
      * supplicant/driver.
@@ -5801,43 +5840,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      * @param bssid BSSID to assocaite with.
      */
     void updateWifiConfigOnStartConnection(WifiConfiguration config, String bssid) {
-        boolean canUpgradePskToSae = false;
-        boolean isFrameworkWpa3SaeUpgradePossible = false;
-        boolean isLegacyWpa2ApInScanResult = false;
-
         setTargetBssid(config, bssid);
-
-        if (isWpa3SaeUpgradeEnabled() && config.isSecurityType(
-                WifiConfiguration.SECURITY_TYPE_PSK)) {
-            isFrameworkWpa3SaeUpgradePossible = true;
-        }
-
-        if (isFrameworkWpa3SaeUpgradePossible && isWpa3SaeUpgradeOffloadEnabled()) {
-            // Driver offload of upgrading legacy WPA/WPA2 connection to WPA3
-            if (mVerboseLoggingEnabled) {
-                Log.d(getTag(), "Driver upgrade legacy WPA/WPA2 connection to WPA3");
-            }
-            config.allowedAuthAlgorithms.clear();
-            // Note: KeyMgmt.WPA2_PSK is already enabled, enable SAE as well
-            config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.SAE);
-            if (!config.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
-                config.addSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
-            }
-            isFrameworkWpa3SaeUpgradePossible = false;
-        }
-        // Check if network selection selected a good WPA3 candidate AP for a WPA2
-        // saved network.
-        ScanResult scanResultCandidate = config.getNetworkSelectionStatus().getCandidate();
-        if (isFrameworkWpa3SaeUpgradePossible && scanResultCandidate != null) {
-            ScanResultMatchInfo scanResultMatchInfo = ScanResultMatchInfo
-                    .fromScanResult(scanResultCandidate);
-            if ((scanResultMatchInfo.networkType == WifiConfiguration.SECURITY_TYPE_SAE)) {
-                canUpgradePskToSae = true;
-            } else {
-                // No SAE candidate
-                isFrameworkWpa3SaeUpgradePossible = false;
-            }
-        }
 
         // Go through the matching scan results and update wifi config.
         ScanResultMatchInfo key1 = ScanResultMatchInfo.fromWifiConfiguration(config);
@@ -5846,27 +5849,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (!config.SSID.equals(ScanResultUtil.createQuotedSSID(scanResult.SSID))) {
                 continue;
             }
-            if (isFrameworkWpa3SaeUpgradePossible && !isLegacyWpa2ApInScanResult) {
-                if (ScanResultUtil.isScanResultForPskNetwork(scanResult)
-                        && !ScanResultUtil.isScanResultForSaeNetwork(scanResult)) {
-                    // Found a legacy WPA2 AP in range. Do not upgrade the connection to WPA3 to
-                    // allow seamless roaming within the ESS.
-                    if (mVerboseLoggingEnabled) {
-                        Log.d(getTag(), "Found legacy WPA2 AP, do not upgrade to WPA3");
-                    }
-                    isLegacyWpa2ApInScanResult = true;
-                    canUpgradePskToSae = false;
-                }
-                if (ScanResultUtil.isScanResultForSaeNetwork(scanResult)
-                        && scanResultCandidate == null) {
-                    // When the user manually selected a network from the Wi-Fi picker, evaluate
-                    // if to upgrade based on the scan results. The most typical use case during
-                    // the WPA3 transition mode is to have a WPA2/WPA3 AP in transition mode. In
-                    // this case, we would like to upgrade the connection.
-                    canUpgradePskToSae = true;
-                }
-            }
-
             ScanResultMatchInfo key2 = ScanResultMatchInfo.fromScanResult(scanResult);
             if (!key1.equals(key2)) {
                 continue;
@@ -5874,14 +5856,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             updateWifiConfigFromMatchingScanResult(config, scanResult);
         }
 
-        if (isFrameworkWpa3SaeUpgradePossible && canUpgradePskToSae
-                && !(config.isFilsSha256Enabled() || config.isFilsSha384Enabled())) {
-            // Upgrade legacy WPA/WPA2 connection to WPA3
-            if (mVerboseLoggingEnabled) {
-                Log.d(getTag(), "Upgrade legacy WPA/WPA2 connection to WPA3");
-            }
-            config.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
-        }
+        selectCandidateSecurityParamsIfNecessary(config, scanResults);
 
         if (mWifiGlobals.isConnectedMacRandomizationEnabled()) {
             if (config.macRandomizationSetting != WifiConfiguration.RANDOMIZATION_NONE) {

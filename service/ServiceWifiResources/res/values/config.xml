@@ -21,6 +21,9 @@
      entries do not follow the convention, but all new entries should. -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- boolean indicating whether the WiFi chipset has 24GHz band support -->
+    <bool translatable="false" name ="config_wifi24ghzSupport">true</bool>
+
     <!-- boolean indicating whether the WiFi chipset has 5GHz band support.
          Note: This config is replacing the config_wifi_dual_band_support
          since more bands may now be supported (such as 6GHz), the naming dual_band
@@ -241,8 +244,17 @@
     <!-- Wifi driver supports IEEE80211AX TWT (Target Wake Time) for softap -->
     <bool translatable="false" name="config_wifiSoftapHeTwtSupported">false</bool>
 
-    <!-- Wifi driver supports 6GHz band for softap -->
+    <!-- Wifi driver supports 2.4GHz band for softap when chip support 24GHz -->
+    <bool translatable="false" name="config_wifiSoftap24ghzSupported">true</bool>
+
+    <!-- Wifi driver supports 5GHz band for softap when chip support 5GHz -->
+    <bool translatable="false" name="config_wifiSoftap5ghzSupported">true</bool>
+
+    <!-- Wifi driver supports 6GHz band for softap when chip support 6GHz -->
     <bool translatable="false" name="config_wifiSoftap6ghzSupported">false</bool>
+
+    <!-- Wifi driver supports 60GHz band for softap when chip support 60GHz -->
+    <bool translatable="false" name="config_wifiSoftap60ghzSupported">false</bool>
 
     <!-- Indicates that local-only hotspot should be brought up at 6GHz if possible.
          This option is for automotive builds only (the one that have
@@ -488,6 +500,12 @@
 
     <!-- Enable WPA2 to WPA3 auto-upgrade offload to capable Driver/Firmware -->
     <bool translatable="false" name="config_wifiSaeUpgradeOffloadEnabled">false</bool>
+
+    <!-- Enable Open to OWE auto-upgrade -->
+    <bool translatable="false" name="config_wifiOweUpgradeEnabled">true</bool>
+
+    <!-- Enable WPA2 Enterprise to WPA3 Enterprise auto-upgrade -->
+    <bool translatable="false" name="config_wifiWpa3EnterpriseUpgradeEnabled">true</bool>
 
     <!-- Number of self recoveries to be attempted per hour. Any fatal errors beyond this will
          cause the wifi stack to turn wifi off and wait for user input.
