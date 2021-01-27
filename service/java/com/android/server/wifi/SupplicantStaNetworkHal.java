@@ -24,6 +24,7 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiEnterpriseConfig.Ocsp;
+import android.net.wifi.WifiManager;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
@@ -133,14 +134,17 @@ public class SupplicantStaNetworkHal {
     private String mEapDomainSuffixMatch;
     private @Ocsp int mOcsp;
     private String mWapiCertSuite;
+    private long mAdvanceKeyMgmtFeatures;
 
     SupplicantStaNetworkHal(ISupplicantStaNetwork iSupplicantStaNetwork, String ifaceName,
-            Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
+            Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
+            long advanceKeyMgmtFeature) {
         mISupplicantStaNetwork = iSupplicantStaNetwork;
         mContext = context;
         mIfaceName = ifaceName;
         mWifiMonitor = monitor;
         mWifiGlobals = wifiGlobals;
+        mAdvanceKeyMgmtFeatures = advanceKeyMgmtFeature;
     }
 
     /**
@@ -942,12 +946,16 @@ public class SupplicantStaNetworkHal {
                     mask |= ISupplicantStaNetwork.GroupCipherMask.GTK_NOT_USED;
                     break;
                 case WifiConfiguration.GroupCipher.GCMP_256:
-                    if (null != getV1_2StaNetwork()) {
-                        mask |= android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork
-                                .GroupCipherMask.GCMP_256;
-                    } else {
+                    if (null == getV1_2StaNetwork()) {
                         Log.d(TAG, "Ignore GCMP_256 cipher for the HAL older than 1.2.");
+                        break;
                     }
+                    if (0 == (mAdvanceKeyMgmtFeatures & WifiManager.WIFI_FEATURE_WPA3_SUITE_B)) {
+                        Log.d(TAG, "Ignore unsupporting GCMP_256 cipher.");
+                        break;
+                    }
+                    mask |= android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork
+                            .GroupCipherMask.GCMP_256;
                     break;
                 case WifiConfiguration.GroupCipher.SMS4:
                     if (null != getV1_3StaNetwork()) {
@@ -1015,12 +1023,16 @@ public class SupplicantStaNetworkHal {
                     mask |= ISupplicantStaNetwork.PairwiseCipherMask.CCMP;
                     break;
                 case WifiConfiguration.PairwiseCipher.GCMP_256:
-                    if (null != getV1_2StaNetwork()) {
-                        mask |= android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork
-                                .PairwiseCipherMask.GCMP_256;
-                    } else {
+                    if (null == getV1_2StaNetwork()) {
                         Log.d(TAG, "Ignore GCMP_256 cipher for the HAL older than 1.2.");
+                        break;
                     }
+                    if (0 == (mAdvanceKeyMgmtFeatures & WifiManager.WIFI_FEATURE_WPA3_SUITE_B)) {
+                        Log.d(TAG, "Ignore unsupporting GCMP_256 cipher.");
+                        break;
+                    }
+                    mask |= android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork
+                            .PairwiseCipherMask.GCMP_256;
                     break;
                 case WifiConfiguration.PairwiseCipher.SMS4:
                     if (null != getV1_3StaNetwork()) {
