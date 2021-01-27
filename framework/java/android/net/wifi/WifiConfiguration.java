@@ -1729,7 +1729,8 @@ public class WifiConfiguration implements Parcelable {
                 DISABLED_BY_WRONG_PASSWORD,
                 DISABLED_AUTHENTICATION_NO_SUBSCRIPTION,
                 DISABLED_AUTHENTICATION_FAILURE_GENERIC,
-                DISABLED_AUTHENTICATION_FAILURE_CARRIER_SPECIFIC})
+                DISABLED_AUTHENTICATION_FAILURE_CARRIER_SPECIFIC,
+                DISABLED_NETWORK_NOT_FOUND})
         public @interface NetworkSelectionDisableReason {}
 
         // Quality Network disabled reasons
@@ -1772,10 +1773,16 @@ public class WifiConfiguration implements Parcelable {
         /** This network is disabled due to carrier specific EAP failure. */
         public static final int DISABLED_AUTHENTICATION_FAILURE_CARRIER_SPECIFIC = 10;
         /**
+         * This network is disabled because supplicant failed to find a network in scan result
+         * which matches the network requested by framework for connection
+         * (including network capabilities).
+         */
+        public static final int DISABLED_NETWORK_NOT_FOUND = 11;
+        /**
          * All other disable reasons should be strictly less than this value.
          * @hide
          */
-        public static final int NETWORK_SELECTION_DISABLED_MAX = 11;
+        public static final int NETWORK_SELECTION_DISABLED_MAX = 12;
 
         /**
          * Get an integer that is equal to the maximum integer value of all the
@@ -1931,6 +1938,12 @@ public class WifiConfiguration implements Parcelable {
                             "NETWORK_SELECTION_DISABLED_AUTHENTICATION_FAILURE_CARRIER_SPECIFIC",
                             1,
                             DisableReasonInfo.PERMANENT_DISABLE_TIMEOUT));
+
+            reasons.append(DISABLED_NETWORK_NOT_FOUND,
+                    new DisableReasonInfo(
+                            "NETWORK_SELECTION_DISABLED_NETWORK_MISCONFIGURED",
+                            2,
+                            5 * 60 * 1000));
 
             return reasons;
         }

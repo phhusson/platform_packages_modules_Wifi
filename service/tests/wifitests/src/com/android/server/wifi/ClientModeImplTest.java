@@ -5537,4 +5537,21 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiConfigManager).updateNetworkTransitionDisable(
                 eq(networkId), eq(indication));
     }
+
+    /**
+     * Verify that the network selection status will be updated with DISABLED_NETWORK_NOT_FOUND
+     * when number of NETWORK_NOT_FOUND_EVENT event reaches the threshold.
+     */
+    @Test
+    public void testNetworkNotFoundEventUpdatesAssociationFailureStatus()
+            throws Exception {
+        initializeAndAddNetworkAndVerifySuccess();
+        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, sBSSID);
+        for (int i = 0; i < ClientModeImpl.NETWORK_NOT_FOUND_EVENT_THRESHOLD; i++) {
+            mCmi.sendMessage(WifiMonitor.NETWORK_NOT_FOUND_EVENT, DEFAULT_TEST_SSID);
+        }
+        mLooper.dispatchAll();
+        verify(mWifiConfigManager).updateNetworkSelectionStatus(anyInt(),
+                eq(WifiConfiguration.NetworkSelectionStatus.DISABLED_NETWORK_NOT_FOUND));
+    }
 }

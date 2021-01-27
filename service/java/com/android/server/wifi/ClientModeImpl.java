@@ -168,6 +168,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private static final int IPCLIENT_STARTUP_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes!
     private static final int IPCLIENT_SHUTDOWN_TIMEOUT_MS = 60_000; // 60 seconds
     @VisibleForTesting public static final long CONNECTING_WATCHDOG_TIMEOUT_MS = 30_000; // 30 secs.
+    @VisibleForTesting
+    public static final short NETWORK_NOT_FOUND_EVENT_THRESHOLD = 3;
 
     private boolean mVerboseLoggingEnabled = false;
 
@@ -596,6 +598,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      */
     private boolean mLingering = false;
 
+    /** NETWORK_NOT_FOUND_EVENT event counter */
+    private int mNetworkNotFoundEventCount = 0;
+
     /** Note that this constructor will also start() the StateMachine. */
     public ClientModeImpl(
             @NonNull Context context,
@@ -778,6 +783,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             WifiMonitor.SUP_REQUEST_SIM_AUTH,
             WifiMonitor.MBO_OCE_BSS_TM_HANDLING_DONE,
             WifiMonitor.TRANSITION_DISABLE_INDICATION,
+            WifiMonitor.NETWORK_NOT_FOUND_EVENT,
     };
 
     private void registerForWifiMonitorEvents()  {
@@ -1856,6 +1862,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     sb.append(" ").append(frameData.toString());
                 }
                 break;
+            case WifiMonitor.NETWORK_NOT_FOUND_EVENT:
+                sb.append(" ssid=" + msg.obj);
+                break;
             default:
                 sb.append(" ");
                 sb.append(Integer.toString(msg.arg1));
@@ -1996,6 +2005,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 return "SET_MIRACAST_MODE";
             case WifiP2pServiceImpl.BLOCK_DISCOVERY:
                 return "BLOCK_DISCOVERY";
+            case WifiMonitor.NETWORK_NOT_FOUND_EVENT:
+                return "NETWORK_NOT_FOUND_EVENT";
             default:
                 return "what:" + what;
         }
@@ -3432,6 +3443,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     Log.i(getTag(), "Connecting with " + currentMacAddress + " as the mac address");
 
                     mTargetWifiConfiguration = config;
+                    mNetworkNotFoundEventCount = 0;
                     /* Check for FILS configuration again after updating the config */
                     if (config.isFilsSha256Enabled() || config.isFilsSha384Enabled()) {
                         boolean isIpClientStarted = startIpClient(config, true);
@@ -3636,6 +3648,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 case WifiMonitor.TRANSITION_DISABLE_INDICATION:
                 case CMD_UNWANTED_NETWORK:
                 case CMD_CONNECTING_WATCHDOG_TIMER:
+                case WifiMonitor.NETWORK_NOT_FOUND_EVENT:
                 case CMD_ROAM_WATCHDOG_TIMER: {
                     // no-op: all messages must be handled in the base state in case it was missed
                     // in one of the child states.
@@ -4273,6 +4286,32 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         public boolean processMessage(Message message) {
             boolean handleStatus = HANDLED;
             switch (message.what) {
+                case WifiMonitor.NETWORK_NOT_FOUND_EVENT:
+                    mNetworkNotFoundEventCount++;
+                    String networkName = (String) message.obj;
+                    if (networkName != null && !networkName.equals(getConnectingSsidInternal())) {
+                        loge("Network not found event received, network: " + networkName
+                                + " which is not the target network: "
+                                + getConnectingSsidInternal());
+                        break;
+                    }
+                    Log.d(getTag(), "Network not found event received: network: " + networkName);
+                    if (mNetworkNotFoundEventCount >= NETWORK_NOT_FOUND_EVENT_THRESHOLD
+                            && mTargetWifiConfiguration != null
+                            && mTargetWifiConfiguration.SSID != null
+                            && mTargetWifiConfiguration.SSID.equals(networkName)) {
+                        mWifiConfigManager.updateNetworkSelectionStatus(
+                                mTargetWifiConfiguration.networkId,
+                                WifiConfiguration.NetworkSelectionStatus
+                                        .DISABLED_NETWORK_NOT_FOUND);
+                        stopIpClient();
+                        reportConnectionAttemptEnd(
+                                WifiMetrics.ConnectionEvent.FAILURE_NETWORK_NOT_FOUND,
+                                WifiMetricsProto.ConnectionEvent.HLF_NONE,
+                                WifiMetricsProto.ConnectionEvent.FAILURE_REASON_UNKNOWN);
+                        transitionTo(mDisconnectedState);
+                    }
+                    break;
                 case WifiMonitor.ASSOCIATION_REJECTION_EVENT: {
                     AssocRejectEventInfo assocRejectEventInfo = (AssocRejectEventInfo) message.obj;
                     if (mVerboseLoggingEnabled) {

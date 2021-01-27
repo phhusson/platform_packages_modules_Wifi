@@ -1373,7 +1373,7 @@ public class SupplicantStaIfaceHal {
         synchronized (mLock) {
             SupplicantStaNetworkHal network =
                     new SupplicantStaNetworkHal(iSupplicantStaNetwork, ifaceName, mContext,
-                            mWifiMonitor, mWifiGlobals);
+                            mWifiMonitor, mWifiGlobals, getAdvancedKeyMgmtCapabilities(ifaceName));
             if (network != null) {
                 network.enableVerboseLogging(mVerboseLoggingEnabled);
             }

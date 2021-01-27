@@ -41,6 +41,7 @@ import android.hardware.wifi.supplicant.V1_0.SupplicantStatus;
 import android.hardware.wifi.supplicant.V1_0.SupplicantStatusCode;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
+import android.net.wifi.WifiManager;
 import android.os.RemoteException;
 import android.text.TextUtils;
 
@@ -90,6 +91,7 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     @Mock private Context mContext;
     @Mock private WifiMonitor mWifiMonitor;
     @Mock private WifiGlobals mWifiGlobals;
+    private long mAdvanceKeyMgmtFeatures = 0;
 
     private SupplicantNetworkVariables mSupplicantVariables;
     private MockResources mResources;
@@ -112,8 +114,10 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private class SupplicantStaNetworkHalSpyV1_2 extends SupplicantStaNetworkHal {
         SupplicantStaNetworkHalSpyV1_2(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
-                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
-            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals);
+                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
+                long advanceKeyMgmtFeatures) {
+            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals,
+                    advanceKeyMgmtFeatures);
         }
 
         @Override
@@ -130,8 +134,10 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private class SupplicantStaNetworkHalSpyV1_3 extends SupplicantStaNetworkHalSpyV1_2 {
         SupplicantStaNetworkHalSpyV1_3(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
-                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
-            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals);
+                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
+                long advanceKeyMgmtFeatures) {
+            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals,
+                    advanceKeyMgmtFeatures);
         }
 
         @Override
@@ -148,8 +154,10 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
     private class SupplicantStaNetworkHalSpyV1_4 extends SupplicantStaNetworkHalSpyV1_3 {
         SupplicantStaNetworkHalSpyV1_4(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
-                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals) {
-            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals);
+                Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
+                long advanceKeyMgmtFeatures) {
+            super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals,
+                    advanceKeyMgmtFeatures);
         }
 
         @Override
@@ -174,6 +182,8 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
         mResources = new MockResources();
         when(mContext.getResources()).thenReturn(mResources);
         when(mWifiGlobals.isWpa3SaeUpgradeOffloadEnabled()).thenReturn(true);
+
+        mAdvanceKeyMgmtFeatures |= WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
         createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_0);
     }
 
@@ -1367,6 +1377,41 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
         return halMaskValue;
     }
 
+    /**
+     * Tests the saving/loading of WifiConfiguration with
+     * unsupporting GCMP-256 ciphers for V1.2 HAL.
+     *
+     * GCMP-256 is supported only if WPA3 SUITE-B is supported.
+     */
+    @Test
+    public void testUnsupportingGcmp256Ciphers1_2OrHigher()
+            throws Exception {
+        mAdvanceKeyMgmtFeatures = 0;
+        createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_2);
+        WifiConfiguration config = WifiConfigurationTestUtil.createSaeNetwork();
+        int expectedHalPairwiseCiphers =
+                putAllSupportingPairwiseCiphersAndReturnExpectedHalCiphersValue(config,
+                        SupplicantStaNetworkVersion.V1_2);
+        expectedHalPairwiseCiphers &= ~android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork
+                .PairwiseCipherMask.GCMP_256;
+        int expectedHalGroupCiphers =
+                putAllSupportingGroupCiphersAndReturnExpectedHalCiphersValue(config,
+                        SupplicantStaNetworkVersion.V1_2);
+        expectedHalGroupCiphers &= ~android.hardware.wifi.supplicant.V1_2.ISupplicantStaNetwork
+                .GroupCipherMask.GCMP_256;
+
+        // Assume that the default params is used for this test.
+        config.getNetworkSelectionStatus().setCandidateSecurityParams(
+                config.getDefaultSecurityParams());
+        assertTrue(mSupplicantNetwork.saveWifiConfiguration(config));
+        WifiConfiguration loadConfig = new WifiConfiguration();
+        Map<String, String> networkExtras = new HashMap<>();
+        assertTrue(mSupplicantNetwork.loadWifiConfiguration(loadConfig, networkExtras));
+
+        verify(mISupplicantStaNetworkV12).setPairwiseCipher_1_2(expectedHalPairwiseCiphers);
+        verify(mISupplicantStaNetworkV12).setGroupCipher_1_2(expectedHalGroupCiphers);
+    }
+
     private void testUnsupportingCiphers(SupplicantStaNetworkVersion version) throws Exception {
         createSupplicantStaNetwork(version);
         WifiConfiguration config = WifiConfigurationTestUtil.createSaeNetwork();
@@ -2192,22 +2237,22 @@ public class SupplicantStaNetworkHalTest extends WifiBaseTest {
             case V1_0:
                 mSupplicantNetwork = new SupplicantStaNetworkHal(
                         mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
-                        mWifiGlobals);
+                        mWifiGlobals, mAdvanceKeyMgmtFeatures);
                 break;
             case V1_2:
                 mSupplicantNetwork = new SupplicantStaNetworkHalSpyV1_2(
                         mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
-                        mWifiGlobals);
+                        mWifiGlobals, mAdvanceKeyMgmtFeatures);
                 break;
             case V1_3:
                 mSupplicantNetwork = new SupplicantStaNetworkHalSpyV1_3(
                         mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
-                        mWifiGlobals);
+                        mWifiGlobals, mAdvanceKeyMgmtFeatures);
                 break;
             case V1_4:
                 mSupplicantNetwork = new SupplicantStaNetworkHalSpyV1_4(
                         mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
-                        mWifiGlobals);
+                        mWifiGlobals, mAdvanceKeyMgmtFeatures);
                 break;
         }
         mSupplicantNetwork.enableVerboseLogging(true);

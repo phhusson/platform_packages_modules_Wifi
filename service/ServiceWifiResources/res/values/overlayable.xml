@@ -121,6 +121,7 @@
           <item type="integer" name="config_wifiDisableReasonAssociationRejectionThreshold" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationFailureThreshold" />
           <item type="integer" name="config_wifiDisableReasonDhcpFailureThreshold" />
+          <item type="integer" name="config_wifiDisableReasonNetworkNotFoundThreshold" />
           <item type="integer" name="config_wifiBssidBlocklistMonitorApUnableToHandleNewStaThreshold" />
           <item type="integer" name="config_wifiBssidBlocklistMonitorNetworkValidationFailureThreshold" />
           <item type="integer" name="config_wifiBssidBlocklistMonitorWrongPasswordThreshold" />
