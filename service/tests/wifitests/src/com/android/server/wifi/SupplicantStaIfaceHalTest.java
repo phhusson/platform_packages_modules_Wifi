@@ -3320,4 +3320,19 @@ public class SupplicantStaIfaceHalTest extends WifiBaseTest {
         assertNull(assocRejectEventInfo.mboAssocDisallowedInfo);
     }
 
+    /**
+     * Tests the handling of network not found notification.
+     */
+    @Test
+    public void testNetworkNotFoundCallback() throws Exception {
+        setupMocksForHalV1_4();
+        executeAndValidateInitializationSequenceV1_4();
+        assertNotNull(mISupplicantStaIfaceCallbackV14);
+        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
+
+        verify(mWifiMonitor).broadcastNetworkNotFoundEvent(
+                eq(WLAN0_IFACE_NAME), eq(SUPPLICANT_SSID));
+
+    }
+
 }
