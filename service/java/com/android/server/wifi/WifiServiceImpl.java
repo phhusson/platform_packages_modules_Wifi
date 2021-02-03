@@ -269,6 +269,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private final WifiDataStall mWifiDataStall;
     private final WifiNative mWifiNative;
     private final SimRequiredNotifier mSimRequiredNotifier;
+    private final MakeBeforeBreakManager mMakeBeforeBreakManager;
 
     /**
      * The wrapper of SoftApCallback is used in WifiService internally.
@@ -348,6 +349,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiGlobals = wifiInjector.getWifiGlobals();
         mSimRequiredNotifier = wifiInjector.getSimRequiredNotifier();
         mWifiCarrierInfoManager = wifiInjector.getWifiCarrierInfoManager();
+        mMakeBeforeBreakManager = mWifiInjector.getMakeBeforeBreakManager();
         mCountryCode.registerListener(new CountryCodeListenerProxy());
     }
 
@@ -2731,10 +2733,12 @@ public class WifiServiceImpl extends BaseWifiService {
             }
         };
         mWifiThreadRunner.post(() ->
-                mConnectHelper.connectToNetwork(
-                        new NetworkUpdateResult(netId),
-                        new ActionListenerWrapper(connectListener),
-                        callingUid)
+                mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                        mConnectHelper.connectToNetwork(
+                                new NetworkUpdateResult(netId),
+                                new ActionListenerWrapper(connectListener),
+                                callingUid)
+                )
         );
         // now wait for response.
         try {
@@ -3593,7 +3597,7 @@ public class WifiServiceImpl extends BaseWifiService {
             pw.println("SettingsStore:");
             mSettingsStore.dump(fd, pw, args);
             mActiveModeWarden.dump(fd, pw, args);
-            mWifiInjector.getMakeBeforeBreakManager().dump(fd, pw, args);
+            mMakeBeforeBreakManager.dump(fd, pw, args);
             pw.println();
             mWifiTrafficPoller.dump(fd, pw, args);
             pw.println();
@@ -4580,7 +4584,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 }
                 result = new NetworkUpdateResult(netId);
             }
-            mConnectHelper.connectToNetwork(result, wrapper, uid);
+            mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                    mConnectHelper.connectToNetwork(result, wrapper, uid));
         });
     }
 
@@ -4601,7 +4606,9 @@ public class WifiServiceImpl extends BaseWifiService {
                     mWifiConfigManager.updateBeforeSaveNetwork(config, uid);
             if (result.isSuccess()) {
                 broadcastWifiCredentialChanged(WifiManager.WIFI_CREDENTIAL_SAVED, config);
-                mActiveModeWarden.getPrimaryClientModeManager().saveNetwork(result, wrapper, uid);
+                mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                        mActiveModeWarden.getPrimaryClientModeManager()
+                                .saveNetwork(result, wrapper, uid));
                 if (mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)) {
                     mWifiMetrics.logUserActionEvent(
                             UserActionEvent.EVENT_ADD_OR_UPDATE_NETWORK, config.networkId);
@@ -4678,12 +4685,9 @@ public class WifiServiceImpl extends BaseWifiService {
      * See {@link WifiManager#addSuggestionConnectionStatusListener(Executor,
      * SuggestionConnectionStatusListener)}
      */
-    public void registerSuggestionConnectionStatusListener(IBinder binder,
-            @NonNull ISuggestionConnectionStatusListener listener,
-            int listenerIdentifier, String packageName, @Nullable String featureId) {
-        if (binder == null) {
-            throw new IllegalArgumentException("Binder must not be null");
-        }
+    public void registerSuggestionConnectionStatusListener(
+            @NonNull ISuggestionConnectionStatusListener listener, String packageName,
+            @Nullable String featureId) {
         if (listener == null) {
             throw new IllegalArgumentException("listener must not be null");
         }
@@ -4695,8 +4699,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkSuggestionsManager
-                        .registerSuggestionConnectionStatusListener(binder, listener,
-                                listenerIdentifier, packageName, uid));
+                        .registerSuggestionConnectionStatusListener(listener, packageName, uid));
     }
 
     /**
@@ -4704,7 +4707,7 @@ public class WifiServiceImpl extends BaseWifiService {
      * SuggestionConnectionStatusListener)}
      */
     public void unregisterSuggestionConnectionStatusListener(
-            int listenerIdentifier, String packageName) {
+            @NonNull ISuggestionConnectionStatusListener listener, String packageName) {
         enforceAccessPermission();
         int uid = Binder.getCallingUid();
         if (mVerboseLoggingEnabled) {
@@ -4713,8 +4716,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkSuggestionsManager
-                        .unregisterSuggestionConnectionStatusListener(listenerIdentifier,
-                                packageName, uid));
+                        .unregisterSuggestionConnectionStatusListener(listener, packageName, uid));
     }
 
     @Override
@@ -4851,12 +4853,8 @@ public class WifiServiceImpl extends BaseWifiService {
      * WifiManager.SuggestionUserApprovalStatusListener)}
      */
     @Override
-    public boolean addSuggestionUserApprovalStatusListener(IBinder binder,
-            ISuggestionUserApprovalStatusListener listener, int listenerIdentifier,
-            String packageName, String featureId) {
-        if (binder == null) {
-            throw new IllegalArgumentException("Binder must not be null");
-        }
+    public boolean addSuggestionUserApprovalStatusListener(
+            ISuggestionUserApprovalStatusListener listener, String packageName) {
         if (listener == null) {
             throw new IllegalArgumentException("listener must not be null");
         }
@@ -4866,8 +4864,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("addSuggestionUserApprovalStatusListener uid=%").c(uid).flush();
         }
         return mWifiThreadRunner.call(() -> mWifiNetworkSuggestionsManager
-                .addSuggestionUserApprovalStatusListener(
-                        binder, listener, listenerIdentifier, packageName, uid), false);
+                .addSuggestionUserApprovalStatusListener(listener, packageName, uid), false);
     }
 
     /**
@@ -4875,8 +4872,8 @@ public class WifiServiceImpl extends BaseWifiService {
      * WifiManager.SuggestionUserApprovalStatusListener)}
      */
     @Override
-    public void removeSuggestionUserApprovalStatusListener(int listenerIdentifier,
-            String packageName) {
+    public void removeSuggestionUserApprovalStatusListener(
+            ISuggestionUserApprovalStatusListener listener, String packageName) {
         enforceAccessPermission();
         int uid = Binder.getCallingUid();
         if (mVerboseLoggingEnabled) {
@@ -4885,8 +4882,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkSuggestionsManager
-                        .removeSuggestionUserApprovalStatusListener(listenerIdentifier,
-                                packageName, uid));
+                        .removeSuggestionUserApprovalStatusListener(listener, packageName, uid));
     }
 
     /**
@@ -4941,5 +4937,17 @@ public class WifiServiceImpl extends BaseWifiService {
 
         nm.createNotificationChannels(channelsList);
         nm.cancelAll();
+    }
+
+    /**
+     * See {@link android.net.wifi.WifiManager#setWifiScoringEnabled(boolean)}.
+     */
+    @Override
+    public boolean setWifiScoringEnabled(boolean enabled) {
+        mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.NETWORK_SETTINGS, "WifiService");
+        // Post operation to handler thread
+        return mWifiThreadRunner.call(
+                () -> mSettingsStore.handleWifiScoringEnabled(enabled), false);
     }
 }

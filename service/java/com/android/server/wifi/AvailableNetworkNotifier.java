@@ -118,7 +118,7 @@ public class AvailableNetworkNotifier {
     /** List of SSIDs blocklisted from recommendation. */
     private final Set<String> mBlocklistedSsids = new ArraySet<>();
 
-    private final Context mContext;
+    private final WifiContext mContext;
     private final Handler mHandler;
     private final FrameworkFacade mFrameworkFacade;
     private final WifiMetrics mWifiMetrics;
@@ -126,6 +126,7 @@ public class AvailableNetworkNotifier {
     private final WifiConfigManager mConfigManager;
     private final ConnectHelper mConnectHelper;
     private final ConnectToNetworkNotificationBuilder mNotificationBuilder;
+    private final MakeBeforeBreakManager mMakeBeforeBreakManager;
 
     private ScanResult mRecommendedNetwork;
 
@@ -152,7 +153,7 @@ public class AvailableNetworkNotifier {
             String toggleSettingsName,
             int notificationIdentifier,
             int nominatorId,
-            Context context,
+            WifiContext context,
             Looper looper,
             FrameworkFacade framework,
             Clock clock,
@@ -160,7 +161,8 @@ public class AvailableNetworkNotifier {
             WifiConfigManager wifiConfigManager,
             WifiConfigStore wifiConfigStore,
             ConnectHelper connectHelper,
-            ConnectToNetworkNotificationBuilder connectToNetworkNotificationBuilder) {
+            ConnectToNetworkNotificationBuilder connectToNetworkNotificationBuilder,
+            MakeBeforeBreakManager makeBeforeBreakManager) {
         mTag = tag;
         mStoreDataIdentifier = storeDataIdentifier;
         mToggleSettingsName = toggleSettingsName;
@@ -174,6 +176,7 @@ public class AvailableNetworkNotifier {
         mConfigManager = wifiConfigManager;
         mConnectHelper = connectHelper;
         mNotificationBuilder = connectToNetworkNotificationBuilder;
+        mMakeBeforeBreakManager = makeBeforeBreakManager;
         mScreenOn = false;
         wifiConfigStore.registerStoreData(new SsidSetStoreData(mStoreDataIdentifier,
                 new AvailableNetworkNotifierStoreData()));
@@ -246,7 +249,8 @@ public class AvailableNetworkNotifier {
         }
 
         if (mState != STATE_NO_NOTIFICATION) {
-            getNotificationManager().cancel(mSystemMessageNotificationId);
+            getNotificationManager().cancel(mContext.getNotificationTag(),
+                    mSystemMessageNotificationId);
 
             if (mRecommendedNetwork != null) {
                 Log.d(mTag, "Notification with state="
@@ -413,7 +417,8 @@ public class AvailableNetworkNotifier {
     }
 
     private void postNotification(Notification notification) {
-        getNotificationManager().notify(mSystemMessageNotificationId, notification);
+        getNotificationManager().notify(mContext.getNotificationTag(),
+                mSystemMessageNotificationId, notification);
     }
 
     private void handleConnectToNetworkAction() {
@@ -436,11 +441,12 @@ public class AvailableNetworkNotifier {
         if (result.isSuccess()) {
             mWifiMetrics.setNominatorForNetwork(result.getNetworkId(), mNominatorId);
             ConnectActionListener listener = new ConnectActionListener();
-            mConnectHelper.connectToNetwork(
-                    // only keep netId, discard other fields
-                    new NetworkUpdateResult(result.getNetworkId()),
-                    new ActionListenerWrapper(listener),
-                    Process.SYSTEM_UID);
+            mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                    mConnectHelper.connectToNetwork(
+                            // only keep netId, discard other fields
+                            new NetworkUpdateResult(result.getNetworkId()),
+                            new ActionListenerWrapper(listener),
+                            Process.SYSTEM_UID));
             addNetworkToBlocklist(mRecommendedNetwork.SSID);
         }
 
