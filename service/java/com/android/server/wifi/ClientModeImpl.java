@@ -817,7 +817,7 @@ public class ClientModeImpl extends StateMachine {
                 mWifiInjector.getWifiThreadRunner(), mWifiInjector.getDeviceConfigFacade(),
                 mContext, looper, mFacade);
 
-        mNetworkCapabilitiesFilter = new NetworkCapabilities.Builder()
+        NetworkCapabilities.Builder builder = new NetworkCapabilities.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
@@ -825,12 +825,15 @@ public class ClientModeImpl extends StateMachine {
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
                 // TODO - needs to be a bit more dynamic
                 .setLinkUpstreamBandwidthKbps(1024 * 1024)
                 .setLinkDownstreamBandwidthKbps(1024 * 1024)
-                .setNetworkSpecifier(new MatchAllNetworkSpecifier())
-                .build();
+                .setNetworkSpecifier(new MatchAllNetworkSpecifier());
+        if (SdkLevel.isAtLeastS()) {
+            builder.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
+        }
+        mNetworkCapabilitiesFilter = builder.build();
+
         // Make the network factories.
         mNetworkFactory = mWifiInjector.makeWifiNetworkFactory(
                 mNetworkCapabilitiesFilter, mWifiConnectivityManager);
