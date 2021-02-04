@@ -52,6 +52,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WifiPermissionsUtil;
@@ -127,7 +128,7 @@ public class WifiAwareDataPathStateManager {
     }
 
     private static NetworkCapabilities makeNetworkCapabilitiesFilter() {
-        return new NetworkCapabilities.Builder()
+        NetworkCapabilities.Builder builder = new NetworkCapabilities.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
                 .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
@@ -136,12 +137,14 @@ public class WifiAwareDataPathStateManager {
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED)
                 .setNetworkSpecifier(new MatchAllNetworkSpecifier())
                 .setLinkUpstreamBandwidthKbps(NETWORK_FACTORY_BANDWIDTH_AVAIL)
                 .setLinkDownstreamBandwidthKbps(NETWORK_FACTORY_BANDWIDTH_AVAIL)
-                .setSignalStrength(NETWORK_FACTORY_SIGNAL_STRENGTH_AVAIL)
-                .build();
+                .setSignalStrength(NETWORK_FACTORY_SIGNAL_STRENGTH_AVAIL);
+        if (SdkLevel.isAtLeastS()) {
+            builder.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED);
+        }
+        return builder.build();
     }
 
     /**
