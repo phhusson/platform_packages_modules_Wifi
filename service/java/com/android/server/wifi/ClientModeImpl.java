@@ -24,6 +24,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_FILS_SHA384;
 
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_TRANSIENT;
+import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STA_FACTORY_MAC_ADDRESS;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__SUPPLICANT_DISCONNECTED;
 
 import android.annotation.IntDef;
@@ -229,6 +230,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private final WifiGlobals mWifiGlobals;
     private final ClientModeManagerBroadcastQueue mBroadcastQueue;
     private final TelephonyManager mTelephonyManager;
+    private final WifiSettingsConfigStore mSettingsConfigStore;
     private final long mId;
 
     private boolean mScreenOn = false;
@@ -662,6 +664,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             @NonNull WifiNetworkSelector wifiNetworkSelector,
             @NonNull TelephonyManager telephonyManager,
             @NonNull WifiInjector wifiInjector,
+            @NonNull WifiSettingsConfigStore settingsConfigStore,
             boolean verboseLoggingEnabled) {
         super(TAG, looper);
         mWifiMetrics = wifiMetrics;
@@ -737,6 +740,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mClientModeManager = clientModeManager;
         mCmiMonitor = cmiMonitor;
         mTelephonyManager = telephonyManager;
+        mSettingsConfigStore = settingsConfigStore;
         updateInterfaceCapabilities();
 
         PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
@@ -3055,7 +3059,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      * Sets the current MAC to the factory MAC address.
      */
     private void setCurrentMacToFactoryMac(WifiConfiguration config) {
-        MacAddress factoryMac = mWifiNative.getStaFactoryMacAddress(mInterfaceName);
+        MacAddress factoryMac = retrieveFactoryMacAddressAndStoreIfNecessary();
         if (factoryMac == null) {
             Log.e(getTag(), "Fail to set factory MAC address. Factory MAC is null.");
             return;
@@ -3143,6 +3147,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mWifiNative.enableStaAutoReconnect(mInterfaceName, false);
         // STA has higher priority over P2P
         mWifiNative.setConcurrencyPriority(true);
+
+        // Retrieve and store the factory MAC address (on first bootup).
+        retrieveFactoryMacAddressAndStoreIfNecessary();
     }
 
     /**
@@ -5704,15 +5711,48 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     }
 
     /**
+     * Retrieve the factory MAC address from config store (stored on first bootup). If we don't have
+     * a factory MAC address stored in config store, retrieve it now and store it.
+     *
+     * Note:
+     * <li> This is needed to ensure that we use the same MAC address for connecting to
+     * networks with MAC randomization disabled regardless of whether the connection is
+     * occurring on "wlan0" or "wlan1" due to STA + STA. </li>
+     * <li> Retries added to deal with any transient failures when invoking
+     * {@link WifiNative#getStaFactoryMacAddress(String)}.
+     */
+    @Nullable
+    private MacAddress retrieveFactoryMacAddressAndStoreIfNecessary() {
+        // Already present, just return.
+        String factoryMacAddressStr = mSettingsConfigStore.get(WIFI_STA_FACTORY_MAC_ADDRESS);
+        if (factoryMacAddressStr != null) return MacAddress.fromString(factoryMacAddressStr);
+
+        MacAddress factoryMacAddress = mWifiNative.getStaFactoryMacAddress(mInterfaceName);
+        if (factoryMacAddress == null) {
+            // the device may be running an older HAL (version < 1.3).
+            Log.w(TAG, "Failed to retrieve factory MAC address");
+            return null;
+        }
+        Log.i(TAG, "Factory MAC address retrieved and stored in config store: "
+                + factoryMacAddress);
+        mSettingsConfigStore.put(WIFI_STA_FACTORY_MAC_ADDRESS, factoryMacAddress.toString());
+        return factoryMacAddress;
+    }
+
+    /**
      * Gets the factory MAC address of wlan0 (station interface).
      * @return String representation of the factory MAC address.
      */
+    @Nullable
     public String getFactoryMacAddress() {
-        MacAddress macAddress = mWifiNative.getStaFactoryMacAddress(mInterfaceName);
-        if (macAddress != null) {
-            return macAddress.toString();
-        }
+        MacAddress factoryMacAddress = retrieveFactoryMacAddressAndStoreIfNecessary();
+        if (factoryMacAddress != null) return factoryMacAddress.toString();
+
+        // For devices with older HAL's (version < 1.3), no API exists to retrieve factory MAC
+        // address (and also does not support MAC randomization - needs verson 1.2). So, just
+        // return the regular MAC address from the interface.
         if (!mWifiGlobals.isConnectedMacRandomizationEnabled()) {
+            Log.w(TAG, "Can't get factory MAC address, return the MAC address");
             return mWifiNative.getMacAddress(mInterfaceName);
         }
         return null;
