@@ -6040,6 +6040,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testStartDppAsEnrolleeResponderWithoutPermissions() {
+        assumeTrue(SdkLevel.isAtLeastS());
         mWifiServiceImpl.startDppAsEnrolleeResponder(mAppBinder, DPP_PRODUCT_INFO,
                 EASY_CONNECT_CRYPTOGRAPHY_CURVE_PRIME256V1, mDppCallback);
     }
@@ -6050,6 +6051,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testStartDppAsEnrolleeResponderThrowsIllegalArgumentExceptionOnDeviceInfoMaxLen() {
+        assumeTrue(SdkLevel.isAtLeastS());
         try {
             StringBuilder sb = new StringBuilder();
             sb.append(Strings.repeat("a",
@@ -6069,6 +6071,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testStartDppAsEnrolleeResponderThrowsIllegalArgumentExceptionOnWrongDeviceInfo() {
+        assumeTrue(SdkLevel.isAtLeastS());
         try {
             mWifiServiceImpl.startDppAsEnrolleeResponder(mAppBinder, "DPP;TESTER",
                     EASY_CONNECT_CRYPTOGRAPHY_CURVE_PRIME256V1, mDppCallback);
