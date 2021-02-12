@@ -4026,6 +4026,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         @Override
         public void enter() {
             if (mVerboseLoggingEnabled) Log.v(getTag(), "Entering ConnectingOrConnectedState");
+            mCmiMonitor.onConnectionStart(mClientModeManager);
+
             // Don't allow country code updates while connecting/connected.
             mCountryCode.setReadyForChange(false);
         }
@@ -4033,6 +4035,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         @Override
         public void exit() {
             if (mVerboseLoggingEnabled) Log.v(getTag(), "Exiting ConnectingOrConnectedState");
+            mCmiMonitor.onConnectionEnd(mClientModeManager);
+
             // Not connected/connecting to any network:
             // 1. Disable the network in supplicant to prevent it from auto-connecting. We don't
             // remove the network to avoid losing any cached info in supplicant (reauth, etc) in

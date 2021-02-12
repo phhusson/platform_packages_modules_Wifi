@@ -811,6 +811,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiConnectivityManager).prepareForForcedConnection(eq(config.networkId));
         verify(mWifiConfigManager).getConfiguredNetworkWithoutMasking(eq(config.networkId));
         verify(mWifiNative).connectToNetwork(eq(WIFI_IFACE_NAME), eq(config));
+        verify(mCmiMonitor).onConnectionStart(mClientModeManager);
         verify(mCountryCode, atLeastOnce()).setReadyForChange(false);
         assertEquals("L2ConnectingState", mCmi.getCurrentState().getName());
     }
@@ -2137,6 +2138,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiStateTracker).updateState(eq(WifiStateTracker.DISCONNECTED));
         verify(mWifiNetworkSuggestionsManager).handleDisconnect(any(), any());
         assertEquals("DisconnectedState", getCurrentState().getName());
+        verify(mCmiMonitor).onConnectionEnd(mClientModeManager);
         inOrderWifiLockManager.verify(mWifiLockManager)
                 .updateWifiClientConnected(mClientModeManager, false);
         verify(mWifiScoreCard).detectAbnormalDisconnection();
