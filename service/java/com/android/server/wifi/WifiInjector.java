@@ -429,7 +429,7 @@ public class WifiInjector {
                 mActiveModeWarden);
         mMboOceController = new MboOceController(makeTelephonyManager(), mActiveModeWarden);
         mCountryCode = new WifiCountryCode(mContext, mActiveModeWarden,
-                SystemProperties.get(BOOT_DEFAULT_WIFI_COUNTRY_CODE));
+                mCmiMonitor, SystemProperties.get(BOOT_DEFAULT_WIFI_COUNTRY_CODE));
         NotificationManager notificationManager =
                 mContext.getSystemService(NotificationManager.class);
         mConnectionFailureNotifier = new ConnectionFailureNotifier(
@@ -699,7 +699,7 @@ public class WifiInjector {
                 mWifiBlocklistMonitor, mConnectionFailureNotifier, NETWORK_CAPABILITIES_FILTER,
                 mWifiNetworkFactory, mUntrustedWifiNetworkFactory, mOemPaidWifiNetworkFactory,
                 mOemPrivateWifiNetworkFactory, mWifiLastResortWatchdog, mWakeupController,
-                mLockManager, mFrameworkFacade, mWifiHandlerThread.getLooper(), mCountryCode,
+                mLockManager, mFrameworkFacade, mWifiHandlerThread.getLooper(),
                 mWifiNative, new WrongPasswordNotifier(mContext, mFrameworkFacade),
                 mWifiTrafficPoller, mLinkProbeManager, mClock.getElapsedSinceBootMillis(),
                 mBatteryStats, supplicantStateTracker, mMboOceController, mWifiCarrierInfoManager,
@@ -741,7 +741,7 @@ public class WifiInjector {
                 mWifiNative, listener, mWifiMetrics, mWakeupController,
                 this, mSelfRecovery, mWifiGlobals, mDefaultClientModeManager,
                 mClock.getElapsedSinceBootMillis(), requestorWs, role, mBroadcastQueue,
-                verboseLoggingEnabled, mCountryCode);
+                verboseLoggingEnabled);
     }
 
     public ScanOnlyModeImpl makeScanOnlyModeImpl(@NonNull String ifaceName) {

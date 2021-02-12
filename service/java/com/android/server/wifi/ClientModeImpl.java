@@ -200,7 +200,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private final WifiBlocklistMonitor mWifiBlocklistMonitor;
     private final WifiDiagnostics mWifiDiagnostics;
     private final Clock mClock;
-    private final WifiCountryCode mCountryCode;
     private final WifiScoreCard mWifiScoreCard;
     private final WifiHealthMonitor mWifiHealthMonitor;
     private final WifiScoreReport mWifiScoreReport;
@@ -642,7 +641,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             @NonNull WifiLockManager wifiLockManager,
             @NonNull FrameworkFacade facade,
             @NonNull Looper looper,
-            @NonNull WifiCountryCode countryCode,
             @NonNull WifiNative wifiNative,
             @NonNull WrongPasswordNotifier wrongPasswordNotifier,
             @NonNull WifiTrafficPoller wifiTrafficPoller,
@@ -714,7 +712,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mLastSimBasedConnectionCarrierName = null;
         mLastSignalLevel = -1;
 
-        mCountryCode = countryCode;
         mScoringParams = scoringParams;
         mWifiThreadRunner = wifiThreadRunner;
         mScanRequestProxy = scanRequestProxy;
@@ -3114,8 +3111,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
         mWifiNative.setExternalSim(mInterfaceName, true);
 
-        mCountryCode.setReadyForChange(true);
-
         mWifiDiagnostics.startPktFateMonitoring(mInterfaceName);
         mWifiDiagnostics.startLogging(mInterfaceName);
 
@@ -3168,7 +3163,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             // race with, say, bringup code over in tethering.
             mIpClientCallbacks.awaitShutdown();
         }
-        mCountryCode.setReadyForChange(false);
         deregisterForWifiMonitorEvents(); // uses mInterfaceName, must call before nulling out
         // TODO: b/79504296 This broadcast has been deprecated and should be removed
         sendSupplicantConnectionChangedBroadcast(false);
@@ -4027,9 +4021,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         public void enter() {
             if (mVerboseLoggingEnabled) Log.v(getTag(), "Entering ConnectingOrConnectedState");
             mCmiMonitor.onConnectionStart(mClientModeManager);
-
-            // Don't allow country code updates while connecting/connected.
-            mCountryCode.setReadyForChange(false);
         }
 
         @Override
@@ -4049,7 +4040,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     Log.e(getTag(), "Failed to set random MAC address on disconnect");
                 }
             }
-            mCountryCode.setReadyForChange(true);
             mWifiInfo.reset();
             mWifiInfo.setSupplicantState(SupplicantState.DISCONNECTED);
             mWifiScoreCard.noteSupplicantStateChanged(mWifiInfo);
