@@ -4252,7 +4252,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     + "(uid = " + uid + ")");
         }
         String result = mWifiThreadRunner.call(
-                mActiveModeWarden.getPrimaryClientModeManager()::getFactoryMacAddress, null);
+                () -> mActiveModeWarden.getPrimaryClientModeManager().getFactoryMacAddress(),
+                null);
         // result can be empty array if either: WifiThreadRunner.call() timed out, or
         // ClientModeImpl.getFactoryMacAddress() returned null.
         // In this particular instance, we don't differentiate the two types of nulls.
