@@ -3612,8 +3612,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         connect();
         verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
-        mWifiNetworkAgentCallbackCaptor.getValue()
-                .onValidationStatus(NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
+        mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
+                NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiDiagnostics).reportConnectionEvent(
@@ -3790,7 +3790,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.INVALID_NETWORK, null /* captivePortalUr; */);
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID, null /* captivePortalUr; */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3822,7 +3822,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.INVALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3852,7 +3852,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.INVALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3917,7 +3917,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3958,7 +3958,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
