@@ -1883,13 +1883,13 @@ public class WifiConfiguration implements Parcelable {
                             // Note that there is a space at the end of this string. Cannot fix
                             // since this string is persisted.
                             "NETWORK_SELECTION_DISABLED_ASSOCIATION_REJECTION ",
-                            5,
+                            3,
                             5 * 60 * 1000));
 
             reasons.append(DISABLED_AUTHENTICATION_FAILURE,
                     new DisableReasonInfo(
                             "NETWORK_SELECTION_DISABLED_AUTHENTICATION_FAILURE",
-                            5,
+                            3,
                             5 * 60 * 1000));
 
             reasons.append(DISABLED_DHCP_FAILURE,
