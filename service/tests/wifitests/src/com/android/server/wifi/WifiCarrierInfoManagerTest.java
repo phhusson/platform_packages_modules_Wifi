@@ -80,6 +80,7 @@ import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.crypto.BadPaddingException;
@@ -139,7 +140,8 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
 
     MockitoSession mMockingSession = null;
     TestLooper mLooper;
-    private WifiCarrierInfoStoreManagerData.DataSource mImsiDataSource;
+    private WifiCarrierInfoStoreManagerData.DataSource mCarrierInfoDataSource;
+    private ImsiPrivacyProtectionExemptionStoreData.DataSource mImsiDataSource;
     private ArgumentCaptor<BroadcastReceiver> mBroadcastReceiverCaptor =
             ArgumentCaptor.forClass(BroadcastReceiver.class);
 
@@ -184,13 +186,20 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 mSubscriptionManager, mWifiInjector, mFrameworkFacade, mContext, mWifiConfigStore,
                 new Handler(mLooper.getLooper()), mWifiMetrics);
         ArgumentCaptor<WifiCarrierInfoStoreManagerData.DataSource>
-                imsiDataSourceArgumentCaptor =
+                carrierInfoSourceArgumentCaptor =
                 ArgumentCaptor.forClass(WifiCarrierInfoStoreManagerData.DataSource.class);
+        ArgumentCaptor<ImsiPrivacyProtectionExemptionStoreData.DataSource>
+                imsiDataSourceArgumentCaptor =
+                ArgumentCaptor.forClass(ImsiPrivacyProtectionExemptionStoreData.DataSource.class);
         verify(mContext).registerReceiver(mBroadcastReceiverCaptor.capture(), any(), any(), any());
-        verify(mWifiInjector).makeWifiCarrierInfoStoreManagerData(imsiDataSourceArgumentCaptor
+        verify(mWifiInjector).makeWifiCarrierInfoStoreManagerData(carrierInfoSourceArgumentCaptor
                 .capture());
+        verify(mWifiInjector).makeImsiPrivacyProtectionExemptionStoreData(
+                imsiDataSourceArgumentCaptor.capture());
+        mCarrierInfoDataSource = carrierInfoSourceArgumentCaptor.getValue();
         mImsiDataSource = imsiDataSourceArgumentCaptor.getValue();
-        assertNotNull(mImsiDataSource);
+        mImsiDataSource.fromDeserialized(new HashMap<>());
+        assertNotNull(mCarrierInfoDataSource);
         mSubInfoList = new ArrayList<>();
         mSubInfoList.add(mDataSubscriptionInfo);
         mSubInfoList.add(mNonDataSubscriptionInfo);
@@ -250,7 +259,6 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 eq(R.string.wifi_suggestion_action_disallow_imsi_privacy_exemption_confirmation)))
                 .thenReturn("blah");
         mWifiCarrierInfoManager.addImsiExemptionUserApprovalListener(mListener);
-        mImsiDataSource.deserializeComplete();
     }
 
     @After
@@ -1551,7 +1559,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).addUserApprovalCarrierUiReaction(
                 WifiCarrierInfoManager.ACTION_USER_ALLOWED_CARRIER, false);
         verify(mWifiConfigManager).saveToStore(true);
-        assertTrue(mImsiDataSource.hasNewDataToSerialize());
+        assertTrue(mCarrierInfoDataSource.hasNewDataToSerialize());
         assertTrue(mWifiCarrierInfoManager
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         verify(mListener).onUserAllowed(DATA_CARRIER_ID);
@@ -1581,7 +1589,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         verify(mAlertDialog, never()).show();
 
         verify(mWifiConfigManager).saveToStore(true);
-        assertTrue(mImsiDataSource.hasNewDataToSerialize());
+        assertTrue(mCarrierInfoDataSource.hasNewDataToSerialize());
         assertFalse(mWifiCarrierInfoManager
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         verify(mListener, never()).onUserAllowed(DATA_CARRIER_ID);
@@ -1620,7 +1628,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 CARRIER_NAME, DATA_CARRIER_ID);
         verifyNoMoreInteractions(mWifiNotificationManager);
         verify(mWifiConfigManager, never()).saveToStore(true);
-        assertFalse(mImsiDataSource.hasNewDataToSerialize());
+        assertFalse(mCarrierInfoDataSource.hasNewDataToSerialize());
         assertFalse(mWifiCarrierInfoManager
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         verify(mListener, never()).onUserAllowed(DATA_CARRIER_ID);
@@ -1659,7 +1667,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         verify(mContext).sendBroadcast(intentCaptor.capture());
         assertEquals(Intent.ACTION_CLOSE_SYSTEM_DIALOGS, intentCaptor.getValue().getAction());
         verify(mWifiConfigManager).saveToStore(true);
-        assertTrue(mImsiDataSource.hasNewDataToSerialize());
+        assertTrue(mCarrierInfoDataSource.hasNewDataToSerialize());
         assertFalse(mWifiCarrierInfoManager
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         verify(mListener, never()).onUserAllowed(DATA_CARRIER_ID);
@@ -1705,7 +1713,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         validateImsiProtectionNotification(CARRIER_NAME);
 
         verify(mWifiConfigManager, never()).saveToStore(true);
-        assertFalse(mImsiDataSource.hasNewDataToSerialize());
+        assertFalse(mCarrierInfoDataSource.hasNewDataToSerialize());
         assertFalse(mWifiCarrierInfoManager
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         verify(mListener, never()).onUserAllowed(DATA_CARRIER_ID);
@@ -1746,7 +1754,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         verify(mContext).sendBroadcast(intentCaptor.capture());
         assertEquals(Intent.ACTION_CLOSE_SYSTEM_DIALOGS, intentCaptor.getValue().getAction());
         verify(mWifiConfigManager).saveToStore(true);
-        assertTrue(mImsiDataSource.hasNewDataToSerialize());
+        assertTrue(mCarrierInfoDataSource.hasNewDataToSerialize());
         verify(mListener).onUserAllowed(DATA_CARRIER_ID);
         verify(mWifiMetrics).addUserApprovalCarrierUiReaction(
                 WifiCarrierInfoManager.ACTION_USER_ALLOWED_CARRIER, true);
@@ -1771,7 +1779,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         verifyNoMoreInteractions(mWifiNotificationManager);
 
         // Loaded user data store, notification should be sent
-        mImsiDataSource.deserializeComplete();
+        mImsiDataSource.fromDeserialized(new HashMap<>());
         mWifiCarrierInfoManager.sendImsiProtectionExemptionNotificationIfRequired(DATA_CARRIER_ID);
         validateImsiProtectionNotification(CARRIER_NAME);
     }

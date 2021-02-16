@@ -183,7 +183,8 @@ public class WifiCarrierInfoManager {
             new ArrayList<>();
 
     private boolean mUserApprovalUiActive = false;
-    private boolean mHasNewDataToSerialize = false;
+    private boolean mHasNewUserDataToSerialize = false;
+    private boolean mHasNewSharedDataToSerialize = false;
     private boolean mUserDataLoaded = false;
     private boolean mIsLastUserApprovalUiDialog = false;
 
@@ -203,10 +204,6 @@ public class WifiCarrierInfoManager {
      */
     private class WifiCarrierInfoStoreManagerDataSource implements
             WifiCarrierInfoStoreManagerData.DataSource {
-        @Override
-        public Map<Integer, Boolean> toSerializeImsiMap() {
-            return mImsiPrivacyProtectionExemptionMap;
-        }
 
         @Override
         public Map<Integer, Boolean> toSerializeMergedCarrierNetworkOffloadMap() {
@@ -220,7 +217,7 @@ public class WifiCarrierInfoManager {
 
         @Override
         public void serializeComplete() {
-            mHasNewDataToSerialize = false;
+            mHasNewSharedDataToSerialize = false;
         }
 
 
@@ -238,15 +235,34 @@ public class WifiCarrierInfoManager {
             mUnmergedCarrierNetworkOffloadMap.putAll(subscriptionOffloadMap);
         }
 
-
         @Override
-        public void fromImsiMapDeserialized(Map<Integer, Boolean> persistMap) {
-            mImsiPrivacyProtectionExemptionMap.clear();
-            mImsiPrivacyProtectionExemptionMap.putAll(persistMap);
+        public void reset() {
+            mMergedCarrierNetworkOffloadMap.clear();
+            mUnmergedCarrierNetworkOffloadMap.clear();
         }
 
         @Override
-        public void deserializeComplete() {
+        public boolean hasNewDataToSerialize() {
+            return mHasNewSharedDataToSerialize;
+        }
+    }
+
+    /**
+     * Module to interact with the wifi config store.
+     */
+    private class ImsiProtectionExemptionDataSource implements
+            ImsiPrivacyProtectionExemptionStoreData.DataSource {
+        @Override
+        public Map<Integer, Boolean> toSerialize() {
+            // Clear the flag after writing to disk.
+            mHasNewUserDataToSerialize = false;
+            return mImsiPrivacyProtectionExemptionMap;
+        }
+
+        @Override
+        public void fromDeserialized(Map<Integer, Boolean> imsiProtectionExemptionMap) {
+            mImsiPrivacyProtectionExemptionMap.clear();
+            mImsiPrivacyProtectionExemptionMap.putAll(imsiProtectionExemptionMap);
             mUserDataLoaded = true;
         }
 
@@ -254,13 +270,11 @@ public class WifiCarrierInfoManager {
         public void reset() {
             mUserDataLoaded = false;
             mImsiPrivacyProtectionExemptionMap.clear();
-            mMergedCarrierNetworkOffloadMap.clear();
-            mUnmergedCarrierNetworkOffloadMap.clear();
         }
 
         @Override
         public boolean hasNewDataToSerialize() {
-            return mHasNewDataToSerialize;
+            return mHasNewUserDataToSerialize;
         }
     }
 
@@ -356,6 +370,8 @@ public class WifiCarrierInfoManager {
         mContext.registerReceiver(mBroadcastReceiver, mIntentFilter, NETWORK_SETTINGS, handler);
         configStore.registerStoreData(wifiInjector.makeWifiCarrierInfoStoreManagerData(
                 new WifiCarrierInfoStoreManagerDataSource()));
+        configStore.registerStoreData(wifiInjector.makeImsiPrivacyProtectionExemptionStoreData(
+                new ImsiProtectionExemptionDataSource()));
 
         onCarrierConfigChanged(context);
 
@@ -1724,7 +1740,8 @@ public class WifiCarrierInfoManager {
 
     private void saveToStore() {
         // Set the flag to let WifiConfigStore that we have new data to write.
-        mHasNewDataToSerialize = true;
+        mHasNewUserDataToSerialize = true;
+        mHasNewSharedDataToSerialize = true;
         if (!mWifiInjector.getWifiConfigManager().saveToStore(true)) {
             Log.w(TAG, "Failed to save to store");
         }
