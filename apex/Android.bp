@@ -37,6 +37,7 @@ apex_defaults {
         "OsuLogin",
         "ServiceWifiResources",
     ],
+    updatable: false,
 }
 
 filegroup {
