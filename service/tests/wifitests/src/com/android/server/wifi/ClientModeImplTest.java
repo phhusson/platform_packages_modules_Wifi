@@ -529,6 +529,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mResources = getMockResources();
         mResources.setIntArray(R.array.config_wifiRssiLevelThresholds,
                 RssiUtilTest.RSSI_THRESHOLDS);
+        mResources.setInteger(R.integer.config_wifiLinkBandwidthUpdateThresholdPercent, 25);
         when(mContext.getResources()).thenReturn(mResources);
 
         when(mWifiGlobals.getPollRssiIntervalMillis()).thenReturn(3000);
@@ -2883,9 +2884,68 @@ public class ClientModeImplTest extends WifiBaseTest {
         assertEquals(signalPollResult.txBitrateMbps, wifiInfo.getTxLinkSpeedMbps());
         assertEquals(signalPollResult.rxBitrateMbps, wifiInfo.getRxLinkSpeedMbps());
         assertEquals(sFreq, wifiInfo.getFrequency());
-        verify(mPerNetwork, atLeastOnce()).getTxLinkBandwidthKbps(any(), anyInt());
-        verify(mPerNetwork, atLeastOnce()).getRxLinkBandwidthKbps(any(), anyInt());
+        verify(mPerNetwork, atLeastOnce()).getTxLinkBandwidthKbps();
+        verify(mPerNetwork, atLeastOnce()).getRxLinkBandwidthKbps();
         verify(mWifiScoreCard).noteSignalPoll(any());
+    }
+
+    /**
+     * Verify link bandwidth update in connected mode
+     */
+    @Test
+    public void verifyConnectedModeNetworkCapabilitiesBandwidthUpdate() throws Exception {
+        when(mPerNetwork.getTxLinkBandwidthKbps()).thenReturn(40_000);
+        when(mPerNetwork.getRxLinkBandwidthKbps()).thenReturn(50_000);
+        when(mWifiNetworkFactory.getSpecificNetworkRequestUidAndPackageName(any(), any()))
+                .thenReturn(Pair.create(Process.INVALID_UID, ""));
+        // Simulate the first connection.
+        connectWithValidInitRssi(-42);
+
+        // NetworkCapabilities should be always updated after the connection
+        ArgumentCaptor<NetworkCapabilities> networkCapabilitiesCaptor =
+                ArgumentCaptor.forClass(NetworkCapabilities.class);
+        verify(mWifiInjector).makeWifiNetworkAgent(
+                networkCapabilitiesCaptor.capture(), any(), anyInt(), any(), any(), any());
+        NetworkCapabilities networkCapabilities = networkCapabilitiesCaptor.getValue();
+        assertNotNull(networkCapabilities);
+        assertEquals(-42, mWifiInfo.getRssi());
+        assertEquals(40_000, networkCapabilities.getLinkUpstreamBandwidthKbps());
+        assertEquals(50_000, networkCapabilities.getLinkDownstreamBandwidthKbps());
+        verify(mCmi.mNetworkAgent, times(2))
+                .sendNetworkCapabilities(networkCapabilitiesCaptor.capture());
+
+        // Enable RSSI polling
+        final long startMillis = 1_500_000_000_100L;
+        WifiLinkLayerStats llStats = new WifiLinkLayerStats();
+        WifiNl80211Manager.SignalPollResult signalPollResult =
+                new WifiNl80211Manager.SignalPollResult(-42, 65, 54, sFreq);
+        when(mWifiNative.getWifiLinkLayerStats(any())).thenReturn(llStats);
+        when(mWifiNative.signalPoll(any())).thenReturn(signalPollResult);
+        when(mClock.getWallClockMillis()).thenReturn(startMillis + 0);
+        when(mPerNetwork.getTxLinkBandwidthKbps()).thenReturn(82_000);
+        when(mPerNetwork.getRxLinkBandwidthKbps()).thenReturn(92_000);
+        mCmi.enableRssiPolling(true);
+        mLooper.dispatchAll();
+        when(mClock.getWallClockMillis()).thenReturn(startMillis + 3333);
+        mLooper.dispatchAll();
+
+        // NetworkCapabilities should be updated after a big change of bandwidth
+        verify(mCmi.mNetworkAgent, times(3))
+                .sendNetworkCapabilities(networkCapabilitiesCaptor.capture());
+        networkCapabilities = networkCapabilitiesCaptor.getValue();
+        assertEquals(82_000, networkCapabilities.getLinkUpstreamBandwidthKbps());
+        assertEquals(92_000, networkCapabilities.getLinkDownstreamBandwidthKbps());
+
+        // No update after a small change of bandwidth
+        when(mPerNetwork.getTxLinkBandwidthKbps()).thenReturn(72_000);
+        when(mPerNetwork.getRxLinkBandwidthKbps()).thenReturn(82_000);
+        when(mClock.getWallClockMillis()).thenReturn(startMillis + 3333);
+        mLooper.dispatchAll();
+        verify(mCmi.mNetworkAgent, times(3))
+                .sendNetworkCapabilities(networkCapabilitiesCaptor.capture());
+        networkCapabilities = networkCapabilitiesCaptor.getValue();
+        assertEquals(82_000, networkCapabilities.getLinkUpstreamBandwidthKbps());
+        assertEquals(92_000, networkCapabilities.getLinkDownstreamBandwidthKbps());
     }
 
     /**
@@ -3640,8 +3700,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         connect();
         verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
-        mWifiNetworkAgentCallbackCaptor.getValue()
-                .onValidationStatus(NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
+        mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
+                NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiDiagnostics).reportConnectionEvent(
@@ -3818,7 +3878,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.INVALID_NETWORK, null /* captivePortalUr; */);
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID, null /* captivePortalUr; */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3850,7 +3910,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.INVALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3880,7 +3940,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.INVALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_NOT_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3945,7 +4005,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -3986,7 +4046,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
-                NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
+                NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager)
@@ -4042,8 +4102,8 @@ public class ClientModeImplTest extends WifiBaseTest {
      */
     @Test
     public void verifyNetworkCapabilities() throws Exception {
-        when(mPerNetwork.getTxLinkBandwidthKbps(any(), anyInt())).thenReturn(40_000);
-        when(mPerNetwork.getRxLinkBandwidthKbps(any(), anyInt())).thenReturn(50_000);
+        when(mPerNetwork.getTxLinkBandwidthKbps()).thenReturn(40_000);
+        when(mPerNetwork.getRxLinkBandwidthKbps()).thenReturn(50_000);
         when(mWifiNetworkFactory.getSpecificNetworkRequestUidAndPackageName(any(), any()))
                 .thenReturn(Pair.create(Process.INVALID_UID, ""));
         // Simulate the first connection.
@@ -4079,8 +4139,8 @@ public class ClientModeImplTest extends WifiBaseTest {
      */
     @Test
     public void verifyNetworkCapabilitiesForSpecificRequest() throws Exception {
-        when(mPerNetwork.getTxLinkBandwidthKbps(any(), anyInt())).thenReturn(30_000);
-        when(mPerNetwork.getRxLinkBandwidthKbps(any(), anyInt())).thenReturn(40_000);
+        when(mPerNetwork.getTxLinkBandwidthKbps()).thenReturn(30_000);
+        when(mPerNetwork.getRxLinkBandwidthKbps()).thenReturn(40_000);
         when(mWifiNetworkFactory.getSpecificNetworkRequestUidAndPackageName(any(), any()))
                 .thenReturn(Pair.create(TEST_UID, OP_PACKAGE_NAME));
         // Simulate the first connection.
