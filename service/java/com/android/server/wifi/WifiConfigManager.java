@@ -2119,6 +2119,7 @@ public class WifiConfigManager {
             return false;
         }
         config.numNoInternetAccessReports++;
+        config.validatedInternetAccess = false;
         return true;
     }
 
