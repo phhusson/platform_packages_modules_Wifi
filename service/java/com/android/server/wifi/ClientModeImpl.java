@@ -238,6 +238,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private final ConcreteClientModeManager mClientModeManager;
 
     private int mLastSignalLevel = -1;
+    private int mLastTxKbps = -1;
+    private int mLastRxKbps = -1;
     private int mLastScanRssi = WifiInfo.INVALID_RSSI;
     private String mLastBssid;
     // TODO (b/162942761): Ensure this is reset when mTargetNetworkId is set.
@@ -1565,6 +1567,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         pw.println("mDhcpResultsParcelable "
                 + dhcpResultsParcelableToString(mDhcpResultsParcelable));
         pw.println("mLastSignalLevel " + mLastSignalLevel);
+        pw.println("mLastTxKbps " + mLastTxKbps);
+        pw.println("mLastRxKbps " + mLastRxKbps);
         pw.println("mLastBssid " + mLastBssid);
         pw.println("mLastNetworkId " + mLastNetworkId);
         pw.println("mLastSubId " + mLastSubId);
@@ -2161,13 +2165,11 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
              * level.
              */
             int newSignalLevel = RssiUtil.calculateSignalLevel(mContext, newRssi);
-            WifiScoreCard.PerNetwork network = mWifiScoreCard.lookupNetwork(mWifiInfo.getSSID());
-            network.updateLinkBandwidth(mLastLinkLayerStats, stats, mWifiInfo, newSignalLevel);
             if (newSignalLevel != mLastSignalLevel) {
-                // TODO (b/162602799 and b/178725509): Do we need to change the update frequency?
-                updateCapabilities();
+                // TODO (b/162602799): Do we need to change the update frequency?
                 sendRssiChangeBroadcast(newRssi);
             }
+            updateLinkBandwidthAndCapabilities(stats, newSignalLevel != mLastSignalLevel);
             mLastSignalLevel = newSignalLevel;
         } else {
             mWifiInfo.setRssi(WifiInfo.INVALID_RSSI);
@@ -2179,6 +2181,27 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
          */
         mWifiMetrics.handlePollResult(mWifiInfo);
         return stats;
+    }
+
+    // Update the link bandwidth. If the link bandwidth changes by a large amount or signal level
+    // changes, also update network capabilities.
+    private void updateLinkBandwidthAndCapabilities(WifiLinkLayerStats stats,
+            boolean hasSignalLevelChanged) {
+        WifiScoreCard.PerNetwork network = mWifiScoreCard.lookupNetwork(mWifiInfo.getSSID());
+        network.updateLinkBandwidth(mLastLinkLayerStats, stats, mWifiInfo);
+        int newTxKbps = network.getTxLinkBandwidthKbps();
+        int newRxKbps = network.getRxLinkBandwidthKbps();
+        int txDeltaKbps = Math.abs(newTxKbps - mLastTxKbps);
+        int rxDeltaKbps = Math.abs(newRxKbps - mLastRxKbps);
+        int bwUpdateThresholdPercent = mContext.getResources().getInteger(
+                R.integer.config_wifiLinkBandwidthUpdateThresholdPercent);
+        if ((txDeltaKbps * 100  >  bwUpdateThresholdPercent * mLastTxKbps)
+                || (rxDeltaKbps * 100  >  bwUpdateThresholdPercent * mLastRxKbps)
+                || hasSignalLevelChanged) {
+            mLastTxKbps = newTxKbps;
+            mLastRxKbps = newRxKbps;
+            updateCapabilities();
+        }
     }
 
     // Polling has completed, hence we won't have a score anymore
@@ -2899,7 +2922,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             c.getNetworkSelectionStatus().clearDisableReasonCounter(
                     WifiConfiguration.NetworkSelectionStatus.DISABLED_DHCP_FAILURE);
         }
-        mWifiScoreCard.noteIpConfiguration(mWifiInfo);
     }
 
     private void handleIPv4Failure() {
@@ -3822,10 +3844,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         int rxTputKbps = 0;
         int currRssi = mWifiInfo.getRssi();
         if (currRssi != WifiInfo.INVALID_RSSI) {
-            int signalLevel = RssiUtil.calculateSignalLevel(mContext, currRssi);
             WifiScoreCard.PerNetwork network = mWifiScoreCard.lookupNetwork(mWifiInfo.getSSID());
-            txTputKbps = network.getTxLinkBandwidthKbps(mWifiInfo, signalLevel);
-            rxTputKbps = network.getRxLinkBandwidthKbps(mWifiInfo, signalLevel);
+            txTputKbps = network.getTxLinkBandwidthKbps();
+            rxTputKbps = network.getRxLinkBandwidthKbps();
         } else {
             // Fall back to max link speed. This should rarely happen if ever
             int maxTxLinkSpeedMbps = mWifiInfo.getMaxSupportedTxLinkSpeedMbps();
@@ -4317,9 +4338,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     break;
                 case WifiMonitor.ASSOCIATION_REJECTION_EVENT: {
                     AssocRejectEventInfo assocRejectEventInfo = (AssocRejectEventInfo) message.obj;
-                    if (mVerboseLoggingEnabled) {
-                        log("L2ConnectingState: Association rejection " + assocRejectEventInfo);
-                    }
+                    log("L2ConnectingState: Association rejection " + assocRejectEventInfo);
                     if (!assocRejectEventInfo.ssid.equals(getConnectingSsidInternal())) {
                         loge("Association rejection event received on not target network");
                         break;
@@ -4330,12 +4349,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     String bssid = assocRejectEventInfo.bssid;
                     boolean timedOut = assocRejectEventInfo.timedOut;
                     int statusCode = assocRejectEventInfo.statusCode;
-                    Log.d(getTag(), "Association Rejection event: bssid=" + bssid + " statusCode="
-                            + statusCode + " timedOut=" + timedOut);
                     if (!isValidBssid(bssid)) {
                         // If BSSID is null, use the target roam BSSID
                         bssid = mTargetBssid;
-                    } else if (mTargetBssid == SUPPLICANT_BSSID_ANY) {
+                    } else if (SUPPLICANT_BSSID_ANY.equals(mTargetBssid)) {
                         // This is needed by WifiBlocklistMonitor to block continuously
                         // failing BSSIDs. Need to set here because mTargetBssid is currently
                         // not being set until association success.
@@ -4392,6 +4409,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     int disableReason = WifiConfiguration.NetworkSelectionStatus
                             .DISABLED_AUTHENTICATION_FAILURE;
                     int reasonCode = message.arg1;
+                    int errorCode = message.arg2;
+                    log("L2ConnectingState: Authentication failure "
+                            + " reason=" + reasonCode + " error=" + errorCode);
                     WifiConfiguration targetedNetwork =
                             mWifiConfigManager.getConfiguredNetwork(mTargetNetworkId);
                     // Check if this is a permanent wrong password failure.
@@ -4399,11 +4419,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                         disableReason = WifiConfiguration.NetworkSelectionStatus
                                 .DISABLED_BY_WRONG_PASSWORD;
                         if (targetedNetwork != null) {
-                            mWrongPasswordNotifier.onWrongPasswordError(
-                                    targetedNetwork.SSID);
+                            mWrongPasswordNotifier.onWrongPasswordError(targetedNetwork.SSID);
                         }
                     } else if (reasonCode == WifiManager.ERROR_AUTH_FAILURE_EAP_FAILURE) {
-                        int errorCode = message.arg2;
                         if (targetedNetwork != null && targetedNetwork.enterpriseConfig != null
                                 && targetedNetwork.enterpriseConfig.isAuthenticationSimBased()) {
                             if (mEapFailureNotifier.onEapFailure(errorCode, targetedNetwork)) {
@@ -5279,6 +5297,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             mWifiLockManager.updateWifiClientConnected(mClientModeManager, true);
             mWifiScoreReport.startConnectedNetworkScorer(mNetworkAgent.getNetwork().getNetId());
             updateLinkLayerStatsRssiAndScoreReport();
+            mWifiScoreCard.noteIpConfiguration(mWifiInfo);
             // too many places to record L3 failure with too many failure reasons.
             // So only record success here.
             mWifiMetrics.noteFirstL3ConnectionAfterBoot(true);
