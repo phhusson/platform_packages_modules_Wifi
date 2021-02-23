@@ -40,7 +40,6 @@ import android.os.IHwBinder.DeathRecipient;
 import android.os.RemoteException;
 import android.os.WorkSource;
 import android.util.Log;
-import android.util.MutableBoolean;
 import android.util.MutableInt;
 import android.util.MutableLong;
 import android.util.Pair;
@@ -938,7 +937,7 @@ public class HalDeviceManager {
 
         synchronized (mLock) {
             try {
-                MutableBoolean statusOk = new MutableBoolean(false);
+                Mutable<Boolean> statusOk = new Mutable<>(false);
                 Mutable<ArrayList<Integer>> chipIdsResp = new Mutable<>();
 
                 // get all chip IDs
@@ -1046,7 +1045,7 @@ public class HalDeviceManager {
             }
 
             try {
-                MutableBoolean statusOk = new MutableBoolean(false);
+                Mutable<Boolean> statusOk = new Mutable<>(false);
                 Mutable<ArrayList<Integer>> chipIdsResp = new Mutable<>();
 
                 // get all chip IDs
@@ -1099,7 +1098,7 @@ public class HalDeviceManager {
                         return null;
                     }
 
-                    MutableBoolean currentModeValidResp = new MutableBoolean(false);
+                    Mutable<Boolean> currentModeValidResp = new Mutable<>(false);
                     MutableInt currentModeResp = new MutableInt(0);
                     chipResp.value.getMode((WifiStatus status, int modeId) -> {
                         statusOk.value = status.code == WifiStatusCode.SUCCESS;
@@ -1475,7 +1474,7 @@ public class HalDeviceManager {
 
         MutableInt chipIdIfProvided = new MutableInt(0); // NOT using 0 as a magic value
         if (chip != null) {
-            MutableBoolean statusOk = new MutableBoolean(false);
+            Mutable<Boolean> statusOk = new Mutable<>(false);
             try {
                 chip.getId((WifiStatus status, int id) -> {
                     if (status.code == WifiStatusCode.SUCCESS) {

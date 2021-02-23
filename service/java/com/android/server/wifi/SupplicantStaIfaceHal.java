@@ -54,7 +54,6 @@ import android.os.IHwBinder.DeathRecipient;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.MutableBoolean;
 import android.util.MutableInt;
 import android.util.Pair;
 
@@ -3010,7 +3009,7 @@ public class SupplicantStaIfaceHal {
 
     private int getKeyMgmtCapabilities(@NonNull String ifaceName) {
         final String methodStr = "getKeyMgmtCapabilities";
-        MutableBoolean status = new MutableBoolean(false);
+        Mutable<Boolean> status = new Mutable<>(false);
         MutableInt keyMgmtMask = new MutableInt(0);
 
         if (isV1_3()) {
@@ -3291,7 +3290,7 @@ public class SupplicantStaIfaceHal {
      */
     public int addDppPeerUri(@NonNull String ifaceName, @NonNull String uri) {
         final String methodStr = "addDppPeerUri";
-        MutableBoolean status = new MutableBoolean(false);
+        Mutable<Boolean> status = new Mutable<>(false);
         MutableInt bootstrapId = new MutableInt(-1);
 
         if (!isV1_2()) {
@@ -3511,7 +3510,7 @@ public class SupplicantStaIfaceHal {
             @NonNull String ifaceName, String macAddress, @NonNull String deviceInfo,
             int dppCurve) {
         final String methodStr = "generateDppBootstrapInfoForResponder";
-        MutableBoolean status = new MutableBoolean(false);
+        Mutable<Boolean> status = new Mutable<>(false);
         WifiNative.DppBootstrapQrCodeInfo bootstrapInfoOut =
                 new WifiNative.DppBootstrapQrCodeInfo();
 

@@ -63,7 +63,6 @@ import android.os.RemoteException;
 import android.os.WorkSource;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.MutableBoolean;
 import android.util.MutableLong;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -75,6 +74,7 @@ import com.android.server.wifi.WifiLinkLayerStats.ChannelStats;
 import com.android.server.wifi.WifiNative.RxFateReport;
 import com.android.server.wifi.WifiNative.TxFateReport;
 import com.android.server.wifi.util.BitMask;
+import com.android.server.wifi.util.GeneralUtil.Mutable;
 import com.android.server.wifi.util.NativeUtil;
 
 import com.google.errorprone.annotations.CompileTimeConstant;
@@ -815,7 +815,7 @@ public class WifiVendorHal {
             IWifiStaIface iface = getStaIface(ifaceName);
             if (iface == null) return boolResult(false);
             try {
-                MutableBoolean ans = new MutableBoolean(false);
+                Mutable<Boolean> ans = new Mutable<>(false);
                 WifiNative.ScanCapabilities out = capabilities;
                 iface.getBackgroundScanCapabilities((status, cap) -> {
                             if (!ok(status)) return;
@@ -2574,7 +2574,7 @@ public class WifiVendorHal {
             IWifiStaIface iface = getStaIface(ifaceName);
             if (iface == null) return nullResult();
             try {
-                MutableBoolean ok = new MutableBoolean(false);
+                Mutable<Boolean> ok = new Mutable<>(false);
                 WifiNative.RoamingCapabilities out = new WifiNative.RoamingCapabilities();
                 iface.getRoamingCapabilities((status, cap) -> {
                     if (!ok(status)) return;
