@@ -16,6 +16,8 @@
 
 package com.android.server.wifi;
 
+import static android.telephony.TelephonyManager.DATA_ENABLED_REASON_USER;
+
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.when;
 import static com.android.server.wifi.WifiCarrierInfoManager.NOTIFICATION_USER_ALLOWED_CARRIER_INTENT_ACTION;
@@ -1817,11 +1819,32 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
     }
 
     @Test
-    public void testSetAndGetCarrierNetworkOffload() {
+    public void testSetAndGetUnmergedCarrierNetworkOffload() {
+        assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, false));
+        mWifiCarrierInfoManager.setCarrierNetworkOffloadEnabled(DATA_SUBID, false, false);
+        verify(mWifiConfigManager).saveToStore(true);
+        assertFalse(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, false));
+    }
+
+    @Test
+    public void testSetAndGetMergedCarrierNetworkOffload() {
+        when(mDataTelephonyManager.isDataEnabled()).thenReturn(true);
+        ArgumentCaptor<WifiCarrierInfoManager.UserDataEnabledChangedListener> listenerCaptor =
+                ArgumentCaptor.forClass(
+                        WifiCarrierInfoManager.UserDataEnabledChangedListener.class);
+        // Check default value and verify listen is registered.
+        assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true));
+        verify(mDataTelephonyManager).registerPhoneStateListener(any(), listenerCaptor.capture());
+
+        // Verify result will change with state changes
+        listenerCaptor.getValue().onDataEnabledChanged(false, DATA_ENABLED_REASON_USER);
+        assertFalse(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true));
+
+        listenerCaptor.getValue().onDataEnabledChanged(true, DATA_ENABLED_REASON_USER);
         mWifiCarrierInfoManager.setCarrierNetworkOffloadEnabled(DATA_SUBID, true, false);
         verify(mWifiConfigManager).saveToStore(true);
         assertFalse(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true));
-        assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, false));
+
     }
 
     private void validateImsiProtectionNotification(String carrierName) {
@@ -1971,8 +1994,11 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
 
     @Test
     public void testClear() {
+        when(mDataTelephonyManager.isDataEnabled()).thenReturn(true);
         mWifiCarrierInfoManager.setHasUserApprovedImsiPrivacyExemptionForCarrier(
                 true, DATA_CARRIER_ID);
+        assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true));
+        assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(NON_DATA_SUBID, false));
         mWifiCarrierInfoManager.setCarrierNetworkOffloadEnabled(DATA_SUBID, true, false);
         mWifiCarrierInfoManager.setCarrierNetworkOffloadEnabled(NON_DATA_SUBID, false, false);
         // Verify values.
@@ -1983,12 +2009,13 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         // Now clear everything.
         mWifiCarrierInfoManager.clear();
 
+        verify(mWifiNotificationManager).cancel(SystemMessage.NOTE_CARRIER_SUGGESTION_AVAILABLE);
+        verify(mDataTelephonyManager).unregisterPhoneStateListener(any());
+
         // Verify restore to default value.
         assertFalse(mWifiCarrierInfoManager
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true));
         assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(NON_DATA_SUBID, false));
-
-        verify(mWifiNotificationManager).cancel(SystemMessage.NOTE_CARRIER_SUGGESTION_AVAILABLE);
     }
 }

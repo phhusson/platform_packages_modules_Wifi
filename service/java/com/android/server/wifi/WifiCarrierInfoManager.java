@@ -17,6 +17,7 @@
 package com.android.server.wifi;
 
 import static android.Manifest.permission.NETWORK_SETTINGS;
+import static android.telephony.TelephonyManager.DATA_ENABLED_REASON_USER;
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
@@ -40,10 +41,12 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.pps.Credential;
 import android.os.Handler;
+import android.os.HandlerExecutor;
 import android.os.PersistableBundle;
 import android.os.UserHandle;
 import android.telephony.CarrierConfigManager;
 import android.telephony.ImsiEncryptionInfo;
+import android.telephony.PhoneStateListener;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -178,8 +181,10 @@ public class WifiCarrierInfoManager {
     private final Map<Integer, Boolean> mImsiPrivacyProtectionExemptionMap = new HashMap<>();
     private final Map<Integer, Boolean> mMergedCarrierNetworkOffloadMap = new HashMap<>();
     private final Map<Integer, Boolean> mUnmergedCarrierNetworkOffloadMap = new HashMap<>();
-    private final List<OnUserApproveCarrierListener>
-            mOnUserApproveCarrierListeners =
+    private final List<OnUserApproveCarrierListener> mOnUserApproveCarrierListeners =
+            new ArrayList<>();
+    private final SparseBooleanArray mUserDataEnabled = new SparseBooleanArray();
+    private final List<UserDataEnabledChangedListener>  mUserDataEnabledListenerList =
             new ArrayList<>();
 
     private boolean mUserApprovalUiActive = false;
@@ -187,6 +192,37 @@ public class WifiCarrierInfoManager {
     private boolean mHasNewSharedDataToSerialize = false;
     private boolean mUserDataLoaded = false;
     private boolean mIsLastUserApprovalUiDialog = false;
+
+    /**
+     * Implement of {@link PhoneStateListener.DataEnabledChangedListener}
+     */
+    @VisibleForTesting
+    public final class UserDataEnabledChangedListener extends PhoneStateListener implements
+            PhoneStateListener.DataEnabledChangedListener {
+        private final int mSubscriptionId;
+
+        public UserDataEnabledChangedListener(int subscriptionId) {
+            mSubscriptionId = subscriptionId;
+        }
+
+        @Override
+        public void onDataEnabledChanged(boolean enabled, int reason) {
+            if (reason == DATA_ENABLED_REASON_USER) {
+                Log.d(TAG, "Mobile data change by user to "
+                        + (enabled ? "enabled" : "disabled") + " for subId: " + mSubscriptionId);
+                mUserDataEnabled.put(mSubscriptionId, enabled);
+            }
+        }
+
+        /**
+         * Unregister the listener from TelephonyManager,
+         */
+        public void unregisterListener() {
+            mTelephonyManager.createForSubscriptionId(mSubscriptionId)
+                    .unregisterPhoneStateListener(this);
+
+        }
+    }
 
     /**
      * Interface for other modules to listen to the user approve IMSI protection exemption.
@@ -1732,10 +1768,25 @@ public class WifiCarrierInfoManager {
      */
     public boolean isCarrierNetworkOffloadEnabled(int subId, boolean merged) {
         if (merged) {
-            return mMergedCarrierNetworkOffloadMap.getOrDefault(subId, true);
+            return mMergedCarrierNetworkOffloadMap.getOrDefault(subId, true)
+                    && isMobileDataEnabled(subId);
         } else {
             return mUnmergedCarrierNetworkOffloadMap.getOrDefault(subId, true);
         }
+    }
+
+    private boolean isMobileDataEnabled(int subId) {
+        if (mUserDataEnabled.indexOfKey(subId) >= 0) {
+            return mUserDataEnabled.get(subId);
+        }
+        TelephonyManager specifiedTm = mTelephonyManager.createForSubscriptionId(subId);
+        boolean enabled = specifiedTm.isDataEnabled();
+        mUserDataEnabled.put(subId, enabled);
+        UserDataEnabledChangedListener listener = new UserDataEnabledChangedListener(subId);
+        specifiedTm.registerPhoneStateListener(new HandlerExecutor(mHandler), listener);
+        mUserDataEnabledListenerList.add(listener);
+
+        return enabled;
     }
 
     private void saveToStore() {
@@ -1754,6 +1805,10 @@ public class WifiCarrierInfoManager {
         mImsiPrivacyProtectionExemptionMap.clear();
         mMergedCarrierNetworkOffloadMap.clear();
         mUnmergedCarrierNetworkOffloadMap.clear();
+        mUserDataEnabled.clear();
+        for (UserDataEnabledChangedListener listener : mUserDataEnabledListenerList) {
+            listener.unregisterListener();
+        }
         resetNotification();
         saveToStore();
     }
