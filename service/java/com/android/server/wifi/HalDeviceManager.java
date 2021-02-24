@@ -40,7 +40,6 @@ import android.os.IHwBinder.DeathRecipient;
 import android.os.RemoteException;
 import android.os.WorkSource;
 import android.util.Log;
-import android.util.MutableInt;
 import android.util.MutableLong;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -1099,7 +1098,7 @@ public class HalDeviceManager {
                     }
 
                     Mutable<Boolean> currentModeValidResp = new Mutable<>(false);
-                    MutableInt currentModeResp = new MutableInt(0);
+                    Mutable<Integer> currentModeResp = new Mutable<>(0);
                     chipResp.value.getMode((WifiStatus status, int modeId) -> {
                         statusOk.value = status.code == WifiStatusCode.SUCCESS;
                         if (statusOk.value) {
@@ -1119,7 +1118,7 @@ public class HalDeviceManager {
                     chipCapabilities.value = getChipCapabilities(chipResp.value);
 
                     Mutable<ArrayList<String>> ifaceNamesResp = new Mutable<>();
-                    MutableInt ifaceIndex = new MutableInt(0);
+                    Mutable<Integer> ifaceIndex = new Mutable<>(0);
 
                     chipResp.value.getStaIfaceNames(
                             (WifiStatus status, ArrayList<String> ifnames) -> {
@@ -1472,7 +1471,7 @@ public class HalDeviceManager {
             return results;
         }
 
-        MutableInt chipIdIfProvided = new MutableInt(0); // NOT using 0 as a magic value
+        Mutable<Integer> chipIdIfProvided = new Mutable<>(0); // NOT using 0 as a magic value
         if (chip != null) {
             Mutable<Boolean> statusOk = new Mutable<>(false);
             try {
@@ -2528,7 +2527,7 @@ public class HalDeviceManager {
 
     // Will return -1 for invalid results! Otherwise will return one of the 4 valid values.
     private static int getType(IWifiIface iface) {
-        MutableInt typeResp = new MutableInt(-1);
+        Mutable<Integer> typeResp = new Mutable<>(-1);
         try {
             iface.getType((WifiStatus status, int type) -> {
                 if (status.code == WifiStatusCode.SUCCESS) {
