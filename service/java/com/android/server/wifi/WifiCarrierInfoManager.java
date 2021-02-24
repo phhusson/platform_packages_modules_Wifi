@@ -186,6 +186,8 @@ public class WifiCarrierInfoManager {
     private final SparseBooleanArray mUserDataEnabled = new SparseBooleanArray();
     private final List<UserDataEnabledChangedListener>  mUserDataEnabledListenerList =
             new ArrayList<>();
+    private final List<OnCarrierOffloadDisabledListener> mOnCarrierOffloadDisabledListeners =
+            new ArrayList<>();
 
     private boolean mUserApprovalUiActive = false;
     private boolean mHasNewUserDataToSerialize = false;
@@ -211,6 +213,12 @@ public class WifiCarrierInfoManager {
                 Log.d(TAG, "Mobile data change by user to "
                         + (enabled ? "enabled" : "disabled") + " for subId: " + mSubscriptionId);
                 mUserDataEnabled.put(mSubscriptionId, enabled);
+                if (!enabled) {
+                    for (OnCarrierOffloadDisabledListener listener :
+                            mOnCarrierOffloadDisabledListeners) {
+                        listener.onCarrierOffloadDisabled(mSubscriptionId, true);
+                    }
+                }
             }
         }
 
@@ -233,6 +241,17 @@ public class WifiCarrierInfoManager {
          * Invoke when user approve the IMSI protection exemption.
          */
         void onUserAllowed(int carrierId);
+    }
+
+    /**
+     * Interface for other modules to listen to the carrier network offload disabled.
+     */
+    public interface OnCarrierOffloadDisabledListener {
+
+        /**
+         * Invoke when carrier offload on target subscriptionId is disabled.
+         */
+        void onCarrierOffloadDisabled(int subscriptionId, boolean merged);
     }
 
     /**
@@ -1569,6 +1588,22 @@ public class WifiCarrierInfoManager {
     }
 
     /**
+     * Add a listener to monitor carrier offload disabled.
+     */
+    public void addOnCarrierOffloadDisabledListener(
+            OnCarrierOffloadDisabledListener listener) {
+        mOnCarrierOffloadDisabledListeners.add(listener);
+    }
+
+    /**
+     * remove a {@link OnCarrierOffloadDisabledListener}.
+     */
+    public void removeOnCarrierOffloadDisabledListener(
+            OnCarrierOffloadDisabledListener listener) {
+        mOnCarrierOffloadDisabledListeners.remove(listener);
+    }
+
+    /**
      * Clear the Imsi Privacy Exemption user approval info the target carrier.
      */
     public void clearImsiPrivacyExemptionForCarrier(int carrierId) {
@@ -1756,6 +1791,11 @@ public class WifiCarrierInfoManager {
             mMergedCarrierNetworkOffloadMap.put(subscriptionId, enabled);
         } else {
             mUnmergedCarrierNetworkOffloadMap.put(subscriptionId, enabled);
+        }
+        if (!enabled) {
+            for (OnCarrierOffloadDisabledListener listener : mOnCarrierOffloadDisabledListeners) {
+                listener.onCarrierOffloadDisabled(subscriptionId, merged);
+            }
         }
         saveToStore();
     }

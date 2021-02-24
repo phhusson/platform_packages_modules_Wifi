@@ -137,6 +137,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
     @Mock AlertDialog mAlertDialog;
     @Mock WifiCarrierInfoManager.OnUserApproveCarrierListener mListener;
     @Mock WifiMetrics mWifiMetrics;
+    @Mock WifiCarrierInfoManager.OnCarrierOffloadDisabledListener mOnCarrierOffloadDisabledListener;
 
     private List<SubscriptionInfo> mSubInfoList;
 
@@ -2017,5 +2018,23 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 .hasUserApprovedImsiPrivacyExemptionForCarrier(DATA_CARRIER_ID));
         assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true));
         assertTrue(mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(NON_DATA_SUBID, false));
+    }
+
+    @Test
+    public void testOnCarrierOffloadDisabledListener() {
+        mWifiCarrierInfoManager.addOnCarrierOffloadDisabledListener(
+                mOnCarrierOffloadDisabledListener);
+        mWifiCarrierInfoManager.isCarrierNetworkOffloadEnabled(DATA_SUBID, true);
+        ArgumentCaptor<WifiCarrierInfoManager.UserDataEnabledChangedListener> captor =
+                ArgumentCaptor.forClass(WifiCarrierInfoManager.UserDataEnabledChangedListener
+                        .class);
+        verify(mDataTelephonyManager).registerPhoneStateListener(any(), captor.capture());
+
+        mWifiCarrierInfoManager.setCarrierNetworkOffloadEnabled(DATA_SUBID, true, false);
+        verify(mOnCarrierOffloadDisabledListener).onCarrierOffloadDisabled(DATA_SUBID, true);
+
+        captor.getValue().onDataEnabledChanged(false, DATA_ENABLED_REASON_USER);
+        verify(mOnCarrierOffloadDisabledListener, times(2))
+                .onCarrierOffloadDisabled(DATA_SUBID, true);
     }
 }
