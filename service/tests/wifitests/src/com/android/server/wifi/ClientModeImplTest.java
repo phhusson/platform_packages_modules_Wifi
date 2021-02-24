@@ -64,6 +64,8 @@ import android.content.pm.PackageManager;
 import android.hardware.wifi.supplicant.V1_0.ISupplicantStaIfaceCallback;
 import android.net.ConnectivityManager;
 import android.net.DhcpResultsParcelable;
+import android.net.INetworkAgent;
+import android.net.INetworkAgentRegistry;
 import android.net.InetAddresses;
 import android.net.Layer2InformationParcelable;
 import android.net.Layer2PacketParcelable;
@@ -121,8 +123,6 @@ import android.util.Pair;
 
 import androidx.test.filters.SmallTest;
 
-import com.android.connectivity.aidl.INetworkAgent;
-import com.android.connectivity.aidl.INetworkAgentRegistry;
 import com.android.dx.mockito.inline.extended.ExtendedMockito;
 import com.android.internal.util.AsyncChannel;
 import com.android.internal.util.IState;

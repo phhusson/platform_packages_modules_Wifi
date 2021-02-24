@@ -43,6 +43,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.wifi.V1_0.NanStatusType;
 import android.net.ConnectivityManager;
+import android.net.INetworkAgent;
 import android.net.MacAddress;
 import android.net.NetworkCapabilities;
 import android.net.NetworkFactory;
@@ -78,7 +79,6 @@ import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
 
-import com.android.connectivity.aidl.INetworkAgent;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.util.NetdWrapper;
