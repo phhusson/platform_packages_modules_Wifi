@@ -4758,6 +4758,7 @@ public class WifiMetrics {
             mWifiLogProto.mainlineModuleVersion = mWifiHealthMonitor.getWifiStackVersion();
             mWifiLogProto.firstConnectAfterBootStats = mFirstConnectAfterBootStats;
             mWifiLogProto.wifiToWifiSwitchStats = mWifiToWifiSwitchStats;
+            mWifiLogProto.bandwidthEstimatorStats = mWifiScoreCard.dumpBandwidthEstimatorStats();
         }
     }
 
