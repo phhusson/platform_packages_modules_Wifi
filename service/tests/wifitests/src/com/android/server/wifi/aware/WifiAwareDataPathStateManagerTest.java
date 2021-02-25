@@ -1556,18 +1556,9 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
                 mMockLooper.dispatchAll();
                 inOrder.verify(mMockNetdWrapper).setInterfaceUp(anyString());
                 inOrder.verify(mMockNetdWrapper).enableIpv6(anyString());
-                inOrder.verify(mMockCm).registerNetworkAgent(agentCaptor.capture(), any(),
-                        any(), netCapCaptor.capture(), anyInt(), any(), anyInt());
                 inOrderM.verify(mAwareMetricsMock).recordNdpStatus(eq(NanStatusType.SUCCESS),
                         eq(useDirect), anyLong());
                 inOrderM.verify(mAwareMetricsMock).recordNdpCreation(anyInt(), any(), any());
-                WifiAwareNetworkInfo netInfo =
-                        (WifiAwareNetworkInfo) netCapCaptor.getValue().getTransportInfo();
-                assertArrayEquals(MacAddress.fromBytes(
-                        peerDataPathMac).getLinkLocalIpv6FromEui48Mac().getAddress(),
-                        netInfo.getPeerIpv6Addr().getAddress());
-                assertEquals(0, netInfo.getPort());
-                assertEquals(-1, netInfo.getTransportProtocol());
             } else {
                 assertTrue(mAlarmManager.dispatch(
                         WifiAwareStateManager.HAL_DATA_PATH_CONFIRM_TIMEOUT_TAG));
@@ -1587,15 +1578,6 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
                 endNetworkMsg.obj = nr;
                 res.mMessenger.send(endNetworkMsg);
 
-                agentCaptor.getValue().onDisconnected();
-
-                mDut.onEndDataPathResponse(transactionId.getValue(), true, 0);
-                mDut.onDataPathEndNotification(ndpId);
-                mMockLooper.dispatchAll();
-
-                inOrder.verify(mMockNetdWrapper).setInterfaceDown(anyString());
-                inOrder.verify(mMockNative).endDataPath(transactionId.capture(), eq(ndpId));
-                inOrderM.verify(mAwareMetricsMock).recordNdpSessionDuration(anyLong());
             }
         } else {
             verifyRequestDeclaredUnfullfillable(nr);
