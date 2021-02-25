@@ -3481,8 +3481,9 @@ public class WifiServiceImpl extends BaseWifiService {
         if (remoteMacAddress == null) {
           throw new IllegalArgumentException("remoteMacAddress cannot be null");
         }
-
-        mActiveModeWarden.getPrimaryClientModeManager().enableTdls(remoteMacAddress, enable);
+        mWifiThreadRunner.post(() ->
+                mActiveModeWarden.getPrimaryClientModeManager().enableTdls(
+                        remoteMacAddress, enable));
     }
 
     /**
@@ -4364,9 +4365,14 @@ public class WifiServiceImpl extends BaseWifiService {
         if (!isSettingsOrSuw(Binder.getCallingPid(), callingUid)) {
             throw new SecurityException(TAG + ": Permission denied");
         }
-
-        mWifiThreadRunner.post(() -> mDppManager.startDppAsConfiguratorInitiator(
-                uid, packageName, binder, enrolleeUri, selectedNetworkId, netRole, callback));
+        // Stop MBB (if in progress) when DPP is initiated. Otherwise, DPP operation will fail
+        // when the previous primary iface is removed after MBB completion.
+        mWifiThreadRunner.post(() ->
+                mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                        mDppManager.startDppAsConfiguratorInitiator(
+                                uid, packageName,
+                                mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                                binder, enrolleeUri, selectedNetworkId, netRole, callback)));
     }
 
     /**
@@ -4397,8 +4403,13 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new SecurityException(TAG + ": Permission denied");
         }
 
+        // Stop MBB (if in progress) when DPP is initiated. Otherwise, DPP operation will fail
+        // when the previous primary iface is removed after MBB completion.
         mWifiThreadRunner.post(() ->
-                mDppManager.startDppAsEnrolleeInitiator(uid, binder, configuratorUri, callback));
+                mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                        mDppManager.startDppAsEnrolleeInitiator(uid,
+                                mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                                binder, configuratorUri, callback)));
     }
 
     /**
@@ -4448,8 +4459,13 @@ public class WifiServiceImpl extends BaseWifiService {
             }
         }
 
+        // Stop MBB (if in progress) when DPP is initiated. Otherwise, DPP operation will fail
+        // when the previous primary iface is removed after MBB completion.
         mWifiThreadRunner.post(() ->
-                mDppManager.startDppAsEnrolleeResponder(uid, binder, deviceInfo, curve, callback));
+                mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
+                        mDppManager.startDppAsEnrolleeResponder(uid,
+                                mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                                binder, deviceInfo, curve, callback)));
     }
 
     /**
