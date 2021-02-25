@@ -63,7 +63,6 @@ import android.os.RemoteException;
 import android.os.WorkSource;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.MutableLong;
 import android.util.Pair;
 import android.util.SparseArray;
 
@@ -1544,7 +1543,7 @@ public class WifiVendorHal {
             return getSupportedFeatureSetFromPackageManager();
         }
         try {
-            final MutableLong feat = new MutableLong(0);
+            final Mutable<Long> feat = new Mutable<>(0L);
             synchronized (sLock) {
                 android.hardware.wifi.V1_3.IWifiChip iWifiChipV13 = getWifiChipForV1_3Mockable();
                 android.hardware.wifi.V1_5.IWifiChip iWifiChipV15 = getWifiChipForV1_5Mockable();
@@ -1561,7 +1560,7 @@ public class WifiVendorHal {
                 } else if (mIWifiChip != null) {
                     mIWifiChip.getCapabilities((status, capabilities) -> {
                         if (!ok(status)) return;
-                        feat.value = wifiFeatureMaskFromChipCapabilities(capabilities);
+                        feat.value = (long) wifiFeatureMaskFromChipCapabilities(capabilities);
                     });
                 }
 

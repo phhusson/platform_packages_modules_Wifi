@@ -40,7 +40,6 @@ import android.os.IHwBinder.DeathRecipient;
 import android.os.RemoteException;
 import android.os.WorkSource;
 import android.util.Log;
-import android.util.MutableLong;
 import android.util.Pair;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
@@ -1114,7 +1113,7 @@ public class HalDeviceManager {
                         return null;
                     }
 
-                    MutableLong chipCapabilities = new MutableLong(0);
+                    Mutable<Long> chipCapabilities = new Mutable<>(0L);
                     chipCapabilities.value = getChipCapabilities(chipResp.value);
 
                     Mutable<ArrayList<String>> ifaceNamesResp = new Mutable<>();
@@ -2571,7 +2570,7 @@ public class HalDeviceManager {
         if (wifiChip == null) return featureSet;
 
         try {
-            final MutableLong feat = new MutableLong(CHIP_CAPABILITY_UNINITIALIZED);
+            final Mutable<Long> feat = new Mutable<>(CHIP_CAPABILITY_UNINITIALIZED);
             synchronized (mLock) {
                 android.hardware.wifi.V1_5.IWifiChip iWifiChipV15 =
                         getWifiChipForV1_5Mockable(wifiChip);
@@ -2579,7 +2578,7 @@ public class HalDeviceManager {
                 if (iWifiChipV15 != null) {
                     iWifiChipV15.getCapabilities_1_5((status, capabilities) -> {
                         if (!ok("getCapabilities_1_5", status)) return;
-                        feat.value = capabilities;
+                        feat.value = (long) capabilities;
                     });
                 }
             }
