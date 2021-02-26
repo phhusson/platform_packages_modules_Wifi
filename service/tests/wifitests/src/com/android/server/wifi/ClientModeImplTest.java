@@ -411,6 +411,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock WifiNative mWifiNative;
     @Mock WifiScoreCard mWifiScoreCard;
     @Mock PerNetwork mPerNetwork;
+    @Mock WifiScoreCard.NetworkConnectionStats mPerNetworkRecentStats;
     @Mock WifiHealthMonitor mWifiHealthMonitor;
     @Mock WifiTrafficPoller mWifiTrafficPoller;
     @Mock WifiConnectivityManager mWifiConnectivityManager;
@@ -600,6 +601,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 .thenReturn(WifiHealthMonitor.REASON_NO_FAILURE);
         when(mWifiScoreCard.detectAbnormalDisconnection())
                 .thenReturn(WifiHealthMonitor.REASON_NO_FAILURE);
+        when(mPerNetwork.getRecentStats()).thenReturn(mPerNetworkRecentStats);
         when(mWifiScoreCard.lookupNetwork(any())).thenReturn(mPerNetwork);
         when(mThroughputPredictor.predictMaxTxThroughput(any())).thenReturn(90);
         when(mThroughputPredictor.predictMaxRxThroughput(any())).thenReturn(80);
@@ -3441,8 +3443,7 @@ public class ClientModeImplTest extends WifiBaseTest {
      * disconnection occurs in middle of connection states.
      */
     @Test
-    public void testDisconnectConnecting()
-            throws Exception {
+    public void testDisconnectConnecting() throws Exception {
         initializeAndAddNetworkAndVerifySuccess();
         mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, 0, 0, TEST_BSSID_STR);
         mCmi.sendMessage(WifiMonitor.NETWORK_DISCONNECTION_EVENT,
@@ -3456,6 +3457,31 @@ public class ClientModeImplTest extends WifiBaseTest {
         // that occurred mid connection attempt.
         verify(mWifiBlocklistMonitor).handleBssidConnectionFailure(anyString(), anyString(),
                 eq(WifiBlocklistMonitor.REASON_NONLOCAL_DISCONNECT_CONNECTING), anyInt());
+        verify(mWifiConfigManager, never()).updateNetworkSelectionStatus(anyInt(),
+                eq(WifiConfiguration.NetworkSelectionStatus.DISABLED_CONSECUTIVE_FAILURES));
+    }
+
+    /**
+     * Verify that the WifiConfigManager is notified when a network experiences consecutive
+     * connection failures.
+     */
+    @Test
+    public void testDisableNetworkConsecutiveFailures() throws Exception {
+        initializeAndAddNetworkAndVerifySuccess();
+        when(mPerNetworkRecentStats.getCount(WifiScoreCard.CNT_CONSECUTIVE_CONNECTION_FAILURE))
+                .thenReturn(WifiBlocklistMonitor.NUM_CONSECUTIVE_FAILURES_PER_NETWORK_EXP_BACKOFF);
+        mCmi.sendMessage(ClientModeImpl.CMD_START_CONNECT, FRAMEWORK_NETWORK_ID, 0, TEST_BSSID_STR);
+        mCmi.sendMessage(WifiMonitor.NETWORK_DISCONNECTION_EVENT,
+                new DisconnectEventInfo(TEST_SSID, TEST_BSSID_STR,
+                        ISupplicantStaIfaceCallback.ReasonCode.FOURWAY_HANDSHAKE_TIMEOUT,
+                        false));
+        mLooper.dispatchAll();
+        verify(mWifiScoreCard).noteConnectionFailure(any(), anyInt(), anyString(), anyInt());
+        verify(mWifiScoreCard).resetConnectionState();
+        verify(mWifiBlocklistMonitor).handleBssidConnectionFailure(anyString(), anyString(),
+                eq(WifiBlocklistMonitor.REASON_NONLOCAL_DISCONNECT_CONNECTING), anyInt());
+        verify(mWifiConfigManager).updateNetworkSelectionStatus(FRAMEWORK_NETWORK_ID,
+                WifiConfiguration.NetworkSelectionStatus.DISABLED_CONSECUTIVE_FAILURES);
     }
 
     /**
