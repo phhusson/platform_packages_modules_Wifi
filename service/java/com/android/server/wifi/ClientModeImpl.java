@@ -3923,7 +3923,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         if (mNetworkAgent == null) {
             return;
         }
-        mNetworkAgent.sendNetworkCapabilities(networkCapabilities);
+        mNetworkAgent.sendNetworkCapabilitiesAndCache(networkCapabilities);
     }
 
     private void handleEapAuthFailure(int networkId, int errorCode) {
