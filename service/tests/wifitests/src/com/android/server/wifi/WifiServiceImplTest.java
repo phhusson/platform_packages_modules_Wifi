@@ -1448,6 +1448,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetCoexUnsafeChannelsDefaultAlgorithmDisabled() {
+        assumeTrue(SdkLevel.isAtLeastS());
         when(mResources.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled))
                 .thenReturn(false);
         List<CoexUnsafeChannel> unsafeChannels = new ArrayList<>();
@@ -1466,6 +1467,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetCoexUnsafeChannelsDefaultAlgorithmEnabled() {
+        assumeTrue(SdkLevel.isAtLeastS());
         when(mResources.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled))
                 .thenReturn(true);
         List<CoexUnsafeChannel> unsafeChannels = new ArrayList<>();
@@ -1483,6 +1485,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetCoexUnsafeChannelsNullSet() {
+        assumeTrue(SdkLevel.isAtLeastS());
         try {
             mWifiServiceImpl.setCoexUnsafeChannels(null, 0);
             fail("Expected IllegalArgumentException");
@@ -1496,6 +1499,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testGetCoexUnsafeChannelsReturnsValueFromCoexManager() {
+        assumeTrue(SdkLevel.isAtLeastS());
         List<CoexUnsafeChannel> unsafeChannels = new ArrayList<>();
         unsafeChannels.add(new CoexUnsafeChannel(WIFI_BAND_24_GHZ, 6));
         unsafeChannels.add(new CoexUnsafeChannel(WIFI_BAND_5_GHZ, 36));
@@ -1514,6 +1518,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testGetCoexRestrictionsReturnsValueFromCoexManager() {
+        assumeTrue(SdkLevel.isAtLeastS());
         final int restrictions = COEX_RESTRICTION_WIFI_DIRECT | COEX_RESTRICTION_SOFTAP
                 | COEX_RESTRICTION_WIFI_AWARE;
         when(mCoexManager.getCoexRestrictions()).thenReturn(restrictions);
@@ -1529,6 +1534,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testRegisterUnregisterCoexCallback() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
         when(mCoexCallback.asBinder()).thenReturn(mAppBinder);
         mWifiServiceImpl.registerCoexCallback(mCoexCallback);
         mLooper.dispatchAll();
@@ -1544,6 +1550,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetCoexUnsafeChannelsThrowsSecurityExceptionOnMissingPermissions() {
+        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(WIFI_UPDATE_COEX_UNSAFE_CHANNELS),
                         eq("WifiService"));
@@ -1559,6 +1566,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testGetCoexUnsafeChannelsThrowsSecurityExceptionOnMissingPermissions() {
+        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(WIFI_ACCESS_COEX_UNSAFE_CHANNELS),
                         eq("WifiService"));
@@ -1574,6 +1582,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testGetCoexRestrictionsThrowsSecurityExceptionOnMissingPermissions() {
+        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(WIFI_ACCESS_COEX_UNSAFE_CHANNELS),
                         eq("WifiService"));
@@ -1589,6 +1598,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testRegisterCoexCallbackThrowsSecurityExceptionOnMissingPermissions() {
+        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(WIFI_ACCESS_COEX_UNSAFE_CHANNELS),
                         eq("WifiService"));
@@ -1604,6 +1614,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testUnregisterCoexCallbackThrowsSecurityExceptionOnMissingPermissions() {
+        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(WIFI_ACCESS_COEX_UNSAFE_CHANNELS),
                         eq("WifiService"));
