@@ -2552,7 +2552,6 @@ public class ClientModeImplTest extends WifiBaseTest {
                 .logStaEvent(WIFI_IFACE_NAME, StaEvent.TYPE_WIFI_DISABLED);
         assertNull(wifiInfo.getBSSID());
         assertEquals(SupplicantState.DISCONNECTED, wifiInfo.getSupplicantState());
-        verify(mPasspointManager).clearAnqpRequestsAndFlushCache();
     }
 
     @Test
@@ -2788,6 +2787,29 @@ public class ClientModeImplTest extends WifiBaseTest {
         connect();
         expectRegisterNetworkAgent((agentConfig) -> {
             assertTrue(agentConfig.explicitlySelected);
+            assertFalse(agentConfig.acceptUnvalidated);
+            assertFalse(agentConfig.acceptPartialConnectivity);
+        }, (cap) -> { });
+    }
+
+    /**
+     * Verify that when a network is explicitly selected, has role SECONDARY_TRANSIENT, but
+     * noInternetAccessExpected is false, the {@link NetworkAgentConfig} contains the right values
+     * of explicitlySelected, acceptUnvalidated and acceptPartialConnectivity.
+     */
+    @Test
+    public void testExplicitlySelected_secondaryTransient_expectNotExplicitlySelected()
+            throws Exception {
+        // Network is explicitly selected.
+        WifiConfiguration config = makeLastSelectedWifiConfiguration(FRAMEWORK_NETWORK_ID,
+                ClientModeImpl.LAST_SELECTED_NETWORK_EXPIRATION_AGE_MILLIS - 1);
+        mConnectedNetwork.noInternetAccessExpected = false;
+
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_SECONDARY_TRANSIENT);
+
+        connect();
+        expectRegisterNetworkAgent((agentConfig) -> {
+            assertFalse(agentConfig.explicitlySelected);
             assertFalse(agentConfig.acceptUnvalidated);
             assertFalse(agentConfig.acceptPartialConnectivity);
         }, (cap) -> { });
@@ -6100,4 +6122,24 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
     }
 
+    /**
+     * Verifies that the ANQP cache is not flushed when the configuration does not permit it.
+     */
+    @Test
+    public void testAnqpFlushCacheSkippedIfNotConfigured() throws Exception {
+        when(mWifiGlobals.flushAnqpCacheOnWifiToggleOffEvent()).thenReturn(false);
+        testWifiInfoCleanedUpEnteringExitingConnectableState();
+        verify(mPasspointManager, never()).clearAnqpRequestsAndFlushCache();
+    }
+
+    /**
+     * Verifies that the ANQP cache is flushed when the configuration requires it.
+     */
+    @Test
+    public void testAnqpFlushCacheDoneIfConfigured() throws Exception {
+        when(mWifiGlobals.flushAnqpCacheOnWifiToggleOffEvent()).thenReturn(true);
+        testWifiInfoCleanedUpEnteringExitingConnectableState();
+        verify(mPasspointManager, times(1))
+                .clearAnqpRequestsAndFlushCache();
+    }
 }
