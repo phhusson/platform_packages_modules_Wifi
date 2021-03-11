@@ -408,6 +408,26 @@ public class HalDeviceManager {
     }
 
     /**
+     * Register a SubsystemRestartListener to listen to the subsystem restart event from HAL.
+     * Use the action() to forward the event to SelfRecovery when receiving the event from HAL.
+     *
+     * @param listener SubsystemRestartListener listener object.
+     * @param handler Handler on which to dispatch listener. Null implies the listener will be
+     *                invoked synchronously from the context of the client which triggered the
+     *                state change.
+     */
+    public void registerSubsystemRestartListener(@NonNull SubsystemRestartListener listener,
+            @Nullable Handler handler) {
+        if (listener == null) {
+            Log.wtf(TAG, "registerSubsystemRestartListener with nulls!? listener=" + listener);
+            return;
+        }
+        if (!mSubsystemRestartListener.add(new SubsystemRestartListenerProxy(listener, handler))) {
+            Log.w(TAG, "registerSubsystemRestartListener: duplicate registration ignored");
+        }
+    }
+
+    /**
      * Register an InterfaceDestroyedListener to the specified iface - returns true on success
      * and false on failure. This listener is in addition to the one registered when the interface
      * was created - allowing non-creators to monitor interface status.
@@ -503,6 +523,17 @@ public class HalDeviceManager {
         }
 
         return nameResp.value;
+    }
+
+    /**
+     * Called when subsystem restart
+     */
+    public interface SubsystemRestartListener {
+        /**
+         * Called for subsystem restart event from the HAL.
+         * It will trigger recovery mechanism in framework.
+         */
+        void onSubsystemRestart();
     }
 
     /**
@@ -660,6 +691,7 @@ public class HalDeviceManager {
             mRttControllerLifecycleCallbacks = new HashSet<>();
     private final SparseArray<IWifiChipEventCallback.Stub> mDebugCallbacks = new SparseArray<>();
     private boolean mIsReady;
+    private final Set<SubsystemRestartListenerProxy> mSubsystemRestartListener = new HashSet<>();
 
     /*
      * This is the only place where we cache HIDL information in this manager. Necessary since
@@ -1470,6 +1502,17 @@ public class HalDeviceManager {
         @Override
         public void onFailure(WifiStatus status) throws RemoteException {
             mWifiEventCallback.onFailure(status);
+        }
+
+        @Override
+        public void onSubsystemRestart(WifiStatus status) throws RemoteException {
+            mEventHandler.post(() -> {
+                synchronized (mLock) {
+                    for (SubsystemRestartListenerProxy cb : mSubsystemRestartListener) {
+                        cb.action();
+                    }
+                }
+            });
         }
     }
 
@@ -2382,6 +2425,19 @@ public class HalDeviceManager {
         ListenerProxy(LISTENER listener, Handler handler, String tag) {
             mListener = listener;
             mHandler = handler;
+        }
+    }
+
+    private class SubsystemRestartListenerProxy extends
+            ListenerProxy<SubsystemRestartListener> {
+        SubsystemRestartListenerProxy(@NonNull SubsystemRestartListener subsystemRestartListener,
+                                        Handler handler) {
+            super(subsystemRestartListener, handler, "SubsystemRestartListenerProxy");
+        }
+
+        @Override
+        protected void action() {
+            mListener.onSubsystemRestart();
         }
     }
 
