@@ -538,7 +538,7 @@ public class ClientModeImplTest extends WifiBaseTest {
             mIpClientCallback.onQuit();
             return null;
         }).when(mIpClient).shutdown();
-        when(mConnectivityManager.registerNetworkAgent(any(), any(), any(), any(), anyInt(), any(),
+        when(mConnectivityManager.registerNetworkAgent(any(), any(), any(), any(), any(), any(),
                 anyInt())).thenReturn(mNetwork);
         List<SubscriptionInfo> subList = Arrays.asList(mock(SubscriptionInfo.class));
         when(mSubscriptionManager.getActiveSubscriptionInfoList()).thenReturn(subList);
@@ -2585,7 +2585,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mConnectivityManager).registerNetworkAgent(naCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class),
                 networkCapabilitiesCaptor.capture(),
-                anyInt(), configCaptor.capture(), anyInt());
+                any(), configCaptor.capture(), anyInt());
 
         mNetworkAgentBinder = naCaptor.getValue();
         configChecker.accept(configCaptor.getValue());
@@ -2711,7 +2711,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<INetworkAgent> agentCaptor = ArgumentCaptor.forClass(INetworkAgent.class);
         verify(mConnectivityManager).registerNetworkAgent(agentCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class), any(NetworkCapabilities.class),
-                anyInt(), any(NetworkAgentConfig.class), anyInt());
+                any(), any(NetworkAgentConfig.class), anyInt());
 
         ArrayList<Integer> thresholdsArray = new ArrayList<>();
         thresholdsArray.add(RSSI_THRESHOLD_MAX);
@@ -3347,7 +3347,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<INetworkAgent> agentCaptor = ArgumentCaptor.forClass(INetworkAgent.class);
         verify(mConnectivityManager).registerNetworkAgent(agentCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class), any(NetworkCapabilities.class),
-                anyInt(), any(NetworkAgentConfig.class), anyInt());
+                any(), any(NetworkAgentConfig.class), anyInt());
         agentCaptor.getValue()
                 .onValidationStatusChanged(NetworkAgent.VALID_NETWORK, null /* captivePortalUrl */);
         mLooper.dispatchAll();
@@ -3578,7 +3578,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<INetworkAgent> agentCaptor = ArgumentCaptor.forClass(INetworkAgent.class);
         verify(mConnectivityManager).registerNetworkAgent(agentCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class), any(NetworkCapabilities.class),
-                anyInt(), any(NetworkAgentConfig.class), anyInt());
+                any(), any(NetworkAgentConfig.class), anyInt());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
         currentNetwork.networkId = FRAMEWORK_NETWORK_ID;
@@ -3613,7 +3613,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<INetworkAgent> agentCaptor = ArgumentCaptor.forClass(INetworkAgent.class);
         verify(mConnectivityManager).registerNetworkAgent(agentCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class), any(NetworkCapabilities.class),
-                anyInt(), any(NetworkAgentConfig.class), anyInt());
+                any(), any(NetworkAgentConfig.class), anyInt());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
         currentNetwork.networkId = FRAMEWORK_NETWORK_ID;
@@ -3645,7 +3645,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<INetworkAgent> agentCaptor = ArgumentCaptor.forClass(INetworkAgent.class);
         verify(mConnectivityManager).registerNetworkAgent(agentCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class), any(NetworkCapabilities.class),
-                anyInt(), any(NetworkAgentConfig.class), anyInt());
+                any(), any(NetworkAgentConfig.class), anyInt());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
         currentNetwork.networkId = FRAMEWORK_NETWORK_ID;
@@ -3679,7 +3679,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<INetworkAgent> agentCaptor = ArgumentCaptor.forClass(INetworkAgent.class);
         verify(mConnectivityManager).registerNetworkAgent(agentCaptor.capture(),
                 any(NetworkInfo.class), any(LinkProperties.class), any(NetworkCapabilities.class),
-                anyInt(), any(NetworkAgentConfig.class), anyInt());
+                any(), any(NetworkAgentConfig.class), anyInt());
 
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
 
@@ -3730,7 +3730,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
         verify(mConnectivityManager).registerNetworkAgent(any(),
                 any(NetworkInfo.class), any(LinkProperties.class),
-                networkCapabilitiesCaptor.capture(), anyInt(), any(NetworkAgentConfig.class),
+                networkCapabilitiesCaptor.capture(), any(), any(NetworkAgentConfig.class),
                 anyInt());
 
         NetworkCapabilities networkCapabilities = networkCapabilitiesCaptor.getValue();
@@ -3768,7 +3768,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
         verify(mConnectivityManager).registerNetworkAgent(any(),
                 any(NetworkInfo.class), any(LinkProperties.class),
-                networkCapabilitiesCaptor.capture(), anyInt(), any(NetworkAgentConfig.class),
+                networkCapabilitiesCaptor.capture(), any(), any(NetworkAgentConfig.class),
                 anyInt());
 
         NetworkCapabilities networkCapabilities = networkCapabilitiesCaptor.getValue();

@@ -204,7 +204,7 @@ public class WifiScoreReportTest extends WifiBaseTest {
         when(mContext.getResources()).thenReturn(mResources);
         final ConnectivityManager cm = mock(ConnectivityManager.class);
         when(mContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(cm);
-        when(cm.registerNetworkAgent(any(), any(), any(), any(), anyInt(), any(), anyInt()))
+        when(cm.registerNetworkAgent(any(), any(), any(), any(), any(), any(), anyInt()))
                 .thenReturn(mNetwork);
         when(mNetwork.getNetId()).thenReturn(0);
         mNetworkAgent = spy(new TestNetworkAgent(mContext));
