@@ -654,6 +654,7 @@ public class HalDeviceManager {
     private IWifi mWifi;
     private IWifiRttController mIWifiRttController;
     private final WifiEventCallback mWifiEventCallback = new WifiEventCallback();
+    private final WifiEventCallbackV15 mWifiEventCallbackV15 = new WifiEventCallbackV15();
     private final Set<ManagerStatusListenerProxy> mManagerStatusListeners = new HashSet<>();
     private final Set<InterfaceRttControllerLifecycleCallbackProxy>
             mRttControllerLifecycleCallbacks = new HashSet<>();
@@ -734,6 +735,11 @@ public class HalDeviceManager {
             Log.e(TAG, "Exception getting IWifi service: " + e);
             return null;
         }
+    }
+
+    protected android.hardware.wifi.V1_5.IWifi getWifiServiceForV1_5Mockable(IWifi iWifi) {
+        if (null == iWifi) return null;
+        return android.hardware.wifi.V1_5.IWifi.castFrom(iWifi);
     }
 
     protected IServiceManager getServiceManagerMockable() {
@@ -903,7 +909,14 @@ public class HalDeviceManager {
                     return;
                 }
 
-                WifiStatus status = mWifi.registerEventCallback(mWifiEventCallback);
+                WifiStatus status;
+                android.hardware.wifi.V1_5.IWifi iWifiV15 = getWifiServiceForV1_5Mockable(mWifi);
+                if (iWifiV15 != null) {
+                    status = iWifiV15.registerEventCallback_1_5(mWifiEventCallbackV15);
+                } else {
+                    status = mWifi.registerEventCallback(mWifiEventCallback);
+                }
+
                 if (status.code != WifiStatusCode.SUCCESS) {
                     Log.e(TAG, "IWifi.registerEventCallback failed: " + statusString(status));
                     mWifi = null;
@@ -1438,6 +1451,25 @@ public class HalDeviceManager {
                     teardownInternal();
                 }
             });
+        }
+    }
+
+    private class WifiEventCallbackV15 extends
+            android.hardware.wifi.V1_5.IWifiEventCallback.Stub {
+        private final WifiEventCallback mWifiEventCallback = new WifiEventCallback();
+        @Override
+        public void onStart() throws RemoteException {
+            mWifiEventCallback.onStart();
+        }
+
+        @Override
+        public void onStop() throws RemoteException {
+            mWifiEventCallback.onStop();
+        }
+
+        @Override
+        public void onFailure(WifiStatus status) throws RemoteException {
+            mWifiEventCallback.onFailure(status);
         }
     }
 
