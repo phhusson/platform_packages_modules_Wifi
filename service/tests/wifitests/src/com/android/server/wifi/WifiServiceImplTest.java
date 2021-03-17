@@ -5302,7 +5302,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager).resetSimNetworks();
-        verify(mWifiConfigManager).stopTemporarilyDisablingAllNonCarrierMergedWifi();
+        verify(mWifiConfigManager).stopRestrictingAutoJoinToSubscriptionId();
         verify(mSimRequiredNotifier, never()).dismissSimRequiredNotification();
         verify(mWifiNetworkSuggestionsManager).resetCarrierPrivilegedApps();
         verify(mWifiConfigManager, never()).removeAllEphemeralOrPasspointConfiguredNetworks();
@@ -5330,7 +5330,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiConfigManager, never()).resetSimNetworks();
         verify(mPasspointManager, never()).resetSimPasspointNetwork();
         verify(mWifiNetworkSuggestionsManager, never()).resetSimNetworkSuggestions();
-        verify(mWifiConfigManager, never()).stopTemporarilyDisablingAllNonCarrierMergedWifi();
+        verify(mWifiConfigManager, never()).stopRestrictingAutoJoinToSubscriptionId();
         verify(mSimRequiredNotifier).dismissSimRequiredNotification();
         verify(mWifiNetworkSuggestionsManager).resetCarrierPrivilegedApps();
         verify(mWifiConfigManager, never()).removeAllEphemeralOrPasspointConfiguredNetworks();
@@ -5353,7 +5353,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager).resetSimNetworks();
-        verify(mWifiConfigManager).stopTemporarilyDisablingAllNonCarrierMergedWifi();
+        verify(mWifiConfigManager).stopRestrictingAutoJoinToSubscriptionId();
         verify(mSimRequiredNotifier).dismissSimRequiredNotification();
         verify(mWifiNetworkSuggestionsManager).resetCarrierPrivilegedApps();
         verify(mWifiConfigManager).removeEphemeralCarrierNetworks();
@@ -7174,7 +7174,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
-     * Verify startTemporarilyDisablingAllNonCarrierMergedWifi is guarded by NETWORK_SETTINGS
+     * Verify startRestrictingAutoJoinToSubscriptionId is guarded by NETWORK_SETTINGS
      * permission.
      */
     @Test
@@ -7185,7 +7185,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETUP_WIZARD),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_DENIED);
         try {
-            mWifiServiceImpl.startTemporarilyDisablingAllNonCarrierMergedWifi(1);
+            mWifiServiceImpl.startRestrictingAutoJoinToSubscriptionId(1);
             fail();
         } catch (SecurityException e) {
             // pass
@@ -7193,21 +7193,21 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
-     * Verify startTemporarilyDisablingAllNonCarrierMergedWifi works properly with permission.
+     * Verify startRestrictingAutoJoinToSubscriptionId works properly with permission.
      */
     @Test
     public void testStartTemporarilyDisablingAllNonCarrierMergedWifi() {
         assumeTrue(SdkLevel.isAtLeastS());
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETUP_WIZARD),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
-        mWifiServiceImpl.startTemporarilyDisablingAllNonCarrierMergedWifi(1);
+        mWifiServiceImpl.startRestrictingAutoJoinToSubscriptionId(1);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).startTemporarilyDisablingAllNonCarrierMergedWifi(1);
+        verify(mWifiConfigManager).startRestrictingAutoJoinToSubscriptionId(1);
         verify(mClientModeManager).disconnect();
     }
 
     /**
-     * Verify stopTemporarilyDisablingAllNonCarrierMergedWifi is guarded by NETWORK_SETTINGS
+     * Verify stopRestrictingAutoJoinToSubscriptionId is guarded by NETWORK_SETTINGS
      * and NETWORK_SETUP_WIZARD permission.
      */
     @Test
@@ -7218,7 +7218,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETUP_WIZARD),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_DENIED);
         try {
-            mWifiServiceImpl.stopTemporarilyDisablingAllNonCarrierMergedWifi();
+            mWifiServiceImpl.stopRestrictingAutoJoinToSubscriptionId();
             fail();
         } catch (SecurityException e) {
             // pass
@@ -7226,16 +7226,16 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
-     * Verify stopTemporarilyDisablingAllNonCarrierMergedWifi works properly with permission.
+     * Verify stopRestrictingAutoJoinToSubscriptionId works properly with permission.
      */
     @Test
     public void testStopTemporarilyDisablingAllNonCarrierMergedWifi() {
         assumeTrue(SdkLevel.isAtLeastS());
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
-        mWifiServiceImpl.stopTemporarilyDisablingAllNonCarrierMergedWifi();
+        mWifiServiceImpl.stopRestrictingAutoJoinToSubscriptionId();
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).stopTemporarilyDisablingAllNonCarrierMergedWifi();
+        verify(mWifiConfigManager).stopRestrictingAutoJoinToSubscriptionId();
     }
 
     /**

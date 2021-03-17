@@ -305,9 +305,9 @@ interface IWifiManager
 
     boolean isAutoWakeupEnabled();
 
-    void startTemporarilyDisablingAllNonCarrierMergedWifi(int subId);
+    void startRestrictingAutoJoinToSubscriptionId(int subId);
 
-    void stopTemporarilyDisablingAllNonCarrierMergedWifi();
+    void stopRestrictingAutoJoinToSubscriptionId();
 
     void setCarrierNetworkOffloadEnabled(int subscriptionId, boolean merged, boolean enabled);
 

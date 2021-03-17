@@ -455,7 +455,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiConfigManager.resetSimNetworks();
                 mWifiNetworkSuggestionsManager.resetSimNetworkSuggestions();
                 mPasspointManager.resetSimPasspointNetwork();
-                mWifiConfigManager.stopTemporarilyDisablingAllNonCarrierMergedWifi();
+                mWifiConfigManager.stopRestrictingAutoJoinToSubscriptionId();
             }
 
             // do additional handling if we are current connected to a sim auth network
@@ -2854,12 +2854,12 @@ public class WifiServiceImpl extends BaseWifiService {
 
     /**
      * See
-     * {@link android.net.wifi.WifiManager#startTemporarilyDisablingAllNonCarrierMergedWifi(int)}
+     * {@link android.net.wifi.WifiManager#startRestrictingAutoJoinToSubscriptionId(int)}
      * @param subscriptionId the subscription ID of the carrier whose merged wifi networks won't be
      *                       disabled.
      */
     @Override
-    public void startTemporarilyDisablingAllNonCarrierMergedWifi(int subscriptionId) {
+    public void startRestrictingAutoJoinToSubscriptionId(int subscriptionId) {
         if (!SdkLevel.isAtLeastS()) {
             throw new UnsupportedOperationException();
         }
@@ -2867,11 +2867,11 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new SecurityException(TAG + ": Permission denied");
         }
 
-        mLog.info("startTemporarilyDisablingAllNonCarrierMergedWifi=% uid=%").c(subscriptionId)
+        mLog.info("startRestrictingAutoJoinToSubscriptionId=% uid=%").c(subscriptionId)
                 .c(Binder.getCallingUid()).flush();
         mWifiThreadRunner.post(() -> {
             mWifiConfigManager
-                    .startTemporarilyDisablingAllNonCarrierMergedWifi(subscriptionId);
+                    .startRestrictingAutoJoinToSubscriptionId(subscriptionId);
             // always disconnect here and rely on auto-join to find the appropriate carrier network
             // to join. Even if we are currently connected to the carrier-merged wifi, it's still
             // better to disconnect here because it's possible that carrier wifi offload is
@@ -2881,10 +2881,10 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
-     * See {@link android.net.wifi.WifiManager#stopTemporarilyDisablingAllNonCarrierMergedWifi()}
+     * See {@link android.net.wifi.WifiManager#stopRestrictingAutoJoinToSubscriptionId()}
      */
     @Override
-    public void stopTemporarilyDisablingAllNonCarrierMergedWifi() {
+    public void stopRestrictingAutoJoinToSubscriptionId() {
         if (!SdkLevel.isAtLeastS()) {
             throw new UnsupportedOperationException();
         }
@@ -2892,10 +2892,10 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new SecurityException(TAG + ": Permission denied");
         }
 
-        mLog.info("stopTemporarilyDisablingAllNonCarrierMergedWifi uid=%")
+        mLog.info("stopRestrictingAutoJoinToSubscriptionId uid=%")
                 .c(Binder.getCallingUid()).flush();
         mWifiThreadRunner.post(() ->
-                mWifiConfigManager.stopTemporarilyDisablingAllNonCarrierMergedWifi());
+                mWifiConfigManager.stopRestrictingAutoJoinToSubscriptionId());
     }
 
     /**
