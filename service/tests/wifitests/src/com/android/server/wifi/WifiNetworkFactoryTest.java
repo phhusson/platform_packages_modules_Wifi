@@ -2167,11 +2167,11 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         // set wifi off.
         mWifiNetworkFactory.setWifiState(false);
-        assertFalse(mWifiNetworkFactory.acceptRequest(mNetworkRequest, 0));
+        assertFalse(mWifiNetworkFactory.acceptRequest(mNetworkRequest));
 
         // set wifi on.
         mWifiNetworkFactory.setWifiState(true);
-        assertTrue(mWifiNetworkFactory.acceptRequest(mNetworkRequest, 0));
+        assertTrue(mWifiNetworkFactory.acceptRequest(mNetworkRequest));
     }
 
     /**
