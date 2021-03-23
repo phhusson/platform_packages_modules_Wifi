@@ -244,7 +244,7 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public void restartWifiSubsystem(String reason) {
+    public void restartWifiSubsystem() {
         throw new UnsupportedOperationException();
     }
 
