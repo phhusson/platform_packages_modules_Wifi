@@ -3881,13 +3881,11 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         verify(mWifiScoreCard, times(1)).resetConnectionState();
         verify(mWifiScoreCard, never()).noteWifiDisabled(any());
-        verify(mWifiHealthMonitor, never()).setWifiEnabled(false);
 
         // disabling while disconnected should note wifi disabled
         mCmi.stop();
         mLooper.dispatchAll();
         verify(mWifiScoreCard, times(2)).resetConnectionState();
-        verify(mWifiHealthMonitor).setWifiEnabled(false);
     }
 
     /**
@@ -3899,7 +3897,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         connect();
         mLooper.dispatchAll();
         verify(mWifiScoreCard, never()).noteWifiDisabled(any());
-        verify(mWifiHealthMonitor, never()).setWifiEnabled(false);
 
         // disabling while connected should note wifi disabled
         mCmi.stop();
@@ -3907,7 +3904,6 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         verify(mWifiScoreCard).noteWifiDisabled(any());
         verify(mWifiScoreCard).resetConnectionState();
-        verify(mWifiHealthMonitor).setWifiEnabled(false);
     }
 
     /**

@@ -3449,7 +3449,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             mWifiMetrics.setWifiState(WifiMetricsProto.WifiLog.WIFI_DISCONNECTED);
             mWifiMetrics.logStaEvent(mInterfaceName, StaEvent.TYPE_WIFI_ENABLED);
             mWifiScoreCard.noteSupplicantStateChanged(mWifiInfo);
-            mWifiHealthMonitor.setWifiEnabled(true);
             mWifiDataStall.init();
         }
 
@@ -3462,7 +3461,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (!mWifiNative.removeAllNetworks(mInterfaceName)) {
                 loge("Failed to remove networks on exiting connect mode");
             }
-            mWifiHealthMonitor.setWifiEnabled(false);
             mWifiDataStall.reset();
 
             mContext.unregisterReceiver(mScreenStateChangeReceiver);

@@ -418,9 +418,6 @@ public class WifiInjector {
         mWifiMetrics.setWifiDataStall(mWifiDataStall);
         mLinkProbeManager = new LinkProbeManager(mClock, mWifiNative, mWifiMetrics,
                 mFrameworkFacade, wifiHandler, mContext);
-        mWifiHealthMonitor = new WifiHealthMonitor(mContext, this, mClock, mWifiConfigManager,
-                mWifiScoreCard, wifiHandler, mWifiNative, l2KeySeed, mDeviceConfigFacade);
-        mWifiMetrics.setWifiHealthMonitor(mWifiHealthMonitor);
         mDefaultClientModeManager = new DefaultClientModeManager();
         mExternalScoreUpdateObserverProxy =
                 new ExternalScoreUpdateObserverProxy(mWifiThreadRunner);
@@ -430,6 +427,10 @@ public class WifiInjector {
                 mWifiNative, mDefaultClientModeManager, mBatteryStats, mWifiDiagnostics,
                 mContext, mSettingsStore, mFrameworkFacade, mWifiPermissionsUtil, mWifiMetrics,
                 mExternalScoreUpdateObserverProxy, mDppManager);
+        mWifiHealthMonitor = new WifiHealthMonitor(mContext, this, mClock, mWifiConfigManager,
+            mWifiScoreCard, wifiHandler, mWifiNative, l2KeySeed, mDeviceConfigFacade,
+            mActiveModeWarden);
+        mWifiMetrics.setWifiHealthMonitor(mWifiHealthMonitor);
         mWifiP2pConnection = new WifiP2pConnection(mContext, wifiLooper, mActiveModeWarden);
         mConnectHelper = new ConnectHelper(mActiveModeWarden, mWifiConfigManager);
         mBroadcastQueue = new ClientModeManagerBroadcastQueue(mActiveModeWarden, mContext);
