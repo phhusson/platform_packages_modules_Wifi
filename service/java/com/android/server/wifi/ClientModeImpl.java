@@ -6270,6 +6270,14 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mWifiScoreReport.dump(fd, pw, args);
     }
 
+    /**
+     * Notifies changes in data connectivity of the default data SIM.
+     */
+    @Override
+    public void onCellularConnectivityChanged(@WifiDataStall.CellularDataStatusCode int status) {
+        mWifiConfigManager.onCellularConnectivityChanged(status);
+    }
+
     @Override
     public void setMboCellularDataStatus(boolean available) {
         mWifiNative.setMboCellularDataStatus(mInterfaceName, available);
