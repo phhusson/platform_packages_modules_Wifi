@@ -48,6 +48,7 @@ import android.net.DhcpInfo;
 import android.net.DhcpResultsParcelable;
 import android.net.InetAddresses;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkStack;
 import android.net.Uri;
 import android.net.ip.IpClientUtil;
@@ -76,7 +77,6 @@ import android.net.wifi.WifiManager.LocalOnlyHotspotCallback;
 import android.net.wifi.WifiManager.SuggestionConnectionStatusListener;
 import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiScanner;
-import android.net.wifi.WifiSsid;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
@@ -2672,40 +2672,20 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         long ident = Binder.clearCallingIdentity();
         try {
-            WifiInfo result = mClientModeImpl.syncRequestConnectionInfo();
-            boolean hideDefaultMacAddress = true;
-            boolean hideBssidSsidNetworkIdAndFqdn = true;
-
+            WifiInfo wifiInfo = mClientModeImpl.syncRequestConnectionInfo();
+            long redactions = wifiInfo.getApplicableRedactions();
+            if (mWifiPermissionsUtil.checkLocalMacAddressPermission(uid)) {
+                redactions &= ~NetworkCapabilities.REDACT_FOR_LOCAL_MAC_ADDRESS;
+            }
+            if (mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)) {
+                redactions &= ~NetworkCapabilities.REDACT_FOR_NETWORK_SETTINGS;
+            }
             try {
-                if (mWifiInjector.getWifiPermissionsWrapper().getLocalMacAddressPermission(uid)
-                        == PERMISSION_GRANTED) {
-                    hideDefaultMacAddress = false;
-                }
                 mWifiPermissionsUtil.enforceCanAccessScanResults(callingPackage, callingFeatureId,
                         uid, null);
-                hideBssidSsidNetworkIdAndFqdn = false;
-            } catch (SecurityException ignored) {
-            }
-            if (hideDefaultMacAddress) {
-                result.setMacAddress(WifiInfo.DEFAULT_MAC_ADDRESS);
-            }
-            if (hideBssidSsidNetworkIdAndFqdn) {
-                result.setBSSID(WifiInfo.DEFAULT_MAC_ADDRESS);
-                result.setSSID(WifiSsid.createFromHex(null));
-                result.setNetworkId(WifiConfiguration.INVALID_NETWORK_ID);
-                result.setFQDN(null);
-                result.setProviderFriendlyName(null);
-                result.setPasspointUniqueId(null);
-            }
-
-            if (mVerboseLoggingEnabled
-                    && (hideBssidSsidNetworkIdAndFqdn || hideDefaultMacAddress)) {
-                mLog.v("getConnectionInfo: hideBssidSsidAndNetworkId="
-                        + hideBssidSsidNetworkIdAndFqdn
-                        + ", hideDefaultMacAddress="
-                        + hideDefaultMacAddress);
-            }
-            return result;
+                redactions &= ~NetworkCapabilities.REDACT_FOR_ACCESS_FINE_LOCATION;
+            } catch (SecurityException ignored) { }
+            return wifiInfo.makeCopy(redactions);
         } finally {
             Binder.restoreCallingIdentity(ident);
         }
