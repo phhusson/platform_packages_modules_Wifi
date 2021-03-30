@@ -3859,10 +3859,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             builder.removeCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED);
         }
         if (SdkLevel.isAtLeastS()) {
-            if (mWifiInfo.isOemPaid()
-                    // TODO(b/177373513): hack to match OEM_PAID NetworkRequest for Make Before
-                    //  Break
-                    || mClientModeManager.getRole() == ROLE_CLIENT_SECONDARY_TRANSIENT) {
+            if (mWifiInfo.isOemPaid()) {
                 builder.addCapability(NetworkCapabilities.NET_CAPABILITY_OEM_PAID);
             } else {
                 builder.removeCapability(NetworkCapabilities.NET_CAPABILITY_OEM_PAID);
