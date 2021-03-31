@@ -585,12 +585,11 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiInjector.getWifiGlobals()).thenReturn(mWifiGlobals);
         when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(true);
         when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
-        when(mWifiInjector.makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(), any()))
+        when(mWifiInjector.makeWifiNetworkAgent(any(), any(), any(), any(), any()))
                 .thenAnswer(new AnswerWithArguments() {
                     public WifiNetworkAgent answer(
                             @NonNull NetworkCapabilities nc,
                             @NonNull LinkProperties linkProperties,
-                            int score,
                             @NonNull NetworkAgentConfig naConfig,
                             @Nullable NetworkProvider provider,
                             @NonNull WifiNetworkAgent.Callback callback) {
@@ -2766,7 +2765,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiInjector).makeWifiNetworkAgent(
                 networkCapabilitiesCaptor.capture(),
                 any(),
-                anyInt(),
                 configCaptor.capture(),
                 any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
@@ -2875,7 +2873,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         // Simulate the first connection.
         connect();
 
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         ArrayList<Integer> thresholdsArray = new ArrayList<>();
@@ -2948,7 +2946,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<NetworkCapabilities> networkCapabilitiesCaptor =
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
         verify(mWifiInjector).makeWifiNetworkAgent(
-                networkCapabilitiesCaptor.capture(), any(), anyInt(), any(), any(), any());
+                networkCapabilitiesCaptor.capture(), any(), any(), any(), any());
         NetworkCapabilities networkCapabilities = networkCapabilitiesCaptor.getValue();
         assertNotNull(networkCapabilities);
         assertEquals(-42, mWifiInfo.getRssi());
@@ -3813,7 +3811,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 .setCandidate(getGoogleGuestScanDetail(TEST_RSSI, TEST_BSSID_STR1, sFreq)
                         .getScanResult());
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
                 NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
@@ -3972,7 +3970,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiNative.signalPoll(any())).thenReturn(signalPollResult);
 
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
@@ -4004,7 +4002,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Test
     public void mbb_internetValidationError_expectDisconnect() throws Exception {
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         // Make Before Break CMM
@@ -4022,7 +4020,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Test
     public void captivePortalDetected_notifiesCmiMonitor() throws Exception {
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         // captive portal detected
@@ -4039,7 +4037,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     public void internetValidationFailure_userSelectedRecently_expectNotDisabled()
             throws Exception {
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
@@ -4072,7 +4070,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     public void internetValidationFailure_userSelectedTooLongAgo_expectTemporarilyDisabled()
             throws Exception {
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
@@ -4106,7 +4104,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     public void noInternetExpectedNetwork_internetValidationFailure_notUserSelected_expectNotDisabled()
             throws Exception {
         connect();
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         WifiConfiguration currentNetwork = new WifiConfiguration();
@@ -4182,7 +4180,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiBlocklistMonitor, never()).handleNetworkValidationSuccess(
                 TEST_BSSID_STR, TEST_SSID);
 
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
@@ -4224,7 +4222,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mWifiBlocklistMonitor).handleDhcpProvisioningSuccess(TEST_BSSID_STR, TEST_SSID);
         verify(mWifiBlocklistMonitor, never())
                 .handleNetworkValidationSuccess(TEST_BSSID_STR, TEST_SSID);
-        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), anyInt(), any(), any(),
+        verify(mWifiInjector).makeWifiNetworkAgent(any(), any(), any(), any(),
                 mWifiNetworkAgentCallbackCaptor.capture());
 
         when(mWifiConfigManager.getLastSelectedNetwork()).thenReturn(FRAMEWORK_NETWORK_ID + 1);
@@ -4293,7 +4291,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         ArgumentCaptor<NetworkCapabilities> networkCapabilitiesCaptor =
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
         verify(mWifiInjector).makeWifiNetworkAgent(
-                networkCapabilitiesCaptor.capture(), any(), anyInt(), any(), any(), any());
+                networkCapabilitiesCaptor.capture(), any(), any(), any(), any());
 
         NetworkCapabilities networkCapabilities = networkCapabilitiesCaptor.getValue();
         assertNotNull(networkCapabilities);
@@ -4329,7 +4327,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(NetworkCapabilities.class);
 
         verify(mWifiInjector).makeWifiNetworkAgent(
-                networkCapabilitiesCaptor.capture(), any(), anyInt(), any(), any(), any());
+                networkCapabilitiesCaptor.capture(), any(), any(), any(), any());
 
         NetworkCapabilities networkCapabilities = networkCapabilitiesCaptor.getValue();
         assertNotNull(networkCapabilities);
@@ -6252,6 +6250,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
         mCmi.onRoleChanged();
         verify(mWifiNative).installPacketFilter(WIFI_IFACE_NAME, filter);
+        verify(mWifiScoreReport).onRoleChanged(ROLE_CLIENT_PRIMARY);
     }
 
 

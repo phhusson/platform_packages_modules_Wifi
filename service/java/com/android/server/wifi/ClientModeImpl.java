@@ -614,13 +614,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     @Nullable
     private WifiVcnNetworkPolicyChangeListener mVcnPolicyChangeListener;
 
-    /**
-     * Whether this ClientModeImpl is in lingering mode. When in lingering mode, the ClientModeImpl
-     * will automatically stop its owner {@link ClientModeManager} upon disconnecting from its
-     * current Wifi network (i.e. exiting {@link L2ConnectedState}.
-     */
-    private boolean mLingering = false;
-
     /** NETWORK_NOT_FOUND_EVENT event counter */
     private int mNetworkNotFoundEventCount = 0;
 
@@ -791,6 +784,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
         // Start the StateMachine
         start();
+
+        // update with initial role for ConcreteClientModeManager
+        onRoleChanged();
     }
 
     private static final int[] WIFI_MONITOR_EVENTS = {
@@ -4757,7 +4753,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 Log.wtf(getTag(), "mNetworkAgent is not null: " + mNetworkAgent);
                 mNetworkAgent.unregister();
             }
-            mNetworkAgent = mWifiInjector.makeWifiNetworkAgent(nc, mLinkProperties, 60, naConfig,
+            mNetworkAgent = mWifiInjector.makeWifiNetworkAgent(nc, mLinkProperties, naConfig,
                     mNetworkFactory.getProvider(), new WifiNetworkAgentCallback());
             mWifiScoreReport.setNetworkAgent(mNetworkAgent);
 
@@ -6317,7 +6313,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      * Invoked by parent ConcreteClientModeManager whenever a role change occurs.
      */
     public void onRoleChanged() {
-        if (mClientModeManager.getRole() == ROLE_CLIENT_PRIMARY) {
+        ClientRole role = mClientModeManager.getRole();
+        if (role == ROLE_CLIENT_PRIMARY) {
             applyCachedPacketFilter();
             if (mScreenOn) {
                 // Start RSSI polling for the new primary network to enable scoring.
@@ -6335,6 +6332,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             // Update capabilities after a role change.
             updateCapabilities(connectedNetwork);
         }
+        mWifiScoreReport.onRoleChanged(role);
     }
 
     private void addPasspointInfoToLinkProperties(LinkProperties linkProperties) {
