@@ -2532,7 +2532,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
 
         if (!ScanResultUtil.validateScanResultList(scanResults)) {
-            Log.e(TAG, "Attempt to retrieve OsuProviders with invalid scanResult List");
+            Log.w(TAG, "Attempt to retrieve OsuProviders with invalid scanResult List");
             return Collections.emptyMap();
         }
         return mWifiThreadRunner.call(
@@ -2585,7 +2585,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     Binder.getCallingUid()).flush();
         }
         if (!ScanResultUtil.validateScanResultList(scanResults)) {
-            Log.e(TAG, "Attempt to retrieve WifiConfiguration with invalid scanResult List");
+            Log.w(TAG, "Attempt to retrieve WifiConfiguration with invalid scanResult List");
             return new ArrayList<>();
         }
         return mWifiThreadRunner.call(
@@ -5210,7 +5210,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("getMatchingPasspointConfigurations uid=%").c(Binder.getCallingUid()).flush();
         }
         if (!ScanResultUtil.validateScanResultList(scanResults)) {
-            Log.e(TAG, "Attempt to retrieve passpoint with invalid scanResult List");
+            Log.w(TAG, "Attempt to retrieve passpoint with invalid scanResult List");
             return Collections.emptyList();
         }
         return mWifiThreadRunner.call(
