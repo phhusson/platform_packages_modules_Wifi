@@ -367,6 +367,7 @@ public class WifiServiceImpl extends BaseWifiService {
             if (!mWifiConfigManager.loadFromStore()) {
                 Log.e(TAG, "Failed to load from config store");
             }
+            mWifiConfigManager.incrementNumRebootsSinceLastUse();
             // config store is read, check if verbose logging is enabled.
             enableVerboseLoggingInternal(
                     mWifiInjector.getSettingsConfigStore().get(WIFI_VERBOSE_LOGGING_ENABLED)
@@ -604,7 +605,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 return false;
             }
         } catch (SecurityException e) {
-            Log.e(TAG, "Permission violation - startScan not allowed for"
+            Log.w(TAG, "Permission violation - startScan not allowed for"
                     + " uid=" + callingUid + ", packageName=" + packageName + ", reason=" + e);
             return false;
         } finally {
@@ -2441,7 +2442,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiPermissionsUtil.enforceCanAccessScanResults(packageName, featureId,
                         callingUid, null);
             } catch (SecurityException e) {
-                Log.e(TAG, "Permission violation - getConfiguredNetworks not allowed for uid="
+                Log.w(TAG, "Permission violation - getConfiguredNetworks not allowed for uid="
                         + callingUid + ", packageName=" + packageName + ", reason=" + e);
                 return new ParceledListSlice<>(new ArrayList<>());
             } finally {
@@ -2500,7 +2501,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mWifiPermissionsUtil.enforceCanAccessScanResults(packageName, featureId, callingUid,
                     null);
         } catch (SecurityException e) {
-            Log.e(TAG, "Permission violation - getPrivilegedConfiguredNetworks not allowed for"
+            Log.w(TAG, "Permission violation - getPrivilegedConfiguredNetworks not allowed for"
                     + " uid=" + callingUid + ", packageName=" + packageName + ", reason=" + e);
             return null;
         } finally {
@@ -2532,7 +2533,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
 
         if (!ScanResultUtil.validateScanResultList(scanResults)) {
-            Log.e(TAG, "Attempt to retrieve OsuProviders with invalid scanResult List");
+            Log.w(TAG, "Attempt to retrieve OsuProviders with invalid scanResult List");
             return Collections.emptyMap();
         }
         return mWifiThreadRunner.call(
@@ -2585,7 +2586,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     Binder.getCallingUid()).flush();
         }
         if (!ScanResultUtil.validateScanResultList(scanResults)) {
-            Log.e(TAG, "Attempt to retrieve WifiConfiguration with invalid scanResult List");
+            Log.w(TAG, "Attempt to retrieve WifiConfiguration with invalid scanResult List");
             return new ArrayList<>();
         }
         return mWifiThreadRunner.call(
@@ -3090,7 +3091,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     mScanRequestProxy::getScanResults, Collections.emptyList());
             return scanResults;
         } catch (SecurityException e) {
-            Log.e(TAG, "Permission violation - getScanResults not allowed for uid="
+            Log.w(TAG, "Permission violation - getScanResults not allowed for uid="
                     + uid + ", packageName=" + callingPackage + ", reason=" + e);
             return new ArrayList<>();
         } finally {
@@ -3129,7 +3130,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     },
                     Collections.emptyMap());
         } catch (SecurityException e) {
-            Log.e(TAG, "Permission violation - getMatchingScanResults not allowed for uid="
+            Log.w(TAG, "Permission violation - getMatchingScanResults not allowed for uid="
                     + uid + ", packageName=" + callingPackage + ", reason + e");
         } finally {
             Binder.restoreCallingIdentity(ident);
@@ -5210,7 +5211,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("getMatchingPasspointConfigurations uid=%").c(Binder.getCallingUid()).flush();
         }
         if (!ScanResultUtil.validateScanResultList(scanResults)) {
-            Log.e(TAG, "Attempt to retrieve passpoint with invalid scanResult List");
+            Log.w(TAG, "Attempt to retrieve passpoint with invalid scanResult List");
             return Collections.emptyList();
         }
         return mWifiThreadRunner.call(
