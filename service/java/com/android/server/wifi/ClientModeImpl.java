@@ -1210,6 +1210,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             long mRxPkts = mFacade.getRxPackets(mInterfaceName);
             mWifiInfo.updatePacketRates(mTxPkts, mRxPkts, mLastLinkLayerStatsUpdate);
         }
+        mWifiMetrics.incrementWifiLinkLayerUsageStats(stats);
         return stats;
     }
 
@@ -5118,7 +5119,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 mWifiScoreReport.noteIpCheck();
             }
 
-            mWifiMetrics.incrementWifiLinkLayerUsageStats(stats);
             mLastLinkLayerStats = stats;
             return stats;
         }
