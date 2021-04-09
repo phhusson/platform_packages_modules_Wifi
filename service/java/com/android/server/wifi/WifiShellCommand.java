@@ -1221,7 +1221,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         + PhysicalChannelConfig.CELL_BANDWIDTH_UNKNOWN);
             }
             cellChannels.add(new CoexUtils.CoexCellChannel(rat, band,
-                    downlinkFreqKhz, downlinkBandwidthKhz, uplinkFreqKhz, uplinkBandwidthKhz));
+                    downlinkFreqKhz, downlinkBandwidthKhz, uplinkFreqKhz, uplinkBandwidthKhz,
+                    SubscriptionManager.INVALID_SUBSCRIPTION_ID));
         }
         return cellChannels;
     }
