@@ -993,7 +993,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             // The current connected or connecting network has been removed, trigger a disconnect.
             if (config.networkId == mTargetNetworkId || config.networkId == mLastNetworkId) {
                 // Disconnect and let autojoin reselect a new network
-                sendMessage(CMD_DISCONNECT);
+                sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_NETWORK_REMOVED);
             } else {
                 WifiConfiguration currentConfig = getConnectedWifiConfiguration();
                 if (currentConfig != null && currentConfig.isLinked(config)) {
@@ -1033,7 +1033,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             // If metered->unmetered update capabilities.
             if (isMetered) {
                 Log.w(getTag(), "Network marked metered, triggering disconnect");
-                sendMessage(CMD_DISCONNECT);
+                sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_NETWORK_METERED);
             } else {
                 Log.i(getTag(), "Network marked unmetered, triggering capabilities update");
                 updateCapabilities(newConfig);
@@ -1045,7 +1045,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (disableReason == DISABLED_NO_INTERNET_TEMPORARY) return;
             if (config.networkId == mTargetNetworkId || config.networkId == mLastNetworkId) {
                 // Disconnect and let autojoin reselect a new network
-                sendMessage(CMD_DISCONNECT);
+                sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_NETWORK_TEMPORARY_DISABLED);
             }
 
         }
@@ -1059,7 +1059,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (disableReason == DISABLED_NO_INTERNET_PERMANENT) return;
             if (config.networkId == mTargetNetworkId || config.networkId == mLastNetworkId) {
                 // Disconnect and let autojoin reselect a new network
-                sendMessage(CMD_DISCONNECT);
+                sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_NETWORK_PERMANENT_DISABLED);
             }
         }
     }
@@ -1078,7 +1078,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (configuration.subscriptionId == subscriptionId
                     && configuration.carrierMerged == merged) {
                 Log.i(getTag(), "Carrier network offload disabled, triggering disconnect");
-                sendMessage(CMD_DISCONNECT);
+                sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_CARRIER_OFFLOAD_DISABLED);
             }
         }
     }
@@ -1478,7 +1478,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      * Disconnect from Access Point
      */
     public void disconnect() {
-        sendMessage(CMD_DISCONNECT);
+        sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_GENERIC);
     }
 
     /**
@@ -3692,7 +3692,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (mTermsAndConditionsUrl == null) {
                         loge("Disconnecting from Passpoint network due to an issue with the "
                                 + "Terms and Conditions URL");
-                        sendMessage(CMD_DISCONNECT);
+                        sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_PASSPOINT_TAC);
                     }
                     break;
                 case WifiMonitor.HS20_REMEDIATION_EVENT:
@@ -3932,7 +3932,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         final VcnNetworkPolicyResult vcnNetworkPolicy =
                 mVcnManager.applyVcnNetworkPolicy(networkCapabilities, mLinkProperties);
         if (vcnNetworkPolicy.isTeardownRequested()) {
-            sendMessage(CMD_DISCONNECT);
+            sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_VCN_REQUEST);
         }
         return vcnNetworkPolicy.getNetworkCapabilities();
     }
@@ -4257,7 +4257,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (config == null) {
                         logw("Connected to unknown networkId " + mLastNetworkId
                                 + ", disconnecting...");
-                        sendMessage(CMD_DISCONNECT);
+                        sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_UNKNOWN_NETWORK);
                         break;
                     }
                     mWifiInfo.setBSSID(mLastBssid);
@@ -4368,7 +4368,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 }
                 case CMD_DISCONNECT: {
                     mWifiMetrics.logStaEvent(mInterfaceName, StaEvent.TYPE_FRAMEWORK_DISCONNECT,
-                            StaEvent.DISCONNECT_GENERIC);
+                            message.arg1);
                     mWifiNative.disconnect(mInterfaceName);
                     break;
                 }

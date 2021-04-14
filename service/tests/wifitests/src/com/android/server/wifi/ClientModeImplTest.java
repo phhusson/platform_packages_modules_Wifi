@@ -1133,6 +1133,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mWifiNative, times(2)).removeAllNetworks(WIFI_IFACE_NAME);
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_RESET_SIM_NETWORKS));
     }
 
     /**
@@ -1828,6 +1830,8 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         verify(mWifiNative).removeNetworkCachedData(FRAMEWORK_NETWORK_ID);
         verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_NETWORK_REMOVED));
 
         when(mWifiConfigManager.getConfiguredNetwork(FRAMEWORK_NETWORK_ID)).thenReturn(null);
         DisconnectEventInfo disconnectEventInfo =
@@ -5231,6 +5235,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         mConfigUpdateListenerCaptor.getValue().onNetworkUpdated(mConnectedNetwork, oldConfig);
         mLooper.dispatchAll();
         verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_NETWORK_METERED));
     }
 
     /**
@@ -5988,6 +5994,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         verify(mPasspointManager).handleTermsAndConditionsEvent(eq(wnmData),
                 any(WifiConfiguration.class));
         verify(mWifiNative).disconnect(eq(WIFI_IFACE_NAME));
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_PASSPOINT_TAC));
     }
 
     /**
@@ -6116,6 +6124,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         inOrder.verify(vcnUnderlyingNetworkPolicy).isTeardownRequested();
         inOrder.verify(vcnUnderlyingNetworkPolicy).getNetworkCapabilities();
         verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_VCN_REQUEST));
         DisconnectEventInfo disconnectEventInfo =
                 new DisconnectEventInfo(TEST_SSID, TEST_BSSID_STR, 0, false);
         mCmi.sendMessage(WifiMonitor.NETWORK_DISCONNECTION_EVENT, disconnectEventInfo);
@@ -6187,6 +6197,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_CARRIER_OFFLOAD_DISABLED));
     }
 
     /**
