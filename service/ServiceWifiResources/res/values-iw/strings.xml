@@ -32,7 +32,7 @@
     <string name="wifi_suggestion_action_allow_app" msgid="7757859972144671588">"אישור"</string>
     <string name="wifi_suggestion_action_disallow_app" msgid="4565857699629860726">"לא תודה"</string>
     <string name="wifi_suggestion_imsi_privacy_title" msgid="8969261812845304079">"‏האם להתחבר ל-Wi-Fi של <xliff:g id="CARRIERNAME">%s</xliff:g>?"</string>
-    <string name="wifi_suggestion_imsi_privacy_content" msgid="4266931269306079184">"‏רשתות אלה מקבלות מזהה SIM שיכול לשמש למעקב אחר מיקום של מכשיר"</string>
+    <string name="wifi_suggestion_imsi_privacy_content" msgid="4266931269306079184">"‏הרשתות האלה מקבלות מזהה SIM שיכול לשמש למעקב אחר מיקום של מכשיר"</string>
     <string name="wifi_suggestion_action_allow_imsi_privacy_exemption_carrier" msgid="3888538126440442636">"חיבור"</string>
     <string name="wifi_suggestion_action_disallow_imsi_privacy_exemption_carrier" msgid="3225397664735676024">"אין להתחבר"</string>
     <string name="wifi_suggestion_imsi_privacy_exemption_confirmation_title" msgid="4407415300707014525">"לאשר את ההתחברות?"</string>
@@ -41,16 +41,16 @@
     <string name="wifi_suggestion_action_disallow_imsi_privacy_exemption_confirmation" msgid="5156881939985876066">"אין להתחבר"</string>
     <string name="wifi_wakeup_onboarding_title" msgid="3868826648004934540">"‏ה-Wi-Fi יופעל אוטומטית"</string>
     <string name="wifi_wakeup_onboarding_subtext" msgid="5705886295837387430">"כשנמצאים בקרבת רשת באיכות גבוהה שנשמרה"</string>
-    <string name="wifi_wakeup_onboarding_action_disable" msgid="6209706680391785825">"אל תפעיל שוב"</string>
+    <string name="wifi_wakeup_onboarding_action_disable" msgid="6209706680391785825">"אין להפעיל שוב"</string>
     <string name="wifi_wakeup_enabled_title" msgid="5043486751612595850">"‏רשת Wi‑Fi הופעלה אוטומטית"</string>
     <string name="wifi_wakeup_enabled_content" msgid="3911262526267025882">"המיקום הנוכחי שלך הוא בקרבת הרשת השמורה: <xliff:g id="NETWORK_SSID">%1$s</xliff:g>"</string>
     <string name="wifi_watchdog_network_disabled" msgid="5769226742956006362">"‏אין אפשרות להתחבר ל-Wi-Fi"</string>
-    <string name="wifi_watchdog_network_disabled_detailed" msgid="1725243835135539125">" בעל חיבור גרוע לאינטרנט."</string>
+    <string name="wifi_watchdog_network_disabled_detailed" msgid="1725243835135539125">" – חיבור גרוע לאינטרנט."</string>
     <string name="wifi_connect_alert_title" msgid="2368200646665663612">"האם להתיר את החיבור?"</string>
     <string name="wifi_connect_alert_message" msgid="7226456300982080746">"‏האפליקציה %1$s מנסה להתחבר אל רשת ה-Wi-Fi ‏%2$s"</string>
     <string name="wifi_connect_default_application" msgid="8917703737222707062">"אפליקציה"</string>
     <string name="accept" msgid="8346431649376483879">"אישור"</string>
-    <string name="decline" msgid="4172251727603762084">"דחה"</string>
+    <string name="decline" msgid="4172251727603762084">"דחייה"</string>
     <string name="ok" msgid="847575529546290102">"אישור"</string>
     <string name="wifi_p2p_invitation_sent_title" msgid="6552639940428040869">"ההזמנה נשלחה"</string>
     <string name="wifi_p2p_invitation_to_connect_title" msgid="8917157937652519251">"הזמנה להתחבר"</string>
