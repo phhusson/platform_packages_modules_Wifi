@@ -4523,7 +4523,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     } else if (reasonCode == WifiManager.ERROR_AUTH_FAILURE_EAP_FAILURE) {
                         if (targetedNetwork != null && targetedNetwork.enterpriseConfig != null
                                 && targetedNetwork.enterpriseConfig.isAuthenticationSimBased()) {
-                            if (mEapFailureNotifier.onEapFailure(errorCode, targetedNetwork)) {
+                            // only show EAP failure notification if primary
+                            if (mEapFailureNotifier
+                                    .onEapFailure(errorCode, targetedNetwork, isPrimary())) {
                                 disableReason = WifiConfiguration.NetworkSelectionStatus
                                     .DISABLED_AUTHENTICATION_PRIVATE_EAP_ERROR;
                                 mWifiBlocklistMonitor.loadCarrierConfigsForDisableReasonInfos();

@@ -2058,7 +2058,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mEapFailureNotifier).onEapFailure(
-                WifiNative.EAP_SIM_VENDOR_SPECIFIC_CERT_EXPIRED, config);
+                WifiNative.EAP_SIM_VENDOR_SPECIFIC_CERT_EXPIRED, config, true);
         verify(mDataTelephonyManager).resetCarrierKeysForImsiEncryption();
         mockSession.finishMocking();
         verify(mDeviceConfigFacade).isAbnormalConnectionFailureBugreportEnabled();
@@ -5904,7 +5904,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         config.getNetworkSelectionStatus().setHasEverConnected(true);
         config.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
         when(mWifiConfigManager.getConfiguredNetwork(anyInt())).thenReturn(config);
-        when(mEapFailureNotifier.onEapFailure(anyInt(), eq(config))).thenReturn(true);
+        when(mEapFailureNotifier.onEapFailure(anyInt(), eq(config), anyBoolean())).thenReturn(true);
 
         mCmi.sendMessage(WifiMonitor.AUTHENTICATION_FAILURE_EVENT,
                 WifiManager.ERROR_AUTH_FAILURE_EAP_FAILURE,
@@ -5912,8 +5912,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         );
         mLooper.dispatchAll();
 
-        verify(mEapFailureNotifier).onEapFailure(
-                DEFINED_ERROR_CODE, config);
+        verify(mEapFailureNotifier).onEapFailure(DEFINED_ERROR_CODE, config, true);
         verify(mWifiBlocklistMonitor).loadCarrierConfigsForDisableReasonInfos();
         verify(mWifiConfigManager).updateNetworkSelectionStatus(anyInt(),
                 eq(WifiConfiguration.NetworkSelectionStatus
