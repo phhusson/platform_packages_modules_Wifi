@@ -2864,7 +2864,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 == WifiMetrics.ConnectionEvent.FAILURE_AUTHENTICATION_FAILURE
                 && level2FailureReason != WifiMetricsProto.ConnectionEvent.AUTH_FAILURE_WRONG_PSWD;
         if ((isAssociationRejection || isAuthenticationFailure)
-                && mWifiConfigManager.isInFlakyRandomizationSsidHotlist(mTargetNetworkId)) {
+                && mWifiConfigManager.isInFlakyRandomizationSsidHotlist(mTargetNetworkId)
+                && isPrimary()) {
             mConnectionFailureNotifier
                     .showFailedToConnectDueToNoRandomizedMacSupportNotification(mTargetNetworkId);
         }
