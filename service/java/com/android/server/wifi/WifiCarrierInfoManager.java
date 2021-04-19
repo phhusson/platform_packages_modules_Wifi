@@ -759,7 +759,7 @@ public class WifiCarrierInfoManager {
         }
         return mActiveSubInfos.stream()
                 .anyMatch(info -> info.getSubscriptionId() == subId
-                        && isSimStateReady(info));
+                        && isSimStateReady(info)) && getSimInfo(subId) != null;
     }
 
     /**
@@ -832,24 +832,20 @@ public class WifiCarrierInfoManager {
      */
     public String getAnonymousIdentityWith3GppRealm(@NonNull WifiConfiguration config) {
         int subId = getBestMatchSubscriptionId(config);
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            return null;
+        }
         SimInfo simInfo = getSimInfo(subId);
         if (simInfo == null) {
             return null;
         }
-        String mccMnc = simInfo.mccMnc;
-        if (mccMnc == null || mccMnc.isEmpty()) {
+        Pair<String, String> mccMncPair = extractMccMnc(simInfo.imsi, simInfo.mccMnc);
+        if (mccMncPair == null) {
             return null;
         }
 
-        // Extract mcc & mnc from mccMnc
-        String mcc = mccMnc.substring(0, 3);
-        String mnc = mccMnc.substring(3);
-
-        if (mnc.length() == 2) {
-            mnc = "0" + mnc;
-        }
-
-        String realm = String.format(THREE_GPP_NAI_REALM_FORMAT, mnc, mcc);
+        String realm = String.format(THREE_GPP_NAI_REALM_FORMAT, mccMncPair.second,
+                mccMncPair.first);
         StringBuilder sb = new StringBuilder();
         if (mEapMethodPrefixEnable.get(subId)) {
             // Set the EAP method as a prefix
@@ -953,7 +949,7 @@ public class WifiCarrierInfoManager {
      * @param isEncrypted Whether the imsi is encrypted or not.
      * @return the eap identity, built using either the encrypted or un-encrypted IMSI.
      */
-    private static String buildIdentity(int eapMethod, String imsi, String mccMnc,
+    private String buildIdentity(int eapMethod, String imsi, String mccMnc,
                                         boolean isEncrypted) {
         if (imsi == null || imsi.isEmpty()) {
             Log.e(TAG, "No IMSI or IMSI is null");
@@ -965,22 +961,10 @@ public class WifiCarrierInfoManager {
             return null;
         }
 
-        /* extract mcc & mnc from mccMnc */
-        String mcc;
-        String mnc;
-        if (mccMnc != null && !mccMnc.isEmpty()) {
-            mcc = mccMnc.substring(0, 3);
-            mnc = mccMnc.substring(3);
-            if (mnc.length() == 2) {
-                mnc = "0" + mnc;
-            }
-        } else {
-            // extract mcc & mnc from IMSI, assume mnc size is 3
-            mcc = imsi.substring(0, 3);
-            mnc = imsi.substring(3, 6);
-        }
+        Pair<String, String> mccMncPair = extractMccMnc(imsi, mccMnc);
 
-        String naiRealm = String.format(THREE_GPP_NAI_REALM_FORMAT, mnc, mcc);
+        String naiRealm = String.format(THREE_GPP_NAI_REALM_FORMAT, mccMncPair.second,
+                mccMncPair.first);
         return prefix + imsi + "@" + naiRealm;
     }
 
@@ -1401,19 +1385,13 @@ public class WifiCarrierInfoManager {
         if (simInfo == null) {
             return null;
         }
-        if (simInfo.mccMnc == null || simInfo.mccMnc.isEmpty()) {
+        Pair<String, String> mccMncPair = extractMccMnc(simInfo.imsi, simInfo.mccMnc);
+        if (mccMncPair == null) {
             return null;
         }
 
-        // Extract mcc & mnc from mccMnc
-        String mcc = simInfo.mccMnc.substring(0, 3);
-        String mnc = simInfo.mccMnc.substring(3);
-
-        if (mnc.length() == 2) {
-            mnc = "0" + mnc;
-        }
-
-        String realm = String.format(THREE_GPP_NAI_REALM_FORMAT, mnc, mcc);
+        String realm = String.format(THREE_GPP_NAI_REALM_FORMAT, mccMncPair.second,
+                mccMncPair.first);
         return String.format("%s@%s", pseudonym, realm);
     }
 
@@ -1933,17 +1911,48 @@ public class WifiCarrierInfoManager {
 
     private SimInfo getSimInfo(int subId) {
         SimInfo simInfo = mSubIdToSimInfoSparseArray.get(subId);
-        if (simInfo == null) {
-            TelephonyManager specifiedTm = mTelephonyManager.createForSubscriptionId(subId);
-            if (specifiedTm.getSimState() == TelephonyManager.SIM_STATE_READY) {
-                String imsi = specifiedTm.getSubscriberId();
-                String mccMnc = specifiedTm.getSimOperator();
-                int CarrierIdFromSimMccMnc = specifiedTm.getCarrierIdFromSimMccMnc();
-                int SimCarrierId = specifiedTm.getSimCarrierId();
-                simInfo = new SimInfo(imsi, mccMnc, CarrierIdFromSimMccMnc, SimCarrierId);
-                mSubIdToSimInfoSparseArray.put(subId, simInfo);
-            }
+        // If mccmnc is not available, try to get it again.
+        if (simInfo != null && simInfo.mccMnc != null && !simInfo.mccMnc.isEmpty()) {
+            return simInfo;
         }
+        TelephonyManager specifiedTm = mTelephonyManager.createForSubscriptionId(subId);
+        if (specifiedTm.getSimState() != TelephonyManager.SIM_STATE_READY) {
+            return null;
+        }
+        String imsi = specifiedTm.getSubscriberId();
+        String mccMnc = specifiedTm.getSimOperator();
+        if (imsi == null || imsi.isEmpty()) {
+            Log.wtf(TAG, "Get invalid imsi when SIM is ready!");
+            return null;
+        }
+        int CarrierIdFromSimMccMnc = specifiedTm.getCarrierIdFromSimMccMnc();
+        int SimCarrierId = specifiedTm.getSimCarrierId();
+        simInfo = new SimInfo(imsi, mccMnc, CarrierIdFromSimMccMnc, SimCarrierId);
+        mSubIdToSimInfoSparseArray.put(subId, simInfo);
         return simInfo;
+    }
+
+    /**
+     * Try to extract mcc and mnc from IMSI and MCCMNC
+     * @return a pair of string represent <mcc, mnc>. Pair.first is mcc, pair.second is mnc.
+     */
+    private Pair<String, String> extractMccMnc(String imsi, String mccMnc) {
+        String mcc;
+        String mnc;
+        if (mccMnc != null && !mccMnc.isEmpty() && mccMnc.length() >= 5) {
+            mcc = mccMnc.substring(0, 3);
+            mnc = mccMnc.substring(3);
+            if (mnc.length() == 2) {
+                mnc = "0" + mnc;
+            }
+        } else if (imsi != null && !imsi.isEmpty() && imsi.length() >= 6) {
+            // extract mcc & mnc from IMSI, assume mnc size is 3
+            mcc = imsi.substring(0, 3);
+            mnc = imsi.substring(3, 6);
+            vlogd("Guessing from IMSI, MCC=" + mcc + "; MNC=" + mnc);
+        } else {
+            return null;
+        }
+        return Pair.create(mcc, mnc);
     }
 }
