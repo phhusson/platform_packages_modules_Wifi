@@ -2786,7 +2786,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             mWifiDiagnostics.takeBugReport(bugTitle, bugDetail);
         }
         mWifiDiagnostics.reportConnectionEvent(WifiDiagnostics.CONNECTION_EVENT_STARTED);
-        mWrongPasswordNotifier.onNewConnectionAttempt();
+        if (isPrimary()) {
+            mWrongPasswordNotifier.onNewConnectionAttempt();
+        }
         removeMessages(CMD_DIAGS_CONNECT_TIMEOUT);
         sendMessageDelayed(CMD_DIAGS_CONNECT_TIMEOUT, DIAGS_CONNECT_TIMEOUT_MILLIS);
     }
@@ -4517,7 +4519,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (isPermanentWrongPasswordFailure(mTargetNetworkId, reasonCode)) {
                         disableReason = WifiConfiguration.NetworkSelectionStatus
                                 .DISABLED_BY_WRONG_PASSWORD;
-                        if (targetedNetwork != null) {
+                        if (targetedNetwork != null && isPrimary()) {
                             mWrongPasswordNotifier.onWrongPasswordError(targetedNetwork.SSID);
                         }
                     } else if (reasonCode == WifiManager.ERROR_AUTH_FAILURE_EAP_FAILURE) {
