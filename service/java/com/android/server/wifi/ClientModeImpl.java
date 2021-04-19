@@ -5029,8 +5029,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                             mWifiNative.removeNetworkCachedData(mLastNetworkId);
                             // remove network so that supplicant's PMKSA cache is cleared
                             mWifiNative.removeAllNetworks(mInterfaceName);
-                            mSimRequiredNotifier.showSimRequiredNotification(
-                                    config, mLastSimBasedConnectionCarrierName);
+                            if (isPrimary()) {
+                                mSimRequiredNotifier.showSimRequiredNotification(
+                                        config, mLastSimBasedConnectionCarrierName);
+                            }
                         }
                     }
                     break;
