@@ -1845,6 +1845,27 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
     }
 
     @Test
+    public void testCarrierConfigNotAvailableNotificationWillNotBeSent() {
+        // Setup carrier without IMSI privacy protection
+        when(mCarrierConfigManager.getConfigForSubId(DATA_SUBID))
+                .thenReturn(generateTestCarrierConfig(false));
+        ArgumentCaptor<BroadcastReceiver> receiver =
+                ArgumentCaptor.forClass(BroadcastReceiver.class);
+        verify(mContext).registerReceiver(receiver.capture(), any(IntentFilter.class));
+
+        receiver.getValue().onReceive(mContext,
+                new Intent(CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED));
+        assertFalse(mWifiCarrierInfoManager.requiresImsiEncryption(DATA_SUBID));
+        // Carrier config for Non data carrier is not available, no notification will send.
+        mWifiCarrierInfoManager
+                .sendImsiProtectionExemptionNotificationIfRequired(NON_DATA_CARRIER_ID);
+        verifyNoMoreInteractions(mWifiNotificationManager);
+
+        mWifiCarrierInfoManager.sendImsiProtectionExemptionNotificationIfRequired(DATA_CARRIER_ID);
+        validateImsiProtectionNotification(CARRIER_NAME);
+    }
+
+    @Test
     public void testImsiProtectionExemptionNotificationNotSentWhenCarrierNameIsInvalid() {
         when(mCarrierConfigManager.getConfigForSubId(DATA_SUBID))
                 .thenReturn(generateTestCarrierConfig(false));
