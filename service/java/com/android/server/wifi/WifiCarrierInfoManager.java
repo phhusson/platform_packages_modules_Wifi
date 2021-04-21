@@ -203,6 +203,7 @@ public class WifiCarrierInfoManager {
     private boolean mHasNewSharedDataToSerialize = false;
     private boolean mUserDataLoaded = false;
     private boolean mIsLastUserApprovalUiDialog = false;
+    private CarrierConfigManager mCarrierConfigManager;
     /**
      * The {@link Clock#getElapsedSinceBootMillis()} must be at least this value for us
      * to update/show the notification.
@@ -542,16 +543,18 @@ public class WifiCarrierInfoManager {
         }
     }
 
-    private PersistableBundle getCarrierConfigForSubId(CarrierConfigManager carrierConfigManager,
-            int subId) {
+    private PersistableBundle getCarrierConfigForSubId(int subId) {
         if (mCachedCarrierConfigPerSubId.contains(subId)) {
             return mCachedCarrierConfigPerSubId.get(subId);
         }
-        if (carrierConfigManager == null) {
+        if (mCarrierConfigManager == null) {
+            mCarrierConfigManager = mContext.getSystemService(CarrierConfigManager.class);
+        }
+        if (mCarrierConfigManager == null) {
             return null;
         }
-        PersistableBundle carrierConfig = carrierConfigManager.getConfigForSubId(subId);
-        if (carrierConfig == null) {
+        PersistableBundle carrierConfig = mCarrierConfigManager.getConfigForSubId(subId);
+        if (!CarrierConfigManager.isConfigForIdentifiedCarrier(carrierConfig)) {
             return null;
         }
         mCachedCarrierConfigPerSubId.put(subId, carrierConfig);
@@ -573,8 +576,7 @@ public class WifiCarrierInfoManager {
             // only carrier networks are allowed to disable MAC randomization through this path.
             return false;
         }
-        PersistableBundle carrierConfig = getCarrierConfigForSubId(
-                mContext.getSystemService(CarrierConfigManager.class), subId);
+        PersistableBundle carrierConfig = getCarrierConfigForSubId(subId);
         if (carrierConfig == null) {
             return false;
         }
@@ -602,8 +604,7 @@ public class WifiCarrierInfoManager {
         if (!SdkLevel.isAtLeastS()) {
             return false;
         }
-        PersistableBundle carrierConfig = getCarrierConfigForSubId(
-                mContext.getSystemService(CarrierConfigManager.class), subId);
+        PersistableBundle carrierConfig = getCarrierConfigForSubId(subId);
         if (carrierConfig == null) {
             return false;
         }
@@ -616,11 +617,6 @@ public class WifiCarrierInfoManager {
      * Updates the IMSI encryption information and clears cached CarrierConfig data.
      */
     private void onCarrierConfigChanged(Context context) {
-        CarrierConfigManager carrierConfigManager = context.getSystemService(
-                CarrierConfigManager.class);
-        if (carrierConfigManager == null) {
-            return;
-        }
         SparseArray<PersistableBundle> cachedCarrierConfigPerSubIdOld =
                 mCachedCarrierConfigPerSubId.clone();
         mCachedCarrierConfigPerSubId.clear();
@@ -630,9 +626,21 @@ public class WifiCarrierInfoManager {
         }
         for (SubscriptionInfo subInfo : mActiveSubInfos) {
             int subId = subInfo.getSubscriptionId();
-            PersistableBundle bundle = getCarrierConfigForSubId(carrierConfigManager, subId);
+            PersistableBundle bundle = getCarrierConfigForSubId(subId);
             if (bundle == null) {
                 Log.e(TAG, "Carrier config is missing for: " + subId);
+            } else {
+                try {
+                    if (requiresImsiEncryption(subId)
+                            && mTelephonyManager.createForSubscriptionId(subId)
+                            .getCarrierInfoForImsiEncryption(TelephonyManager.KEY_TYPE_WLAN)
+                            != null) {
+                        vlogd("IMSI encryption info is available for " + subId);
+                        mImsiEncryptionInfoAvailable.put(subId, true);
+                    }
+                } catch (IllegalArgumentException e) {
+                    vlogd("IMSI encryption info is not available.");
+                }
             }
             PersistableBundle bundleOld = cachedCarrierConfigPerSubIdOld.get(subId);
             if (bundleOld != null && bundleOld.getBoolean(CarrierConfigManager
@@ -645,29 +653,21 @@ public class WifiCarrierInfoManager {
                 }
             }
 
-            try {
-                if (requiresImsiEncryption(subId)
-                        && mTelephonyManager.createForSubscriptionId(subId)
-                        .getCarrierInfoForImsiEncryption(TelephonyManager.KEY_TYPE_WLAN) != null) {
-                    vlogd("IMSI encryption info is available for " + subId);
-                    mImsiEncryptionInfoAvailable.put(subId, true);
-                }
-            } catch (IllegalArgumentException e) {
-                vlogd("IMSI encryption info is not available.");
-            }
         }
     }
 
     /**
      * Check if the IMSI encryption is required for the SIM card.
+     * Note: should only be called when {@link #isSimReady(int)} is true, or the result may not be
+     * correct.
      *
      * @param subId The subscription ID of SIM card.
      * @return true if the IMSI encryption is required, otherwise false.
      */
     public boolean requiresImsiEncryption(int subId) {
-        PersistableBundle bundle = getCarrierConfigForSubId(
-                mContext.getSystemService(CarrierConfigManager.class), subId);
+        PersistableBundle bundle = getCarrierConfigForSubId(subId);
         if (bundle == null) {
+            Log.wtf(TAG, "requiresImsiEncryption is called when SIM is not ready!");
             return false;
         }
         return (bundle.getInt(CarrierConfigManager.IMSI_KEY_AVAILABILITY_INT)
@@ -738,7 +738,7 @@ public class WifiCarrierInfoManager {
             return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
         }
         int dataSubId = SubscriptionManager.getDefaultDataSubscriptionId();
-        if (isSimPresent(dataSubId)) {
+        if (isSimReady(dataSubId)) {
             vlogd("carrierId is not assigned, using the default data sub.");
             return dataSubId;
         }
@@ -747,29 +747,22 @@ public class WifiCarrierInfoManager {
     }
 
     /**
-     * Check if the specified SIM card is in the device.
+     * Check if the specified SIM card is ready for Wi-Fi connection on the device.
      *
      * @param subId subscription ID of SIM card in the device.
-     * @return true if the subId is active, otherwise false.
+     * @return true if the SIM is active and all info are available, otherwise false.
      */
-    public boolean isSimPresent(int subId) {
+    public boolean isSimReady(int subId) {
         if (!SubscriptionManager.isValidSubscriptionId(subId)) {
             return false;
         }
         if (mActiveSubInfos == null || mActiveSubInfos.isEmpty()) {
             return false;
         }
-        return mActiveSubInfos.stream()
-                .anyMatch(info -> info.getSubscriptionId() == subId
-                        && isSimStateReady(info)) && getSimInfo(subId) != null;
-    }
-
-    /**
-     * Check if SIM card for SubscriptionInfo is ready.
-     */
-    private boolean isSimStateReady(SubscriptionInfo info) {
-        int simSlotIndex = info.getSimSlotIndex();
-        return mTelephonyManager.getSimState(simSlotIndex) == TelephonyManager.SIM_STATE_READY;
+        if (getSimInfo(subId) == null || getCarrierConfigForSubId(subId) == null) {
+            return false;
+        }
+        return mActiveSubInfos.stream().anyMatch(info -> info.getSubscriptionId() == subId);
     }
 
     /**
@@ -1460,6 +1453,9 @@ public class WifiCarrierInfoManager {
      * matching SIM card
      */
     public @Nullable String getMatchingImsiBySubId(int subId) {
+        if (!isSimReady(subId)) {
+            return null;
+        }
         if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
             if (requiresImsiEncryption(subId) && !isImsiEncryptionInfoAvailable(subId)) {
                 vlogd("required IMSI encryption information is not available.");
@@ -1779,8 +1775,7 @@ public class WifiCarrierInfoManager {
         if (!mUserDataLoaded) {
             return;
         }
-        PersistableBundle bundle = getCarrierConfigForSubId(
-                mContext.getSystemService(CarrierConfigManager.class), subId);
+        PersistableBundle bundle = getCarrierConfigForSubId(subId);
         if (bundle == null) {
             return;
         }
@@ -1968,8 +1963,7 @@ public class WifiCarrierInfoManager {
     }
 
     private boolean isEapMethodPrefixEnabled(int subId) {
-        PersistableBundle bundle = getCarrierConfigForSubId(
-                mContext.getSystemService(CarrierConfigManager.class), subId);
+        PersistableBundle bundle = getCarrierConfigForSubId(subId);
         if (bundle == null) {
             return false;
         }

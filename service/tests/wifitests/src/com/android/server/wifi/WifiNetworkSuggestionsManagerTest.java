@@ -279,7 +279,7 @@ public class WifiNetworkSuggestionsManagerTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager.isSubIdMatchingCarrierId(anyInt(), anyInt())).thenReturn(true);
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any())).thenReturn(
                 SubscriptionManager.INVALID_SUBSCRIPTION_ID);
-        when(mWifiCarrierInfoManager.isSimPresent(SubscriptionManager.INVALID_SUBSCRIPTION_ID))
+        when(mWifiCarrierInfoManager.isSimReady(SubscriptionManager.INVALID_SUBSCRIPTION_ID))
                 .thenReturn(false);
         when(mWifiCarrierInfoManager.areMergedCarrierWifiNetworksAllowed(anyInt())).thenReturn(
                 false);
@@ -3552,11 +3552,11 @@ public class WifiNetworkSuggestionsManagerTest extends WifiBaseTest {
         placeholderConfig.subscriptionId = TEST_SUBID;
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(placeholderConfig))
                 .thenReturn(TEST_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(TEST_SUBID)).thenReturn(false);
+        when(mWifiCarrierInfoManager.isSimReady(TEST_SUBID)).thenReturn(false);
         assertFalse(mWifiNetworkSuggestionsManager
                 .isPasspointSuggestionSharedWithUser(placeholderConfig));
 
-        when(mWifiCarrierInfoManager.isSimPresent(TEST_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(TEST_SUBID)).thenReturn(true);
         assertTrue(mWifiNetworkSuggestionsManager
                 .isPasspointSuggestionSharedWithUser(placeholderConfig));
 
@@ -3679,7 +3679,7 @@ public class WifiNetworkSuggestionsManagerTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager
                 .getBestMatchSubscriptionId(argThat(new WifiConfigMatcher(configuration))))
                 .thenReturn(TEST_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(TEST_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(TEST_SUBID)).thenReturn(true);
         List<ScanResult> scanResults = new ArrayList<>();
         scanResults.add(
                 createScanDetailForNetwork(networkSuggestion1.wifiConfiguration).getScanResult());
@@ -3849,7 +3849,7 @@ public class WifiNetworkSuggestionsManagerTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager.getCarrierIdForPackageWithCarrierPrivileges(TEST_PACKAGE_1))
                 .thenReturn(VALID_CARRIER_ID);
         when(mWifiCarrierInfoManager.getMatchingSubId(VALID_CARRIER_ID)).thenReturn(TEST_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(TEST_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(TEST_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.requiresImsiEncryption(TEST_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(TEST_SUBID)).thenReturn(true);
         ScanDetail scanDetail = createScanDetailForNetwork(config);

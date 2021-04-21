@@ -1042,7 +1042,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mConnectedNetwork.carrierId = CARRIER_ID_1;
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         mConnectedNetwork.enterpriseConfig.setAnonymousIdentity("");
 
         triggerConnect();
@@ -1066,7 +1066,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Test
     public void testResetSimWhenNonConnectedSimRemoved() throws Exception {
         setupEapSimConnection();
-        doReturn(true).when(mWifiCarrierInfoManager).isSimPresent(eq(DATA_SUBID));
+        doReturn(true).when(mWifiCarrierInfoManager).isSimReady(eq(DATA_SUBID));
         mCmi.sendMessage(ClientModeImpl.CMD_RESET_SIM_NETWORKS,
                 ClientModeImpl.RESET_SIM_REASON_SIM_REMOVED);
         mLooper.dispatchAll();
@@ -1082,7 +1082,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Test
     public void testResetSimWhenConnectedSimRemoved() throws Exception {
         setupEapSimConnection();
-        doReturn(false).when(mWifiCarrierInfoManager).isSimPresent(eq(DATA_SUBID));
+        doReturn(false).when(mWifiCarrierInfoManager).isSimReady(eq(DATA_SUBID));
         mCmi.sendMessage(ClientModeImpl.CMD_RESET_SIM_NETWORKS,
                 ClientModeImpl.RESET_SIM_REASON_SIM_REMOVED);
         mLooper.dispatchAll();
@@ -1098,7 +1098,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Test
     public void testResetSimWhenConnectedSimRemovedAfterNetworkRemoval() throws Exception {
         setupEapSimConnection();
-        doReturn(false).when(mWifiCarrierInfoManager).isSimPresent(eq(DATA_SUBID));
+        doReturn(false).when(mWifiCarrierInfoManager).isSimReady(eq(DATA_SUBID));
         when(mWifiConfigManager.getConfiguredNetwork(anyInt())).thenReturn(null);
         mCmi.sendMessage(ClientModeImpl.CMD_RESET_SIM_NETWORKS,
                 ClientModeImpl.RESET_SIM_REASON_SIM_REMOVED);
@@ -1137,7 +1137,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
         when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
                 .thenReturn(expectedAnonymousIdentity);
@@ -1191,7 +1191,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
         when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
                 .thenReturn(expectedAnonymousIdentity);
@@ -1243,7 +1243,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
         when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
                 .thenReturn(expectedAnonymousIdentity);
@@ -1294,7 +1294,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
         when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
                 .thenReturn(expectedAnonymousIdentity);
@@ -1349,7 +1349,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
         when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
                 .thenReturn(expectedAnonymousIdentity);
@@ -4679,7 +4679,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         when(mWifiCarrierInfoManager.getSimIdentity(any()))
                 .thenReturn(Pair.create(expectetIdentity, ""));
 
@@ -5768,7 +5768,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mConnectedNetwork.carrierId = CARRIER_ID_1;
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
                 .thenReturn(DATA_SUBID);
-        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isSimReady(DATA_SUBID)).thenReturn(true);
         mConnectedNetwork.enterpriseConfig.setAnonymousIdentity("");
         triggerConnect();
 
