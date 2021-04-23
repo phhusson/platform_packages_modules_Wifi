@@ -2478,7 +2478,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 () -> mWifiConfigManager.getSavedNetworks(finalTargetConfigUid),
                 Collections.emptyList());
         if (isTargetSdkLessThanQOrPrivileged && !callerNetworksOnly) {
-            return new ParceledListSlice<>(configs);
+            return new ParceledListSlice<>(
+                    WifiConfigurationUtil.convertMultiTypeConfigsToLegacyConfigs(configs));
         }
         // Should only get its own configs
         List<WifiConfiguration> creatorConfigs = new ArrayList<>();
@@ -2487,7 +2488,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 creatorConfigs.add(config);
             }
         }
-        return new ParceledListSlice<>(creatorConfigs);
+        return new ParceledListSlice<>(
+                WifiConfigurationUtil.convertMultiTypeConfigsToLegacyConfigs(creatorConfigs));
     }
 
     /**
@@ -2520,7 +2522,8 @@ public class WifiServiceImpl extends BaseWifiService {
         List<WifiConfiguration> configs = mWifiThreadRunner.call(
                 () -> mWifiConfigManager.getConfiguredNetworksWithPasswords(),
                 Collections.emptyList());
-        return new ParceledListSlice<>(configs);
+        return new ParceledListSlice<>(
+                WifiConfigurationUtil.convertMultiTypeConfigsToLegacyConfigs(configs));
     }
 
     /**
