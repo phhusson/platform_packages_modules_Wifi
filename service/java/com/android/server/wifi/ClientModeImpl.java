@@ -4687,6 +4687,24 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     mWifiConfigManager.updateNetworkTransitionDisable(message.arg1, message.arg2);
                     break;
                 }
+                case WifiMonitor.NETWORK_CONNECTION_EVENT: {
+                    NetworkConnectionEventInfo connectionInfo =
+                            (NetworkConnectionEventInfo) message.obj;
+                    String quotedOrHexConnectingSsid = getConnectingSsidInternal();
+                    String quotedOrHexConnectedSsid = NativeUtil.encodeSsid(
+                            NativeUtil.byteArrayToArrayList(connectionInfo.wifiSsid.getOctets()));
+                    if (quotedOrHexConnectingSsid != null
+                            && !quotedOrHexConnectingSsid.equals(quotedOrHexConnectedSsid)) {
+                        // possibly a NETWORK_CONNECTION_EVENT for a successful roam on the previous
+                        // network while connecting to a new network, ignore it.
+                        Log.d(TAG, "Connecting to ssid=" + quotedOrHexConnectingSsid + ", but got "
+                                + "NETWORK_CONNECTION_EVENT for ssid=" + quotedOrHexConnectedSsid
+                                + ", ignoring");
+                        break;
+                    }
+                    handleStatus = NOT_HANDLED;
+                    break;
+                }
                 default: {
                     handleStatus = NOT_HANDLED;
                     break;

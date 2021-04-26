@@ -200,6 +200,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                     : ClientModeImpl.NUM_LOG_RECS_VERBOSE);
     private static final int FRAMEWORK_NETWORK_ID = 0;
     private static final int PASSPOINT_NETWORK_ID = 1;
+    private static final int OTHER_NETWORK_ID = 47;
     private static final int TEST_RSSI = -54;
     private static final int TEST_NETWORK_ID = 54;
     private static final int WPS_SUPPLICANT_NETWORK_ID = 5;
@@ -938,8 +939,10 @@ public class ClientModeImplTest extends WifiBaseTest {
                         SupplicantState.ASSOCIATED));
         mLooper.dispatchAll();
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         verify(mWifiMetrics).noteFirstL2ConnectionAfterBoot(true);
@@ -1055,9 +1058,51 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mScanDetailCache.getScanResult(TEST_BSSID_STR)).thenReturn(
                 getGoogleGuestScanDetail(TEST_RSSI, TEST_BSSID_STR, sFreq).getScanResult());
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
+        assertEquals("L3ProvisioningState", getCurrentState().getName());
+    }
+
+    /**
+     * Test when a roam occurs simultaneously with another connection attempt.
+     * The roam's NETWORK_CONNECTION_EVENT should be ignored, only the new network's
+     * NETWORK_CONNECTION_EVENT should be acted upon.
+     */
+    @Test
+    public void roamRaceWithConnect() throws Exception {
+        connect();
+
+        initializeAndAddNetworkAndVerifySuccess();
+
+        // connect to new network
+        WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
+        config.networkId = OTHER_NETWORK_ID;
+        setupAndStartConnectSequence(config);
+
+        // in L2ConnectingState
+        assertEquals("L2ConnectingState", getCurrentState().getName());
+
+        // send NETWORK_CONNECTION_EVENT for previous network ID
+        mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
+                new NetworkConnectionEventInfo(
+                        FRAMEWORK_NETWORK_ID, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+        mLooper.dispatchAll();
+
+        // should ignore it, stay in L2ConnectingState
+        assertEquals("L2ConnectingState", getCurrentState().getName());
+
+        // send expected new network SSID
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(config.SSID)));
+        mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
+                new NetworkConnectionEventInfo(
+                        OTHER_NETWORK_ID, wifiSsid, TEST_BSSID_STR1, false));
+        mLooper.dispatchAll();
+
+        // then move to next state
         assertEquals("L3ProvisioningState", getCurrentState().getName());
     }
 
@@ -1162,8 +1207,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiNative.getEapAnonymousIdentity(anyString()))
                 .thenReturn(expectedAnonymousIdentity);
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         verify(mWifiNative).getEapAnonymousIdentity(any());
@@ -1214,8 +1261,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiNative.getEapAnonymousIdentity(anyString()))
                 .thenReturn(pseudonym);
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         verify(mWifiNative).getEapAnonymousIdentity(any());
@@ -1268,8 +1317,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiNative.getEapAnonymousIdentity(anyString()))
                 .thenReturn(pseudonym);
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         verify(mWifiNative).getEapAnonymousIdentity(any());
@@ -1319,8 +1370,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiNative.getEapAnonymousIdentity(anyString()))
                 .thenReturn(pseudonym);
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         verify(mWifiNative).getEapAnonymousIdentity(any());
@@ -1375,8 +1428,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiNative.getEapAnonymousIdentity(anyString()))
                 .thenReturn(pseudonym);
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         verify(mWifiNative).getEapAnonymousIdentity(any());
@@ -4243,8 +4298,10 @@ public class ClientModeImplTest extends WifiBaseTest {
                         SupplicantState.ASSOCIATED));
         mLooper.dispatchAll();
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
 
         mCmi.sendMessage(WifiMonitor.SUPPLICANT_STATE_CHANGE_EVENT, 0, 0,
@@ -5800,8 +5857,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mScanDetailCache.getScanResult(TEST_BSSID_STR)).thenReturn(
                 getGoogleGuestScanDetail(TEST_RSSI, TEST_BSSID_STR, sFreq).getScanResult());
 
+        WifiSsid wifiSsid = WifiSsid.createFromByteArray(
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(mConnectedNetwork.SSID)));
         mCmi.sendMessage(WifiMonitor.NETWORK_CONNECTION_EVENT,
-                new NetworkConnectionEventInfo(0, TEST_WIFI_SSID, TEST_BSSID_STR, false));
+                new NetworkConnectionEventInfo(0, wifiSsid, TEST_BSSID_STR, false));
         mLooper.dispatchAll();
         assertEquals("L3ProvisioningState", getCurrentState().getName());
     }
