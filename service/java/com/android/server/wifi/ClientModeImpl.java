@@ -1709,11 +1709,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     sb.append(" ").append((AssocRejectEventInfo) msg.obj);
                 }
                 break;
-            case WifiMonitor.NETWORK_CONNECTION_EVENT:
+            case WifiMonitor.NETWORK_CONNECTION_EVENT: {
+                NetworkConnectionEventInfo connectionInfo = (NetworkConnectionEventInfo) msg.obj;
                 sb.append(" ");
-                sb.append(Integer.toString(msg.arg1));
+                sb.append(connectionInfo.networkId);
                 sb.append(" ");
-                sb.append(Integer.toString(msg.arg2));
+                sb.append(connectionInfo.isFilsConnection);
                 sb.append(" ").append(mLastBssid);
                 sb.append(" nid=").append(mLastNetworkId);
                 config = getConnectedWifiConfigurationInternal();
@@ -1725,6 +1726,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     sb.append(" last=").append(key);
                 }
                 break;
+            }
             case WifiMonitor.TARGET_BSSID_EVENT:
             case WifiMonitor.ASSOCIATED_BSSID_EVENT:
                 sb.append(" ");
@@ -4247,12 +4249,13 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 }
                 case WifiMonitor.NETWORK_CONNECTION_EVENT: {
                     if (mVerboseLoggingEnabled) log("Network connection established");
-                    mLastNetworkId = message.arg1;
-                    mSentHLPs = message.arg2 == 1;
+                    NetworkConnectionEventInfo connectionInfo =
+                            (NetworkConnectionEventInfo) message.obj;
+                    mLastNetworkId = connectionInfo.networkId;
+                    mSentHLPs = connectionInfo.isFilsConnection;
                     if (mSentHLPs) mWifiMetrics.incrementL2ConnectionThroughFilsAuthCount();
                     mWifiConfigManager.clearRecentFailureReason(mLastNetworkId);
-                    mLastBssid = (String) message.obj;
-                    int reasonCode = message.arg2;
+                    mLastBssid = connectionInfo.bssid;
                     // TODO: This check should not be needed after ClientModeImpl refactor.
                     // Currently, the last connected network configuration is left in
                     // wpa_supplicant, this may result in wpa_supplicant initiating connection
@@ -4911,12 +4914,14 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     break;
                 }
                 case WifiMonitor.NETWORK_CONNECTION_EVENT: {
-                    mWifiInfo.setBSSID((String) message.obj);
-                    mLastNetworkId = message.arg1;
+                    NetworkConnectionEventInfo connectionInfo =
+                            (NetworkConnectionEventInfo) message.obj;
+                    mWifiInfo.setBSSID(connectionInfo.bssid);
+                    mLastNetworkId = connectionInfo.networkId;
                     mWifiInfo.setNetworkId(mLastNetworkId);
                     mWifiInfo.setMacAddress(mWifiNative.getMacAddress(mInterfaceName));
-                    if (!Objects.equals(mLastBssid, message.obj)) {
-                        mLastBssid = (String) message.obj;
+                    if (!Objects.equals(mLastBssid, connectionInfo.bssid)) {
+                        mLastBssid = connectionInfo.bssid;
                         sendNetworkChangeBroadcastWithCurrentState();
                     }
                     if (mIsLinkedNetworkRoaming) {
@@ -5322,8 +5327,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                         if (mVerboseLoggingEnabled) {
                             log("roaming and Network connection established");
                         }
-                        mLastNetworkId = message.arg1;
-                        mLastBssid = (String) message.obj;
+                        NetworkConnectionEventInfo connectionInfo =
+                                (NetworkConnectionEventInfo) message.obj;
+                        mLastNetworkId = connectionInfo.networkId;
+                        mLastBssid = connectionInfo.bssid;
                         mWifiInfo.setBSSID(mLastBssid);
                         mWifiInfo.setNetworkId(mLastNetworkId);
                         sendNetworkChangeBroadcastWithCurrentState();
