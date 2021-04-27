@@ -970,6 +970,21 @@ public class WifiNetworkSelector {
     }
 
     /**
+     * For the transition mode, MFPC should be true, and MFPR should be false,
+     * see WPA3 SAE specification section 2.3 and 3.3.
+     */
+    private void updateSecurityParamsForTransitionModeIfNecessary(
+            ScanResult scanResult, SecurityParams params) {
+        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)
+                && ScanResultUtil.isScanResultForPskSaeTransitionNetwork(scanResult)) {
+            params.setRequirePmf(false);
+        } else if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE)
+                && ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)) {
+            params.setRequirePmf(false);
+        }
+    }
+
+    /**
      * Using the registered Scorers, choose the best network from the list of Candidate(s).
      * The ScanDetailCache is also updated here.
      * @param candidates - Candidates to perferm network selection on.
@@ -1004,6 +1019,7 @@ public class WifiNetworkSelector {
                     config,
                     scanResultParamsList);
             if (params == null) continue;
+            updateSecurityParamsForTransitionModeIfNecessary(scanDetail.getScanResult(), params);
             mWifiConfigManager.setNetworkCandidateScanResult(choice.candidateKey.networkId,
                     scanDetail.getScanResult(), 0, params);
         }

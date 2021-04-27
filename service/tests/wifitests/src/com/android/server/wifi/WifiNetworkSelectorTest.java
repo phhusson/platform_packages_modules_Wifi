@@ -2138,6 +2138,8 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
         assertTrue(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
                 .isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE));
+        assertFalse(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
+                .isRequirePmf());
     }
 
     /**
@@ -2347,5 +2349,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
         assertTrue(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
                 .isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE));
+        assertFalse(networkSelectorChoice.getNetworkSelectionStatus().getCandidateSecurityParams()
+                .isRequirePmf());
     }
 }
