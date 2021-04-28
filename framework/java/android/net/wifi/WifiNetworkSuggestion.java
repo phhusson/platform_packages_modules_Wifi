@@ -28,12 +28,15 @@ import android.net.MacAddress;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.wifi.hotspot2.PasspointConfiguration;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.modules.utils.build.SdkLevel;
 
@@ -405,9 +408,6 @@ public final class WifiNetworkSuggestion implements Parcelable {
          */
         public @NonNull Builder setWpa3EnterpriseStandardModeConfig(
                 @NonNull WifiEnterpriseConfig enterpriseConfig) {
-            if (!SdkLevel.isAtLeastS()) {
-                throw new UnsupportedOperationException();
-            }
             checkNotNull(enterpriseConfig);
             if (enterpriseConfig.isTlsBasedEapMethod()
                     && !enterpriseConfig.isMandatoryParameterSetForServerCertValidation()) {
@@ -434,9 +434,6 @@ public final class WifiNetworkSuggestion implements Parcelable {
          */
         public @NonNull Builder setWpa3Enterprise192BitModeConfig(
                 @NonNull WifiEnterpriseConfig enterpriseConfig) {
-            if (!SdkLevel.isAtLeastS()) {
-                throw new UnsupportedOperationException();
-            }
             checkNotNull(enterpriseConfig);
             if (enterpriseConfig.getEapMethod() != WifiEnterpriseConfig.Eap.TLS) {
                 throw new IllegalArgumentException("The 192-bit mode network type must be TLS");
@@ -897,6 +894,7 @@ public final class WifiNetworkSuggestion implements Parcelable {
          *        default is false.
          * @return Instance of {@link Builder} to enable chaining of the builder method.
          */
+        @RequiresApi(Build.VERSION_CODES.S)
         public @NonNull Builder setIsWpa3SaeH2eOnlyModeEnabled(boolean enable) {
             if (!SdkLevel.isAtLeastS()) {
                 throw new UnsupportedOperationException();
