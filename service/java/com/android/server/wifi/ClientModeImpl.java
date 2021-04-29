@@ -3179,7 +3179,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
         setSuspendOptimizationsNative(SUSPEND_DUE_TO_HIGH_PERF, true);
 
-        mWifiStateTracker.updateState(WifiStateTracker.INVALID);
+        mWifiStateTracker.updateState(mInterfaceName, WifiStateTracker.INVALID);
         mIpClientCallbacks = new IpClientCallbacksImpl();
         mFacade.makeIpClient(mContext, mInterfaceName, mIpClientCallbacks);
         if (!mIpClientCallbacks.awaitCreation()) {
@@ -4835,7 +4835,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 }
             }
             mWifiMetrics.setWifiState(WifiMetricsProto.WifiLog.WIFI_DISCONNECTED);
-            mWifiStateTracker.updateState(WifiStateTracker.DISCONNECTED);
+            mWifiStateTracker.updateState(mInterfaceName, WifiStateTracker.DISCONNECTED);
             // Inform WifiLockManager
             mWifiLockManager.updateWifiClientConnected(mClientModeManager, false);
             mLastConnectionCapabilities = null;
@@ -5447,7 +5447,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
             mTargetNetworkId = WifiConfiguration.INVALID_NETWORK_ID;
             mWifiLastResortWatchdog.connectedStateTransition(true);
-            mWifiStateTracker.updateState(WifiStateTracker.CONNECTED);
+            mWifiStateTracker.updateState(mInterfaceName, WifiStateTracker.CONNECTED);
             // Inform WifiLockManager
             mWifiLockManager.updateWifiClientConnected(mClientModeManager, true);
             WifiConfiguration config = getConnectedWifiConfigurationInternal();

@@ -1029,7 +1029,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         // Anonymous Identity is not set.
         assertEquals("", mConnectedNetwork.enterpriseConfig.getAnonymousIdentity());
-        verify(mWifiStateTracker).updateState(eq(WifiStateTracker.CONNECTED));
+        verify(mWifiStateTracker).updateState(WIFI_IFACE_NAME, WifiStateTracker.CONNECTED);
         assertEquals("L3ConnectedState", getCurrentState().getName());
         verify(mWifiMetrics).incrementNumOfCarrierWifiConnectionSuccess();
         verify(mWifiLockManager).updateWifiClientConnected(mClientModeManager, true);
@@ -1570,7 +1570,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         mCmi.stop();
         mLooper.dispatchAll();
-        verify(mWifiStateTracker).updateState(eq(WifiStateTracker.DISCONNECTED));
+        verify(mWifiStateTracker).updateState(WIFI_IFACE_NAME, WifiStateTracker.DISCONNECTED);
     }
 
     /**
@@ -2195,7 +2195,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                         TEST_BSSID_STR, SupplicantState.DISCONNECTED));
         mLooper.dispatchAll();
 
-        verify(mWifiStateTracker).updateState(eq(WifiStateTracker.DISCONNECTED));
+        verify(mWifiStateTracker).updateState(WIFI_IFACE_NAME, WifiStateTracker.DISCONNECTED);
         assertEquals("DisconnectedState", getCurrentState().getName());
         verify(mCmiMonitor).onConnectionEnd(mClientModeManager);
         inOrderWifiLockManager.verify(mWifiLockManager)
