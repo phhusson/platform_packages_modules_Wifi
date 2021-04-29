@@ -1620,7 +1620,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 R.bool.config_wifiSuspendOptimizationsEnabled));
         pw.println("mSuspendOptNeedsDisabled " + mSuspendOptNeedsDisabled);
         dumpIpClient(fd, pw, args);
-        mLinkProbeManager.dump(fd, pw, args);
         pw.println("WifiScoreReport:");
         mWifiScoreReport.dump(fd, pw, args);
         pw.println();
@@ -4734,7 +4733,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         public void enter() {
             mRssiPollToken++;
             if (mEnableRssiPolling) {
-                mLinkProbeManager.resetOnNewConnection();
+                if (isPrimary()) {
+                    mLinkProbeManager.resetOnNewConnection();
+                }
                 sendMessage(CMD_RSSI_POLL, mRssiPollToken, 0);
             }
             sendNetworkChangeBroadcast(DetailedState.CONNECTING);
@@ -4967,7 +4968,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (message.arg1 == mRssiPollToken) {
                         updateLinkLayerStatsRssiDataStallScoreReport();
                         mWifiScoreCard.noteSignalPoll(mWifiInfo);
-                        mLinkProbeManager.updateConnectionStats(mWifiInfo, mInterfaceName);
+                        if (isPrimary()) {
+                            mLinkProbeManager.updateConnectionStats(mWifiInfo, mInterfaceName);
+                        }
                         sendMessageDelayed(obtainMessage(CMD_RSSI_POLL, mRssiPollToken, 0),
                                 mWifiGlobals.getPollRssiIntervalMillis());
                         if (mVerboseLoggingEnabled) sendRssiChangeBroadcast(mWifiInfo.getRssi());
@@ -4987,7 +4990,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (mEnableRssiPolling) {
                         // First poll
                         mLastSignalLevel = -1;
-                        mLinkProbeManager.resetOnScreenTurnedOn();
+                        if (isPrimary()) {
+                            mLinkProbeManager.resetOnScreenTurnedOn();
+                        }
                         updateLinkLayerStatsRssiSpeedFrequencyCapabilities();
                         sendMessageDelayed(obtainMessage(CMD_RSSI_POLL, mRssiPollToken, 0),
                                 mWifiGlobals.getPollRssiIntervalMillis());
