@@ -16,6 +16,8 @@
 
 package com.android.server.wifi;
 
+import static android.telephony.CarrierConfigManager.KEY_CARRIER_CONFIG_APPLIED_BOOL;
+
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.when;
 import static com.android.server.wifi.WifiCarrierInfoManager.NOTIFICATION_USER_ALLOWED_CARRIER_INTENT_ACTION;
@@ -177,17 +179,6 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         when(mWifiInjector.makeImsiProtectionExemptionStoreData(any()))
                 .thenReturn(mImsiPrivacyProtectionExemptionStoreData);
         when(mWifiInjector.getWifiConfigManager()).thenReturn(mWifiConfigManager);
-        mWifiCarrierInfoManager = new WifiCarrierInfoManager(mTelephonyManager,
-                mSubscriptionManager, mWifiInjector, mFrameworkFacade, mContext, mWifiConfigStore,
-                new Handler(mLooper.getLooper()), mWifiMetrics);
-        ArgumentCaptor<ImsiPrivacyProtectionExemptionStoreData.DataSource>
-                imsiDataSourceArgumentCaptor =
-                ArgumentCaptor.forClass(ImsiPrivacyProtectionExemptionStoreData.DataSource.class);
-        verify(mContext).registerReceiver(mBroadcastReceiverCaptor.capture(), any(), any(), any());
-        verify(mWifiInjector).makeImsiProtectionExemptionStoreData(imsiDataSourceArgumentCaptor
-                .capture());
-        mImsiDataSource = imsiDataSourceArgumentCaptor.getValue();
-        assertNotNull(mImsiDataSource);
         mSubInfoList = new ArrayList<>();
         mSubInfoList.add(mDataSubscriptionInfo);
         mSubInfoList.add(mNonDataSubscriptionInfo);
@@ -197,6 +188,8 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 .thenReturn(mNonDataTelephonyManager);
         when(mTelephonyManager.getSimState(anyInt())).thenReturn(TelephonyManager.SIM_STATE_READY);
         when(mSubscriptionManager.getActiveSubscriptionInfoList()).thenReturn(mSubInfoList);
+        when(mCarrierConfigManager.getConfigForSubId(anyInt()))
+                .thenReturn(generateTestCarrierConfig(false));
         mMockingSession = ExtendedMockito.mockitoSession().strictness(Strictness.LENIENT)
                 .mockStatic(SubscriptionManager.class).startMocking();
 
@@ -246,6 +239,18 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         when(mResources.getText(
                 eq(R.string.wifi_suggestion_action_disallow_imsi_privacy_exemption_confirmation)))
                 .thenReturn("blah");
+        mWifiCarrierInfoManager = new WifiCarrierInfoManager(mTelephonyManager,
+                mSubscriptionManager, mWifiInjector, mFrameworkFacade, mContext, mWifiConfigStore,
+                new Handler(mLooper.getLooper()), mWifiMetrics);
+        ArgumentCaptor<ImsiPrivacyProtectionExemptionStoreData.DataSource>
+                imsiDataSourceArgumentCaptor =
+                ArgumentCaptor.forClass(ImsiPrivacyProtectionExemptionStoreData.DataSource.class);
+        verify(mContext).registerReceiver(mBroadcastReceiverCaptor.capture(), any(), any(), any());
+        verify(mWifiInjector).makeImsiProtectionExemptionStoreData(imsiDataSourceArgumentCaptor
+                .capture());
+        mImsiDataSource = imsiDataSourceArgumentCaptor.getValue();
+        assertNotNull(mImsiDataSource);
+
         mWifiCarrierInfoManager.addImsiExemptionUserApprovalListener(mListener);
         mImsiDataSource.fromDeserialized(new HashMap<>());
     }
@@ -274,6 +279,7 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
 
     private PersistableBundle generateTestCarrierConfig(boolean requiresImsiEncryption) {
         PersistableBundle bundle = new PersistableBundle();
+        bundle.putBoolean(KEY_CARRIER_CONFIG_APPLIED_BOOL, true);
         if (requiresImsiEncryption) {
             bundle.putInt(CarrierConfigManager.IMSI_KEY_AVAILABILITY_INT,
                     TelephonyManager.KEY_TYPE_WLAN);

@@ -363,11 +363,13 @@ public class WifiCarrierInfoManager {
         for (SubscriptionInfo subInfo : activeSubInfos) {
             int subId = subInfo.getSubscriptionId();
             PersistableBundle bundle = carrierConfigManager.getConfigForSubId(subId);
-            if (bundle != null) {
+            if (CarrierConfigManager.isConfigForIdentifiedCarrier(bundle)) {
                 if ((bundle.getInt(CarrierConfigManager.IMSI_KEY_AVAILABILITY_INT)
                                     & TelephonyManager.KEY_TYPE_WLAN) != 0) {
                     vlogd("IMSI encryption is required for " + subId);
                     mImsiEncryptionRequired.put(subId, true);
+                } else {
+                    mImsiEncryptionRequired.put(subId, false);
                 }
                 if (bundle.getBoolean(CarrierConfigManager.ENABLE_EAP_METHOD_PREFIX_BOOL)) {
                     vlogd("EAP Prefix is required for " + subId);
@@ -482,6 +484,9 @@ public class WifiCarrierInfoManager {
         }
         List<SubscriptionInfo> subInfoList = mSubscriptionManager.getActiveSubscriptionInfoList();
         if (subInfoList == null || subInfoList.isEmpty()) {
+            return false;
+        }
+        if (mImsiEncryptionRequired.indexOfKey(subId) < 0) {
             return false;
         }
         return subInfoList.stream()
@@ -1526,6 +1531,9 @@ public class WifiCarrierInfoManager {
         int subId = getMatchingSubId(carrierId);
         // If user data isn't loaded, don't send notification.
         if (!mUserDataLoaded) {
+            return;
+        }
+        if (mImsiEncryptionRequired.indexOfKey(subId) < 0) {
             return;
         }
         if (requiresImsiEncryption(subId)) {

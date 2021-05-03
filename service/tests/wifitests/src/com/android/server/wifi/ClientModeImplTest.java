@@ -369,7 +369,6 @@ public class ClientModeImplTest extends WifiBaseTest {
     IpClientCallbacks mIpClientCallback;
     OsuProvider mOsuProvider;
     WifiConfiguration mConnectedNetwork;
-    WifiCarrierInfoManager mWifiCarrierInfoManager;
 
     @Mock WifiScanner mWifiScanner;
     @Mock SupplicantStateTracker mSupplicantStateTracker;
@@ -425,6 +424,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock ScanRequestProxy mScanRequestProxy;
     @Mock DeviceConfigFacade mDeviceConfigFacade;
     @Mock Network mNetwork;
+    @Mock WifiCarrierInfoManager mWifiCarrierInfoManager;
 
     final ArgumentCaptor<WifiConfigManager.OnNetworkUpdateListener> mConfigUpdateListenerCaptor =
             ArgumentCaptor.forClass(WifiConfigManager.OnNetworkUpdateListener.class);
@@ -539,16 +539,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         }).when(mIpClient).shutdown();
         when(mConnectivityManager.registerNetworkAgent(any(), any(), any(), any(), anyInt(), any(),
                 anyInt())).thenReturn(mNetwork);
-        List<SubscriptionInfo> subList = Arrays.asList(mock(SubscriptionInfo.class));
-        when(mSubscriptionManager.getActiveSubscriptionInfoList()).thenReturn(subList);
-        when(mSubscriptionManager.getActiveSubscriptionIdList())
-                .thenReturn(new int[]{DATA_SUBID});
 
-        WifiCarrierInfoManager tu = new WifiCarrierInfoManager(mTelephonyManager,
-                mSubscriptionManager, mWifiInjector, mock(FrameworkFacade.class),
-                mock(WifiContext.class), mock(WifiConfigStore.class), mock(Handler.class),
-                mWifiMetrics);
-        mWifiCarrierInfoManager = spy(tu);
         // static mocking
         mSession = ExtendedMockito.mockitoSession().strictness(Strictness.LENIENT)
                 .spyStatic(MacAddress.class)
@@ -1088,10 +1079,9 @@ public class ClientModeImplTest extends WifiBaseTest {
         mConnectedNetwork = spy(WifiConfigurationTestUtil.createEapNetwork(
                 WifiEnterpriseConfig.Eap.SIM, WifiEnterpriseConfig.Phase2.NONE));
         mConnectedNetwork.carrierId = CARRIER_ID_1;
-        doReturn(DATA_SUBID).when(mWifiCarrierInfoManager)
-                .getBestMatchSubscriptionId(any(WifiConfiguration.class));
-        when(mDataTelephonyManager.getSimOperator()).thenReturn("123456");
-        when(mDataTelephonyManager.getSimState()).thenReturn(TelephonyManager.SIM_STATE_READY);
+        when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
+                .thenReturn(DATA_SUBID);
+        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
         mConnectedNetwork.enterpriseConfig.setAnonymousIdentity("");
 
         triggerConnect();
@@ -1180,16 +1170,15 @@ public class ClientModeImplTest extends WifiBaseTest {
     public void testSetAnonymousIdentityWhenConnectionIsEstablishedNoPseudonym() throws Exception {
         mConnectedNetwork = spy(WifiConfigurationTestUtil.createEapNetwork(
                 WifiEnterpriseConfig.Eap.SIM, WifiEnterpriseConfig.Phase2.NONE));
-        when(mDataTelephonyManager.getSimOperator()).thenReturn("123456");
-        when(mDataTelephonyManager.getSimState()).thenReturn(TelephonyManager.SIM_STATE_READY);
         mConnectedNetwork.enterpriseConfig.setAnonymousIdentity("");
-
         String expectedAnonymousIdentity = "anonymous@wlan.mnc456.mcc123.3gppnetwork.org";
-        MockitoSession mockSession = ExtendedMockito.mockitoSession()
-                .mockStatic(SubscriptionManager.class)
-                .startMocking();
-        when(SubscriptionManager.getDefaultDataSubscriptionId()).thenReturn(DATA_SUBID);
-        doReturn(true).when(mWifiCarrierInfoManager).isImsiEncryptionInfoAvailable(anyInt());
+
+        when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
+                .thenReturn(DATA_SUBID);
+        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
+        when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
+                .thenReturn(expectedAnonymousIdentity);
 
         // Initial value should be "not set"
         assertEquals("", mConnectedNetwork.enterpriseConfig.getAnonymousIdentity());
@@ -1222,7 +1211,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         // trigger "add or update network" operation. The test needs to be updated to account for
         // this change.
         verify(mWifiConfigManager).addOrUpdateNetwork(any(), anyInt());
-        mockSession.finishMocking();
     }
 
     /**
@@ -1235,17 +1223,17 @@ public class ClientModeImplTest extends WifiBaseTest {
             throws Exception {
         mConnectedNetwork = spy(WifiConfigurationTestUtil.createEapNetwork(
                 WifiEnterpriseConfig.Eap.SIM, WifiEnterpriseConfig.Phase2.NONE));
-        when(mDataTelephonyManager.getSimOperator()).thenReturn("123456");
-        when(mDataTelephonyManager.getSimState()).thenReturn(TelephonyManager.SIM_STATE_READY);
         mConnectedNetwork.enterpriseConfig.setAnonymousIdentity("");
 
         String expectedAnonymousIdentity = "anonymous@wlan.mnc456.mcc123.3gppnetwork.org";
         String pseudonym = "83bcca9384fca@wlan.mnc456.mcc123.3gppnetwork.org";
-        MockitoSession mockSession = ExtendedMockito.mockitoSession()
-                .mockStatic(SubscriptionManager.class)
-                .startMocking();
-        when(SubscriptionManager.getDefaultDataSubscriptionId()).thenReturn(DATA_SUBID);
-        doReturn(true).when(mWifiCarrierInfoManager).isImsiEncryptionInfoAvailable(anyInt());
+
+        when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
+                .thenReturn(DATA_SUBID);
+        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
+        when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
+                .thenReturn(expectedAnonymousIdentity);
 
         triggerConnect();
 
@@ -1275,7 +1263,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         // trigger "add or update network" operation. The test needs to be updated to account for
         // this change.
         verify(mWifiConfigManager).addOrUpdateNetwork(any(), anyInt());
-        mockSession.finishMocking();
     }
 
     /**
@@ -1288,23 +1275,24 @@ public class ClientModeImplTest extends WifiBaseTest {
             throws Exception {
         mConnectedNetwork = spy(WifiConfigurationTestUtil.createEapNetwork(
                 WifiEnterpriseConfig.Eap.SIM, WifiEnterpriseConfig.Phase2.NONE));
-        when(mDataTelephonyManager.getSimOperator()).thenReturn("123456");
-        when(mDataTelephonyManager.getSimState()).thenReturn(TelephonyManager.SIM_STATE_READY);
         mConnectedNetwork.enterpriseConfig.setAnonymousIdentity("");
 
-        String realm = "wlan.mnc456.mcc123.3gppnetwork.org";
-        String expectedAnonymousIdentity = "anonymous";
         String pseudonym = "83bcca9384fca";
-        MockitoSession mockSession = ExtendedMockito.mockitoSession()
-                .mockStatic(SubscriptionManager.class)
-                .startMocking();
-        when(SubscriptionManager.getDefaultDataSubscriptionId()).thenReturn(DATA_SUBID);
-        doReturn(true).when(mWifiCarrierInfoManager).isImsiEncryptionInfoAvailable(anyInt());
+        String realm = "wlan.mnc456.mcc123.3gppnetwork.org";
+        String expectedAnonymousIdentity = "anonymous@wlan.mnc456.mcc123.3gppnetwork.org";
 
+        when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
+                .thenReturn(DATA_SUBID);
+        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(anyInt())).thenReturn(true);
+        when(mWifiCarrierInfoManager.getAnonymousIdentityWith3GppRealm(any()))
+                .thenReturn(expectedAnonymousIdentity);
+        doAnswer(invocation -> { return invocation.getArgument(1) + "@" + realm; })
+                .when(mWifiCarrierInfoManager).decoratePseudonymWith3GppRealm(any(), anyString());
         triggerConnect();
 
         // CMD_START_CONNECT should have set anonymousIdentity to anonymous@<realm>
-        assertEquals(expectedAnonymousIdentity + "@" + realm,
+        assertEquals(expectedAnonymousIdentity,
                 mConnectedNetwork.enterpriseConfig.getAnonymousIdentity());
 
         when(mWifiConfigManager.getScanDetailCacheForNetwork(FRAMEWORK_NETWORK_ID))
@@ -1329,7 +1317,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         // trigger "add or update network" operation. The test needs to be updated to account for
         // this change.
         verify(mWifiConfigManager).addOrUpdateNetwork(any(), anyInt());
-        mockSession.finishMocking();
     }
     /**
      * Tests the Passpoint information is set in WifiInfo for Passpoint AP connection.
@@ -1922,11 +1909,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         config.allowedKeyManagement.set(KeyMgmt.IEEE8021X);
         config.enterpriseConfig.setEapMethod(WifiEnterpriseConfig.Eap.SIM);
         when(mWifiConfigManager.getConfiguredNetwork(anyInt())).thenReturn(config);
-        MockitoSession mockSession = ExtendedMockito.mockitoSession()
-                .mockStatic(SubscriptionManager.class)
-                .startMocking();
-        when(SubscriptionManager.getDefaultDataSubscriptionId()).thenReturn(DATA_SUBID);
-        when(SubscriptionManager.isValidSubscriptionId(anyInt())).thenReturn(true);
         when(mWifiScoreCard.detectAbnormalConnectionFailure(anyString()))
                 .thenReturn(WifiHealthMonitor.REASON_AUTH_FAILURE);
 
@@ -1937,8 +1919,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         verify(mEapFailureNotifier).onEapFailure(
                 WifiNative.EAP_SIM_VENDOR_SPECIFIC_CERT_EXPIRED, config);
-        verify(mDataTelephonyManager).resetCarrierKeysForImsiEncryption();
-        mockSession.finishMocking();
+        verify(mWifiCarrierInfoManager).resetCarrierKeysForImsiEncryption(any());
         verify(mDeviceConfigFacade).isAbnormalConnectionFailureBugreportEnabled();
         verify(mWifiScoreCard).detectAbnormalConnectionFailure(anyString());
         verify(mWifiDiagnostics, times(2)).takeBugReport(anyString(), anyString());
@@ -1971,7 +1952,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 WifiNative.EAP_SIM_VENDOR_SPECIFIC_CERT_EXPIRED);
         mLooper.dispatchAll();
 
-        verify(mDataTelephonyManager, never()).resetCarrierKeysForImsiEncryption();
+        verify(mWifiCarrierInfoManager, never()).resetCarrierKeysForImsiEncryption(any());
     }
 
     /**
@@ -4201,16 +4182,13 @@ public class ClientModeImplTest extends WifiBaseTest {
         mConnectedNetwork = spy(WifiConfigurationTestUtil.createEapNetwork(
                 WifiEnterpriseConfig.Eap.SIM, WifiEnterpriseConfig.Phase2.NONE));
         mConnectedNetwork.SSID = DEFAULT_TEST_SSID;
+        String expectetIdentity = "13214561234567890@wlan.mnc456.mcc321.3gppnetwork.org";
 
-        when(mDataTelephonyManager.getSubscriberId()).thenReturn("3214561234567890");
-        when(mDataTelephonyManager.getSimState()).thenReturn(TelephonyManager.SIM_STATE_READY);
-        when(mDataTelephonyManager.getSimOperator()).thenReturn("321456");
-        when(mDataTelephonyManager.getCarrierInfoForImsiEncryption(anyInt())).thenReturn(null);
-        MockitoSession mockSession = ExtendedMockito.mockitoSession()
-                .mockStatic(SubscriptionManager.class)
-                .startMocking();
-        when(SubscriptionManager.getDefaultDataSubscriptionId()).thenReturn(DATA_SUBID);
-        when(SubscriptionManager.isValidSubscriptionId(anyInt())).thenReturn(true);
+        when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any(WifiConfiguration.class)))
+                .thenReturn(DATA_SUBID);
+        when(mWifiCarrierInfoManager.isSimPresent(DATA_SUBID)).thenReturn(true);
+        when(mWifiCarrierInfoManager.getSimIdentity(any()))
+                .thenReturn(Pair.create(expectetIdentity, ""));
 
         triggerConnect();
 
@@ -4219,8 +4197,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mWifiNative).simIdentityResponse(WIFI_IFACE_NAME,
-                "13214561234567890@wlan.mnc456.mcc321.3gppnetwork.org", "");
-        mockSession.finishMocking();
+                expectetIdentity, "");
     }
 
     /**
