@@ -122,6 +122,8 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.ParceledListSlice;
@@ -3352,9 +3354,6 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void setOverrideCountryCode(@NonNull String countryCode) {
-        if (!SdkLevel.isAtLeastS()) {
-            throw new UnsupportedOperationException();
-        }
         mContext.enforceCallingOrSelfPermission(
                 Manifest.permission.MANAGE_WIFI_COUNTRY_CODE, "WifiService");
         if (!WifiCountryCode.isValid(countryCode)) {
@@ -3376,9 +3375,6 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void clearOverrideCountryCode() {
-        if (!SdkLevel.isAtLeastS()) {
-            throw new UnsupportedOperationException();
-        }
         mContext.enforceCallingOrSelfPermission(
                 Manifest.permission.MANAGE_WIFI_COUNTRY_CODE, "WifiService");
         if (isVerboseLoggingEnabled()) {
@@ -3395,9 +3391,6 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void setDefaultCountryCode(@NonNull String countryCode) {
-        if (!SdkLevel.isAtLeastS()) {
-            throw new UnsupportedOperationException();
-        }
         mContext.enforceCallingOrSelfPermission(
                 Manifest.permission.MANAGE_WIFI_COUNTRY_CODE, "WifiService");
         if (!WifiCountryCode.isValid(countryCode)) {
@@ -4633,6 +4626,7 @@ public class WifiServiceImpl extends BaseWifiService {
      * @param callback Callback for status updates
      */
     @Override
+    @RequiresApi(Build.VERSION_CODES.S)
     public void startDppAsEnrolleeResponder(IBinder binder, @Nullable String deviceInfo,
             @WifiManager.EasyConnectCryptographyCurve int curve, IDppCallback callback) {
         if (!SdkLevel.isAtLeastS()) {
