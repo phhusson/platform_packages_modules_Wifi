@@ -7821,7 +7821,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetOverrideCountryCodeThrowsSecurityExceptionOnMissingPermissions() {
-        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(MANAGE_WIFI_COUNTRY_CODE),
                         eq("WifiService"));
@@ -7836,7 +7835,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetOverrideCountryCode() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastS());
         mWifiServiceImpl.setOverrideCountryCode(TEST_COUNTRY_CODE);
         mLooper.dispatchAll();
         verify(mWifiCountryCode).setOverrideCountryCode(TEST_COUNTRY_CODE);
@@ -7848,7 +7846,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testClearOverrideCountryCodeThrowsSecurityExceptionOnMissingPermissions() {
-        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(MANAGE_WIFI_COUNTRY_CODE),
                         eq("WifiService"));
@@ -7863,7 +7860,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testClearOverrideCountryCode() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastS());
         mWifiServiceImpl.clearOverrideCountryCode();
         mLooper.dispatchAll();
         verify(mWifiCountryCode).clearOverrideCountryCode();
@@ -7875,7 +7871,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetDefaultCountryCodeThrowsSecurityExceptionOnMissingPermissions() {
-        assumeTrue(SdkLevel.isAtLeastS());
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(MANAGE_WIFI_COUNTRY_CODE),
                         eq("WifiService"));
@@ -7890,7 +7885,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetDefaultCountryCode() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastS());
         mWifiServiceImpl.setDefaultCountryCode(TEST_COUNTRY_CODE);
         mLooper.dispatchAll();
         verify(mWifiCountryCode).setDefaultCountryCode(TEST_COUNTRY_CODE);
@@ -8068,18 +8062,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     private List<WifiConfiguration> setupMultiTypeConfigs(
-            long featureFlags, boolean saeAutoUpgradeEnabled,
-            boolean oweAutoUpgradeEnabled, boolean wpa3EnterpriseAutoUpgradeEnabled) {
+            long featureFlags, boolean saeAutoUpgradeEnabled, boolean oweAutoUpgradeEnabled) {
         when(mClientModeManager.getSupportedFeatures()).thenReturn(featureFlags);
         when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(saeAutoUpgradeEnabled);
         when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(oweAutoUpgradeEnabled);
-        when(mWifiGlobals.isWpa3EnterpriseUpgradeEnabled())
-                .thenReturn(wpa3EnterpriseAutoUpgradeEnabled);
 
         List<WifiConfiguration> multiTypeConfigs  = new ArrayList<>();
-        multiTypeConfigs.add(WifiConfigurationTestUtil.createOpenNetwork());
-        multiTypeConfigs.add(WifiConfigurationTestUtil.createPskNetwork());
-        multiTypeConfigs.add(WifiConfigurationTestUtil.createEapNetwork());
+        multiTypeConfigs.add(WifiConfigurationTestUtil.createOpenOweNetwork());
+        multiTypeConfigs.add(WifiConfigurationTestUtil.createPskSaeNetwork());
+        multiTypeConfigs.add(WifiConfigurationTestUtil.createWpa2Wpa3EnterpriseNetwork());
         return multiTypeConfigs;
     }
 
@@ -8093,27 +8084,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         return true;
     }
 
-    private boolean shouldOmitAutoUpgradeParams(SecurityParams params,
-            boolean saeAutoUpgradeEnabled, boolean oweAutoUpgradeEnabled,
-            boolean wpa3EnterpriseAutoUpgradeEnabled) {
-        if (!params.isAddedByAutoUpgrade()) return false;
-
-        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)) {
-            return !saeAutoUpgradeEnabled;
-        }
-        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE)) {
-            return !oweAutoUpgradeEnabled;
-        }
-        if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE)) {
-            return !wpa3EnterpriseAutoUpgradeEnabled;
-        }
-        return false;
-    }
-
     private List<WifiConfiguration> generateExpectedConfigs(
             List<WifiConfiguration> testConfigs,
-            boolean saeAutoUpgradeEnabled, boolean oweAutoUpgradeEnabled,
-            boolean wpa3EnterpriseAutoUpgradeEnabled) {
+            boolean saeAutoUpgradeEnabled, boolean oweAutoUpgradeEnabled) {
         WifiConfiguration tmpConfig;
         List<WifiConfiguration> expectedConfigs = new ArrayList<>();
         tmpConfig = new WifiConfiguration(testConfigs.get(0));
@@ -8145,13 +8118,11 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 SecurityParams.createSecurityParamsBySecurityType(
                         WifiConfiguration.SECURITY_TYPE_EAP));
         expectedConfigs.add(tmpConfig);
-        if (wpa3EnterpriseAutoUpgradeEnabled) {
-            tmpConfig = new WifiConfiguration(testConfigs.get(2));
-            tmpConfig.setSecurityParams(
-                    SecurityParams.createSecurityParamsBySecurityType(
-                            WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE));
-            expectedConfigs.add(tmpConfig);
-        }
+        tmpConfig = new WifiConfiguration(testConfigs.get(2));
+        tmpConfig.setSecurityParams(
+                SecurityParams.createSecurityParamsBySecurityType(
+                        WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE));
+        expectedConfigs.add(tmpConfig);
         return expectedConfigs;
     }
 
@@ -8163,7 +8134,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testGetConfiguredNetworksForMultiTypeConfigs() {
         long featureFlags = WifiManager.WIFI_FEATURE_WPA3_SAE | WifiManager.WIFI_FEATURE_OWE;
         List<WifiConfiguration> testConfigs = setupMultiTypeConfigs(
-                featureFlags, true, true, true);
+                featureFlags, true, true);
         when(mWifiConfigManager.getSavedNetworks(anyInt()))
                 .thenReturn(testConfigs);
         when(mWifiConfigManager.getConfiguredNetworksWithPasswords())
@@ -8179,7 +8150,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         List<WifiConfiguration> expectedConfigs = generateExpectedConfigs(
-                testConfigs, true, true, true);
+                testConfigs, true, true);
         WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(
                 expectedConfigs, configs.getList());
         WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(
@@ -8194,7 +8165,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testGetConfiguredNetworksForMultiTypeConfigsWithoutAutoUpgradeEnabled() {
         long featureFlags = WifiManager.WIFI_FEATURE_WPA3_SAE | WifiManager.WIFI_FEATURE_OWE;
         List<WifiConfiguration> testConfigs = setupMultiTypeConfigs(
-                featureFlags, false, false, false);
+                featureFlags, false, false);
         when(mWifiConfigManager.getSavedNetworks(anyInt()))
                 .thenReturn(testConfigs);
         when(mWifiConfigManager.getConfiguredNetworksWithPasswords())
@@ -8210,7 +8181,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         List<WifiConfiguration> expectedConfigs = generateExpectedConfigs(
-                testConfigs, false, false, false);
+                testConfigs, false, false);
         WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(
                 expectedConfigs, configs.getList());
         WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(
@@ -8225,7 +8196,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testGetConfiguredNetworksForMultiTypeConfigsWithoutHwSupport() {
         long featureFlags = 0L;
         List<WifiConfiguration> testConfigs = setupMultiTypeConfigs(
-                featureFlags, true, true, true);
+                featureFlags, true, true);
         when(mWifiConfigManager.getSavedNetworks(anyInt()))
                 .thenReturn(testConfigs);
         when(mWifiConfigManager.getConfiguredNetworksWithPasswords())
@@ -8241,7 +8212,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         List<WifiConfiguration> expectedConfigs = generateExpectedConfigs(
-                testConfigs, true, true, true);
+                testConfigs, true, true);
         WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(
                 expectedConfigs, configs.getList());
         WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(

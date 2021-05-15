@@ -646,10 +646,10 @@ public class WifiMetricsTest extends WifiBaseTest {
                 FEATURE_11AX | FEATURE_6G | FEATURE_6G_PSC));
         // WPA3 Enterprise transition network
         mockScanDetails.add(buildMockScanDetail(false, null,
-                "[WPA-EAP/SHA1+EAP/SHA256-CCMP][MFPC]", 0));
+                "[RSN-EAP/SHA1+EAP/SHA256-CCMP][MFPC]", 0));
         // WPA3 Enterprise only network
         mockScanDetails.add(buildMockScanDetail(false, null,
-                "[WPA-EAP/SHA256-CCMP][MFPR][MFPC]", 0));
+                "[RSN-EAP/SHA256-CCMP][MFPR][MFPC]", 0));
         mockScanDetails.add(buildMockScanDetail(false, null, "[WAPI-WAPI-PSK-SMS4-SMS4]", 0));
         mockScanDetails.add(buildMockScanDetail(false, null, "[WAPI-WAPI-CERT-SMS4-SMS4]", 0));
         mockScanDetails.add(buildMockScanDetail(false, null, "[WAPI-WAPI-CERT-SMS4-SMS4]", 0));
@@ -6370,5 +6370,25 @@ public class WifiMetricsTest extends WifiBaseTest {
         assertEquals(0, mDecodedProto.totalNumberOfPasspointAcceptanceOfTermsAndConditions);
         assertEquals(0, mDecodedProto.totalNumberOfPasspointProfilesWithDecoratedIdentity);
         assertEquals(0, mDecodedProto.passpointDeauthImminentScope.length);
+    }
+
+    @Test
+    public void testWifiStatsHealthStatWrite() throws Exception {
+        WifiInfo wifiInfo = mock(WifiInfo.class);
+        when(wifiInfo.getFrequency()).thenReturn(5810);
+        mWifiMetrics.incrementWifiScoreCount("",  60);
+        mWifiMetrics.handlePollResult(wifiInfo);
+        mWifiMetrics.incrementConnectionDuration(3000, true, true);
+        ExtendedMockito.verify(() -> WifiStatsLog.write(
+                WifiStatsLog.WIFI_HEALTH_STAT_REPORTED, 3000, true, true,
+                WifiStatsLog.WIFI_HEALTH_STAT_REPORTED__BAND__BAND_5G_HIGH));
+
+        when(wifiInfo.getFrequency()).thenReturn(2412);
+        mWifiMetrics.incrementWifiScoreCount("",  30);
+        mWifiMetrics.handlePollResult(wifiInfo);
+        mWifiMetrics.incrementConnectionDuration(2000, false, true);
+        ExtendedMockito.verify(() -> WifiStatsLog.write(
+                WifiStatsLog.WIFI_HEALTH_STAT_REPORTED, 2000, true, true,
+                WifiStatsLog.WIFI_HEALTH_STAT_REPORTED__BAND__BAND_2G));
     }
 }
