@@ -4706,7 +4706,13 @@ public class WifiManager {
 
             List<SoftApInfo> changedInfoList = new ArrayList<>(infos.values());
             Map<SoftApInfo, List<WifiClient>> changedInfoClients = new HashMap<>();
+            // Some devices may not support infos callback, allow them to support client
+            // connection changed callback.
+            boolean areClientsChangedWithoutInfosChanged =
+                    infos.size() == 0 && getConnectedClientList(clients).size()
+                    != getConnectedClientList(mCurrentClients).size();
             boolean isInfoChanged = infos.size() != mCurrentInfos.size();
+
             if (isRegistration) {
                 // Check if there are clients connected, put it to changedInfoClients
                 for (SoftApInfo currentInfo : infos.values()) {
@@ -4745,7 +4751,7 @@ public class WifiManager {
             mCurrentClients = clients;
             mCurrentInfos = infos;
             if (!isInfoChanged && changedInfoClients.isEmpty()
-                    && !isRegistration) {
+                    && !isRegistration && !areClientsChangedWithoutInfosChanged) {
                 Log.v(TAG, "SoftApCallbackProxy: No changed & Not Registration,"
                         + " don't need to notify the client");
                 return;
@@ -4777,7 +4783,8 @@ public class WifiManager {
                 });
             }
 
-            if (isRegistration || !changedInfoClients.isEmpty()) {
+            if (isRegistration || !changedInfoClients.isEmpty()
+                    || areClientsChangedWithoutInfosChanged) {
                 Log.v(TAG, "SoftApCallbackProxy: send onConnectedClientsChanged(clients): "
                         + getConnectedClientList(clients));
                 mExecutor.execute(() -> {
