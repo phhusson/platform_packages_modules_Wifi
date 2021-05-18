@@ -1109,7 +1109,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 }
             } else if (option.equals("-a")) {
                 if (SdkLevel.isAtLeastS()) {
-                    suggestionBuilder.setCarrierMerged(true);
+                    isCarrierMerged = true;
                 } else {
                     throw new IllegalArgumentException("-a option is not supported before S");
                 }
@@ -1132,6 +1132,14 @@ public class WifiShellCommand extends BasicShellCommandHandler {
             option = getNextOption();
         }
         WifiNetworkSuggestion suggestion = suggestionBuilder.build();
+        if (isCarrierMerged) {
+            if (suggestion.wifiConfiguration.subscriptionId
+                    == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                pw.println("Carrier merged network must have valid subscription Id");
+                return null;
+            }
+            suggestion.wifiConfiguration.carrierMerged = true;
+        }
         return suggestion;
     }
 
@@ -1657,30 +1665,15 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         if (suggestions == null || suggestions.isEmpty()) {
             pw.println("No suggestions on this device");
         } else {
-            pw.println("SSID                         Security type");
+            pw.println("SSID                         Security type(s)");
             for (WifiNetworkSuggestion suggestion : suggestions) {
-                String securityType = null;
-                if (suggestion.getPasspointConfig() != null) {
-                    securityType = "passpoint";
-                } else if (WifiConfigurationUtil.isConfigForSaeNetwork(
-                        suggestion.getWifiConfiguration())) {
-                    securityType = "wpa3";
-                } else if (WifiConfigurationUtil.isConfigForPskNetwork(
-                        suggestion.getWifiConfiguration())) {
-                    securityType = "wpa2";
-                } else if (WifiConfigurationUtil.isConfigForEapNetwork(
-                        suggestion.getWifiConfiguration())) {
-                    securityType = "eap";
-                } else if (WifiConfigurationUtil.isConfigForOweNetwork(
-                        suggestion.getWifiConfiguration())) {
-                    securityType = "owe";
-                } else if (WifiConfigurationUtil.isConfigForOpenNetwork(
-                        suggestion.getWifiConfiguration())) {
-                    securityType = "open";
-                }
                 pw.println(String.format("%-32s %-4s",
                         WifiInfo.sanitizeSsid(suggestion.getWifiConfiguration().SSID),
-                        securityType));
+                        suggestion.getWifiConfiguration().getSecurityParamsList().stream()
+                                .map(p -> WifiConfiguration.getSecurityTypeName(
+                                        p.getSecurityType())
+                                        + (p.isAddedByAutoUpgrade() ? "^" : ""))
+                                .collect(Collectors.joining("/"))));
             }
         }
     }
