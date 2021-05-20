@@ -203,7 +203,7 @@ public class WifiScoreReport {
             }
 
             // TODO(b/153075963): This should not be plumbed through WifiMetrics
-            mWifiMetrics.updateWifiUsabilityStatsEntries(mWifiInfo, stats);
+            mWifiMetrics.updateWifiUsabilityStatsEntries(mInterfaceName, mWifiInfo, stats);
         }
 
         @Override
