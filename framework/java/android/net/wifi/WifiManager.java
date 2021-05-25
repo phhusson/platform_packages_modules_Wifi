@@ -2452,9 +2452,6 @@ public class WifiManager {
      */
     @RequiresPermission(android.Manifest.permission.CHANGE_WIFI_STATE)
     public boolean removeNonCallerConfiguredNetworks() {
-        if (!SdkLevel.isAtLeastS()) {
-            throw new UnsupportedOperationException();
-        }
         try {
             return mService.removeNonCallerConfiguredNetworks(mContext.getOpPackageName());
         } catch (RemoteException e) {
