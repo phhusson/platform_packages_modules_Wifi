@@ -8082,6 +8082,7 @@ public class WifiManager {
      * @throws UnsupportedOperationException if this API is not supported on this device.
      * @hide
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     @SystemApi
     @NonNull
     @RequiresPermission(android.Manifest.permission.LOCATION_HARDWARE)
@@ -8114,6 +8115,7 @@ public class WifiManager {
      * @throws UnsupportedOperationException if this API is not supported on this device.
      * @hide
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     @SystemApi
     @NonNull
     @RequiresPermission(android.Manifest.permission.LOCATION_HARDWARE)
