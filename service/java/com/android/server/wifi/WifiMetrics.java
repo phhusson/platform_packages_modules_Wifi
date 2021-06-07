@@ -278,6 +278,7 @@ public class WifiMetrics {
     private WifiChannelUtilization mWifiChannelUtilization;
     private WifiSettingsStore mWifiSettingsStore;
     private IntCounter mPasspointDeauthImminentScope = new IntCounter();
+    private IntCounter mRecentFailureAssociationStatus = new IntCounter();
 
     /**
      * Metrics are stored within an instance of the WifiLog proto during runtime,
@@ -3814,6 +3815,8 @@ public class WifiMetrics {
                         + mWifiLogProto.numConnectRequestWithFilsAkm);
                 pw.println("mWifiLogProto.numL2ConnectionThroughFilsAuthentication="
                         + mWifiLogProto.numL2ConnectionThroughFilsAuthentication);
+                pw.println("mWifiLogProto.recentFailureAssociationStatus="
+                        + mRecentFailureAssociationStatus.toString());
 
                 pw.println("mWifiLogProto.numScans=" + mWifiLogProto.numScans);
                 pw.println("mWifiLogProto.WifiScoreCount: [" + MIN_WIFI_SCORE + ", "
@@ -4960,6 +4963,8 @@ public class WifiMetrics {
             mWifiLogProto.wifiToWifiSwitchStats = mWifiToWifiSwitchStats;
             mWifiLogProto.bandwidthEstimatorStats = mWifiScoreCard.dumpBandwidthEstimatorStats();
             mWifiLogProto.passpointDeauthImminentScope = mPasspointDeauthImminentScope.toProto();
+            mWifiLogProto.recentFailureAssociationStatus =
+                    mRecentFailureAssociationStatus.toProto();
         }
     }
 
@@ -5190,6 +5195,7 @@ public class WifiMetrics {
             mFirstConnectAfterBootStats = null;
             mWifiToWifiSwitchStats.clear();
             mPasspointDeauthImminentScope.clear();
+            mRecentFailureAssociationStatus.clear();
         }
     }
 
@@ -8190,6 +8196,17 @@ public class WifiMetrics {
         synchronized (mLock) {
             mPasspointDeauthImminentScope.increment(isEss ? PASSPOINT_DEAUTH_IMMINENT_SCOPE_ESS
                     : PASSPOINT_DEAUTH_IMMINENT_SCOPE_BSS);
+        }
+    }
+
+    /**
+     * Increment number of times connection failure status reported per
+     * WifiConfiguration.RecentFailureReason
+     */
+    public void incrementRecentFailureAssociationStatusCount(
+            @WifiConfiguration.RecentFailureReason int reason) {
+        synchronized (mLock) {
+            mRecentFailureAssociationStatus.increment(reason);
         }
     }
 }
