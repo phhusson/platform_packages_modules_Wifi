@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -644,6 +645,26 @@ public class CoexUtils {
                     + ", ulBandwidthKhz=" + mUplinkBandwidthKhz
                     + ", subId=" + mSubId
                     + '}';
+        }
+
+        @java.lang.Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof CoexCellChannel)) return false;
+            CoexCellChannel that = (CoexCellChannel) o;
+            return getRat() == that.getRat() && getBand() == that.getBand()
+                    && getDownlinkFreqKhz() == that.getDownlinkFreqKhz()
+                    && getDownlinkBandwidthKhz() == that.getDownlinkBandwidthKhz()
+                    && getUplinkFreqKhz() == that.getUplinkFreqKhz()
+                    && getUplinkBandwidthKhz() == that.getUplinkBandwidthKhz()
+                    && getSubId() == that.getSubId();
+        }
+
+        @java.lang.Override
+        public int hashCode() {
+            return Objects.hash(getRat(), getBand(), getDownlinkFreqKhz(),
+                    getDownlinkBandwidthKhz(),
+                    getUplinkFreqKhz(), getUplinkBandwidthKhz(), getSubId());
         }
     }
 }
