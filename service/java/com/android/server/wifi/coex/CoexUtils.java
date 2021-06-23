@@ -309,22 +309,24 @@ public class CoexUtils {
      *
      * @param startChannel Channel to start from
      * @param offsetKhz Offset distance in Khz
-     * @param channelStep Step size to count channels by
-     * @return
+     * @param channelStepSize Step size to count channels by
+     * @return The channel that lies the given offset away from the start channel
      */
-    private static int getOffsetChannel(int startChannel, int offsetKhz, int channelStep) {
-        // Each channel number always counts 5Mhz.
+    @VisibleForTesting
+    /* package */ static int getOffsetChannel(
+            int startChannel, int offsetKhz, int channelStepSize) {
+        // Each channel number is always separated by 5Mhz.
         int channelSpacingKhz = 5_000;
-        int offsetChannel = startChannel + offsetKhz / channelSpacingKhz;
+        int stepsToOffset = offsetKhz / (channelSpacingKhz * channelStepSize);
         // Offset lands directly channel edge; use previous channel based on offset direction.
-        if (offsetKhz % (channelSpacingKhz * channelStep) == 0) {
+        if (offsetKhz % (channelSpacingKhz * channelStepSize) == 0) {
             if (offsetKhz > 0) {
-                offsetChannel -= channelStep;
-            } else {
-                offsetChannel += channelStep;
+                stepsToOffset--;
+            } else if (offsetKhz < 0) {
+                stepsToOffset++;
             }
         }
-        return offsetChannel;
+        return startChannel + (stepsToOffset * channelStepSize);
     }
 
     /**
